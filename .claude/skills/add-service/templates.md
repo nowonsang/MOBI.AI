@@ -174,15 +174,24 @@ export function AdminUserList() {
   const visibleUsers = users.filter((user) => matchesRoleFilter(user, filter));
 
   if (visibleUsers.length === 0) {
-    return <p className="text-sm text-foreground/60">표시할 사용자가 없습니다.</p>;
+    return (
+      <p className="py-10 text-center text-body text-ink-tertiary">
+        아직 등록된 사용자가 없어요.
+      </p>
+    );
   }
 
+  // 모바일 우선 세로 목록, 행 높이 56px 이상, 구분선은 line 토큰 (ui-design 스킬)
   return (
-    <ul className="flex flex-col gap-2">
+    <ul className="flex flex-col divide-y divide-line">
       {visibleUsers.map((user) => (
-        <li key={user.id} className="flex items-center justify-between gap-3">
-          <span>{user.name}</span>
+        <li
+          key={user.id}
+          className="flex min-h-14 items-center justify-between gap-3 py-3"
+        >
+          <span className="text-body text-ink">{user.name}</span>
           <select
+            className="h-11 rounded-control border border-line bg-surface px-3 text-body-sm text-ink focus:border-primary"
             aria-label={`${user.name} 역할`}
             value={user.role}
             onChange={(event) =>
@@ -220,12 +229,12 @@ export async function GET() {
 ## 라우트 그룹 — `app/(admin)/layout.tsx`, `app/(admin)/admin/error.tsx`
 
 ```tsx
-// app/(admin)/layout.tsx — 서비스 전용 레이아웃
+// app/(admin)/layout.tsx — 서비스 전용 레이아웃 (반응형 여백·폭은 ui-design 스킬 4장)
 import type { ReactNode } from "react";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-24">
+    <main className="mx-auto flex w-full max-w-content flex-1 flex-col gap-6 px-5 py-12 md:px-6 md:py-16 lg:px-7.5 lg:py-20">
       {children}
     </main>
   );
@@ -252,18 +261,24 @@ export default function AdminError({
     console.error(error);
   }, [error]);
 
+  // 실패 화면: 탓하지 않는 해요체 + 다음 행동 1개 (ui-design 스킬 2·6장)
   return (
-    <div className="flex flex-col gap-4">
-      <h2 className="text-lg font-semibold">데이터를 불러오지 못했습니다.</h2>
+    <div className="mx-auto flex w-full max-w-narrow flex-col gap-3 py-10 text-center">
+      <h2 className="text-heading font-bold text-ink lg:text-heading-lg">
+        잠시 문제가 생겼어요
+      </h2>
+      <p className="text-body text-ink-tertiary">
+        네트워크 상태를 확인하고 다시 시도해 주세요.
+      </p>
       <button
         type="button"
-        className="self-start underline underline-offset-4"
+        className="mt-4 h-13 w-full rounded-control bg-primary px-5 text-body-lg font-bold text-surface transition-colors hover:bg-primary-strong md:mx-auto md:w-auto md:min-w-60"
         onClick={() => {
           reset();
           retry();
         }}
       >
-        다시 시도
+        다시 시도하기
       </button>
     </div>
   );

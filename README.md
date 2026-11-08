@@ -39,6 +39,7 @@ Supabase 프로젝트 자체를 처음 준비하는 경우(스키마 생성)는 
 | `add-service` | 새 서비스 생성 절차와 템플릿 | 새 도메인 모듈 추가 |
 | `secure-coding` | Server Action·Route Handler·환경 변수·캐시·CSP·의존성 보안 규칙 | 보안 관련 코드 작업·점검 |
 | `supabase-schema` | 다른 서비스와 공유하는 프로젝트에서 `mobi_ai` 스키마 격리 규칙, 마이그레이션 작성·검사·실행, 해커톤 종료 정리 | 모든 DB 작업 |
+| `ui-design` | 반응형 필수 규칙, 현대자동차 기반 색·비율, 토스식 UX 원칙, 컴포넌트·문구·접근성 규칙 | 모든 화면(UI) 작업 |
 
 규칙은 문서로만 두지 않고 도구로도 강제한다.
 
@@ -46,6 +47,7 @@ Supabase 프로젝트 자체를 처음 준비하는 경우(스키마 생성)는 
 | --- | --- | --- |
 | ESLint `boundaries` | `eslint.config.mjs` | 계층 역방향 import, 서비스 간 import, 계층 밖 파일을 에러로 처리 (IDE·`npm run lint`) |
 | ESLint Supabase 격리 | `eslint.config.mjs` | `@supabase/*` 직접 import, `.schema(...)` 스키마 전환을 에러로 처리 |
+| ESLint 디자인 토큰 | `eslint.config.mjs` | 임의 색상(`bg-[#...]`, `rgb(...)`, 인라인 `style` 색상)을 에러로 처리 → `globals.css` 토큰만 사용 |
 | 마이그레이션 검사 | `scripts/check-migrations.mjs` (`npm run lint` 포함) | 스키마 생략(→ 공유 서비스 `public`에 생성), 공유 스키마 변경, RLS 누락, 위험 구문을 에러로 처리 |
 | PostToolUse 훅 | `.claude/hooks/lint-changed-file.mjs` | AI가 파일을 수정할 때마다 ESLint를 돌려 위반을 즉시 AI에게 돌려줌 |
 | `AGENTS.md` (`CLAUDE.md`가 import) | 저장소 루트 | 핵심 규칙 요약. 모든 AI 세션에 항상 로드됨 |
@@ -115,6 +117,16 @@ app → core → features → shared
 - `src/` 아래 새 최상위 폴더를 만들면 `boundaries/no-unknown-files` 에러가 난다.
 - query key·cache tag·Redux 슬라이스 이름에는 서비스 이름을 접두어로 붙인다 (`["admin", ...]`, `"admin:users"`, `adminRoleFilter`).
 - 배럴 파일(`index.ts`)은 두지 않는다. 서버 전용 모듈과 클라이언트 모듈이 한 진입점에 섞이면 번들 경계가 깨진다.
+
+## 디자인 시스템 (상세: `ui-design` 스킬)
+
+현대자동차 공모전 프로젝트라서 **색·비율은 현대자동차 브랜드 실측값**, **UX 행동은 토스식 원칙**을 따른다. 토큰은 `src/app/globals.css` 에 있다.
+
+- **반응형 필수**: 모바일 우선. 360 · 768 · 1024 · 1440px 에서 가로 스크롤 없이 동작해야 한다. 브레이크포인트 `md` 768px, `lg` 1024px (현대 사이트와 동일)
+- **색**: `primary` #002C5F(Hyundai Blue, 주 CTA) · `accent` #007FA8(링크) · `highlight` #00AAD2(장식 전용) · `sand` #E4DCD3 · `sand-light` #F6F3F2 · 글자 `ink` 계열 · 선 `line`
+- **비율**: 좌우 여백 20 → 24 → 30px, 본문 폭 560 / 1120 / 1400px, 헤더 56 → 64 → 80px, 배너 16:3(모바일 4:3), 카드 이미지 14:17
+- **UX**: 한 화면 한 가지 · 주 CTA 1개 · 섹션당 항목 7개 이하 · 0.4초 안에 반응(스켈레톤·낙관적 업데이트) · 실패 화면은 해요체 + 다음 행동 1개
+- **글꼴**: Pretendard → 시스템 한글 글꼴. 현대 전용 서체·로고·사진은 공모전 측이 제공·허용한 것만 사용
 
 ## 상태 책임 분리
 

@@ -117,7 +117,16 @@ import { AdminUserList } from "@/features/admin/ui/admin-user-list";
 
 export default function AdminPage() {
   return (
-    <Suspense fallback={<p className="text-sm">불러오는 중…</p>}>
+    // 로딩은 실제 목록 모양의 스켈레톤으로 (ui-design 스킬 6장)
+    <Suspense
+      fallback={
+        <div
+          role="status"
+          aria-label="불러오는 중"
+          className="h-56 animate-pulse rounded-control bg-sand-light"
+        />
+      }
+    >
       <AdminUsersData />
     </Suspense>
   );

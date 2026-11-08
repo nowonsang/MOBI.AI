@@ -100,6 +100,7 @@ features/<서비스>/
 4. 폴더 구조나 규칙이 바뀌었다면 `README.md` 를 함께 갱신
 5. 보안 관련 코드(Server Action, Route Handler, 환경 변수, 인증)를 건드렸다면 `secure-coding` 스킬의 체크리스트 확인
 6. DB(테이블·SQL·Supabase 조회)를 건드렸다면 `supabase-schema` 스킬의 규칙과 검증 절차 확인
+7. 화면(UI)을 만들거나 바꿨다면 `ui-design` 스킬의 완료 체크리스트 확인 (반응형 360·768·1024·1440px 필수)
 
 > 파일을 수정할 때마다 PostToolUse 훅이 ESLint를 돌려 위반을 바로 알려준다. 훅이 위반을 보고하면 다음 작업으로 넘어가기 전에 고친다.
 

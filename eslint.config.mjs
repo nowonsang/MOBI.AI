@@ -55,6 +55,27 @@ const architecture = {
   },
 };
 
+// 디자인 토큰 강제: 색상은 globals.css 의 토큰(bg-primary, text-ink 등)만 쓴다 (ui-design 스킬).
+const HARD_CODED_COLOR = "/(\\[#[0-9a-fA-F]{3,8}\\])|(\\[(rgb|hsl)a?\\()/";
+const designTokenRules = [
+  {
+    selector: `Literal[value=${HARD_CODED_COLOR}]`,
+    message:
+      "임의 색상 금지: globals.css 디자인 토큰(bg-primary, text-ink-secondary 등)을 사용하세요.",
+  },
+  {
+    selector: `TemplateElement[value.raw=${HARD_CODED_COLOR}]`,
+    message:
+      "임의 색상 금지: globals.css 디자인 토큰(bg-primary, text-ink-secondary 등)을 사용하세요.",
+  },
+  {
+    selector:
+      "Property[key.name=/^(color|background|backgroundColor|borderColor|fill|stroke)$/] > Literal[value=/^(#|rgb|hsl)/]",
+    message:
+      "인라인 색상 금지: globals.css 디자인 토큰(var(--color-...))을 사용하세요.",
+  },
+];
+
 // Supabase는 다른 서비스와 공유한다. DB 접근은 mobi_ai 스키마로 고정된 @/shared/supabase/admin 만 쓴다.
 const supabaseIsolation = [
   {
@@ -76,6 +97,7 @@ const supabaseIsolation = [
     },
   },
   {
+    // no-restricted-syntax 는 설정 블록끼리 옵션이 합쳐지지 않으므로 금지 구문을 이 블록 하나에 모은다.
     files: ["src/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-syntax": [
@@ -85,6 +107,7 @@ const supabaseIsolation = [
           message:
             "Supabase 스키마 전환 금지: mobi_ai 외의 스키마(public 등)는 공유 서비스 소유입니다.",
         },
+        ...designTokenRules,
       ],
     },
   },
