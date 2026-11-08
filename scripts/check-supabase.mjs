@@ -202,12 +202,17 @@ for (const file of [".env.local", ".env"]) {
   else if (!ignored) fail(`${file}: .gitignore 대상이 아닙니다`);
   else pass(`${file}: gitignore 적용, git 추적 안 됨`);
 
+  // 키 파일은 본인만 읽을 수 있어야 한다. Windows는 chmod 권한 체계가 없어 검사하지 않는다.
   const mode = (stats.mode & 0o777).toString(8);
-  if (stats.mode & 0o077)
-    warn(
-      `${file}: 권한 ${mode} — 다른 사용자도 읽을 수 있습니다 (chmod 600 권장)`,
+  if (process.platform === "win32") {
+    warn(`${file}: Windows에서는 권한을 검사하지 않습니다`);
+  } else if (stats.mode & 0o077) {
+    fail(
+      `${file}: 권한 ${mode} — 다른 사용자도 읽을 수 있습니다 (npm run secure:env 로 600으로 변경)`,
     );
-  else pass(`${file}: 권한 ${mode} (본인만 읽기 가능)`);
+  } else {
+    pass(`${file}: 권한 ${mode} (본인만 읽기 가능)`);
+  }
 }
 
 const probeKeyVar = publicKeyVar ?? secretKeyVar;

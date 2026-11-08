@@ -13,6 +13,7 @@ Next.js 16 공식 가이드(`node_modules/next/dist/docs/01-app/02-guides/data-s
 - AI는 `.env*`, 키, 인증서 파일을 읽거나 출력하거나 수정하지 않는다. 훅과 deny 규칙으로 막혀 있으며, **우회를 시도하지 않는다**. 값이 필요하면 사용자에게 변수 이름만 묻는다.
 - 서버 환경 변수는 `src/shared/config/server-env.ts` 의 zod 스키마에 추가하고 `serverEnv` 로만 읽는다. 코드 곳곳에서 `process.env` 를 직접 읽지 않는다.
 - `NEXT_PUBLIC_` 접두어 변수는 브라우저 번들에 그대로 들어간다. 비밀 값에 절대 붙이지 않는다.
+- `.env*` 파일은 권한 600(본인만 읽기·쓰기)이어야 한다. `npm run secure:env` 로 맞추고 `npm run check:supabase` 로 확인한다 (설정 절차는 `project-setup` 스킬).
 - 비밀 값·토큰·개인정보를 `console.log`, 에러 메시지, 응답 본문에 넣지 않는다.
 - 비밀 값을 코드, 테스트 데이터, README, 커밋 메시지에 쓰지 않는다.
 

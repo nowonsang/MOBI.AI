@@ -14,6 +14,7 @@ Detailed rules live in project skills under `.claude/skills/`. Load them before 
 
 | Skill | Load when |
 | --- | --- |
+| `project-setup` | First-time setup after cloning, `.env.local` setup, onboarding a teammate, or when `npm run check:supabase` fails |
 | `project-architecture` | Before adding, changing, moving, or reviewing any code |
 | `add-service` | Creating a new service (domain module) |
 | `secure-coding` | Touching Server Actions, Route Handlers, auth, env vars, caching, external requests, CSP, or dependencies |
@@ -31,4 +32,4 @@ Non-negotiable core rules:
 
 ## Sensitive files
 
-Never read, print, copy, or edit secret files (`.env*`, private keys, credentials) or dump environment variables. They are blocked by `.claude/settings.json` and `.claude/hooks/protect-sensitive-files.mjs`; do not try to work around a block. If a value is needed, ask the user for the variable name only. `.claude/settings*.json` and `.claude/hooks/**` are protected guard files: AI must not modify them; ask the user to change them directly.
+Never read, print, copy, or edit secret files (`.env*`, private keys, credentials) or dump environment variables. They are blocked by `.claude/settings.json` and `.claude/hooks/protect-sensitive-files.mjs`; do not try to work around a block. If a value is needed, ask the user for the variable name only. Env files must be owner-only (mode 600): run `npm run secure:env` (it changes permissions without reading contents). `.claude/settings*.json` and `.claude/hooks/**` are protected guard files: AI must not modify them; ask the user to change them directly.

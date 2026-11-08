@@ -2,6 +2,17 @@
 
 Next.js 16 (App Router · Cache Components) + React 19 + TanStack Query v5 + Redux Toolkit v2
 
+## 처음 받았다면 (팀원 온보딩)
+
+자세한 절차와 문제 해결은 `project-setup` 스킬에 있다. Claude Code에 "세팅해줘"라고 하면 이 순서로 안내한다.
+
+1. 프로젝트 소유자에게 Supabase 조직 초대(Developer)와 MOBI.AI 전용 secret 키·프로젝트 URL을 **안전한 경로로** 받는다.
+2. `npm install`
+3. 루트에 `.env.local` 을 **직접** 만들고 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` 를 넣는다 (아래 "환경 변수" 표).
+4. `npm run secure:env` — `.env*` 파일 권한을 본인 전용(600)으로 바꾼다 (내용은 읽지 않음).
+5. 커밋 전 비밀 값 검사 켜기: `chmod +x .githooks/pre-commit && git config core.hooksPath .githooks`
+6. `npm run check:supabase` 가 "결과: 통과" 인지 확인한다 (권한이 600이 아니면 실패로 표시된다).
+
 ## 실행
 
 ```bash
@@ -12,9 +23,10 @@ npm run lint       # 코드 규칙 + 아키텍처 규칙(boundaries) 검사
 npm run typecheck  # next typegen && tsc
 npm run check:supabase  # Supabase 연결·스키마·키 보호 상태 점검 (키 값은 출력하지 않음)
 npm run check:migrations  # 마이그레이션 SQL의 mobi_ai 스키마 격리 규칙 검사 (lint에 포함)
+npm run secure:env  # .env* 파일 권한을 600으로 (내용은 읽지 않음)
 ```
 
-처음 clone 했다면 [Supabase 설정](#supabase-공유-프로젝트)부터 진행한다.
+Supabase 프로젝트 자체를 처음 준비하는 경우(스키마 생성)는 [Supabase 설정](#supabase-공유-프로젝트)을 따른다.
 
 ## 팀 규칙 (Claude Code 스킬)
 
@@ -22,6 +34,7 @@ npm run check:migrations  # 마이그레이션 SQL의 mobi_ai 스키마 격리 �
 
 | 스킬 | 내용 | 사용 시점 |
 | --- | --- | --- |
+| `project-setup` | 처음 받은 팀원의 환경 설정 순서 (`.env.local`, 권한 600, 커밋 전 검사, 연결 확인) | clone 직후·온보딩·연결 확인 실패 시 |
 | `project-architecture` | 계층·의존 방향, 서비스 내부 구조, 네이밍, 상태 책임, 완료 체크리스트 | 모든 코드 작업·리뷰 |
 | `add-service` | 새 서비스 생성 절차와 템플릿 | 새 도메인 모듈 추가 |
 | `secure-coding` | Server Action·Route Handler·환경 변수·캐시·CSP·의존성 보안 규칙 | 보안 관련 코드 작업·점검 |
