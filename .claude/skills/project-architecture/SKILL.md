@@ -6,7 +6,7 @@ description: MOBI.AI 팀 공용 클린 아키텍처 규칙. 이 저장소에서 
 # MOBI.AI 아키텍처 규칙
 
 팀원 모두와 모든 AI 세션이 같은 규칙으로 코드를 쓰기 위한 기준이다. **규칙과 다른 구조가 필요하면 임의로 바꾸지 말고 사용자에게 먼저 확인한다.**
-참고 구현은 `src/features/main` 과 `src/app/(main)` 이다. 새 코드는 이 구현의 모양을 그대로 따른다.
+참고 구현은 `add-service` 스킬의 템플릿(`.claude/skills/add-service/SKILL.md`, `templates.md`)이다. 새 코드는 이 템플릿의 모양을 그대로 따른다.
 
 ## 1. 계층과 의존 방향 (ESLint `boundaries/dependencies`로 강제)
 
@@ -46,20 +46,20 @@ features/<서비스>/
 
 ## 3. 파일·식별자 네이밍
 
-| 대상 | 규칙 | 예 (`main` 서비스) |
+| 대상 | 규칙 | 예 (`add-service` 템플릿의 `admin` 서비스) |
 | --- | --- | --- |
-| 서비스 폴더 | 소문자 kebab-case 단수 | `features/main`, `features/user-profile` |
-| 타입 | `model/<서비스>.types.ts` | `MainItem`, `MainItemFilter` |
-| Redux 슬라이스 | `model/<서비스>-<주제>.slice.ts`, `name`은 camelCase `<서비스><주제>` | `mainFilterSlice` (`name: "mainFilter"`) |
-| 슬라이스 액션 | 과거형 이벤트 이름 | `filterChanged`, `itemSelected` |
-| 셀렉터 | `select<대상>` | `selectMainFilter` |
-| 캐시 계약 | `api/<서비스>.queries.ts` → `<서비스>Keys`, `<서비스>Tags`, `<서비스>Queries` | `mainKeys.items()`, `mainTags.items`, `mainQueries.items()` |
-| 뮤테이션 훅 | `api/<서비스>.mutations.ts` → `use<동사><대상>` | `useToggleMainItem` |
-| 저장소(DAL) | `server/<서비스>.repository.ts` → `find*`, `create*`, `update*`, `delete*` | `findMainItems` |
-| 캐시 읽기 | `server/<서비스>.data.ts` → `get*` | `getMainItems` |
-| Server Action | `server/<서비스>.actions.ts` → `<동사><대상>Action` | `toggleMainItemAction` |
-| 컴포넌트 파일 | `ui/<서비스>-<이름>.tsx` (kebab-case), named export PascalCase | `main-item-list.tsx` → `MainItemList` |
-| 라우트 | `app/(<서비스>)/...`, API는 `app/api/<서비스>/...` | `app/(main)/page.tsx`, `app/api/main/items/route.ts` |
+| 서비스 폴더 | 소문자 kebab-case 단수 | `features/admin`, `features/user-profile` |
+| 타입 | `model/<서비스>.types.ts` | `AdminUser`, `AdminRoleFilter` |
+| Redux 슬라이스 | `model/<서비스>-<주제>.slice.ts`, `name`은 camelCase `<서비스><주제>` | `adminRoleFilterSlice` (`name: "adminRoleFilter"`) |
+| 슬라이스 액션 | 과거형 이벤트 이름 | `roleFilterChanged`, `userSelected` |
+| 셀렉터 | `select<대상>` | `selectAdminRoleFilter` |
+| 캐시 계약 | `api/<서비스>.queries.ts` → `<서비스>Keys`, `<서비스>Tags`, `<서비스>Queries` | `adminKeys.users()`, `adminTags.users`, `adminQueries.users()` |
+| 뮤테이션 훅 | `api/<서비스>.mutations.ts` → `use<동사><대상>` | `useUpdateAdminUserRole` |
+| 저장소(DAL) | `server/<서비스>.repository.ts` → `find*`, `create*`, `update*`, `delete*` | `findAdminUsers` |
+| 캐시 읽기 | `server/<서비스>.data.ts` → `get*` | `getAdminUsers` |
+| Server Action | `server/<서비스>.actions.ts` → `<동사><대상>Action` | `updateAdminUserRoleAction` |
+| 컴포넌트 파일 | `ui/<서비스>-<이름>.tsx` (kebab-case), named export PascalCase | `admin-user-list.tsx` → `AdminUserList` |
+| 라우트 | `app/(<서비스>)/...`, API는 `app/api/<서비스>/...` | `app/(admin)/admin/page.tsx`, `app/api/admin/users/route.ts` |
 
 - `export default` 는 Next.js 특수 파일(`page`, `layout`, `error`, `loading`, `not-found`, `route` 등)에만 쓴다. 나머지는 named export.
 - query key는 `["<서비스>", ...]`, cache tag는 `"<서비스>:<대상>"` 로 시작해 서비스 간 캐시 충돌을 막는다.

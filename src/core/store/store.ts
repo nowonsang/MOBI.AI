@@ -1,8 +1,8 @@
 import { combineSlices, configureStore } from "@reduxjs/toolkit";
-import { mainFilterSlice } from "@/features/main/model/main-filter.slice";
 
-// 새 슬라이스는 여기에 추가한다. 각 슬라이스의 reducerPath(기본값: name)가 state key가 된다.
-const rootReducer = combineSlices(mainFilterSlice);
+// 새 슬라이스는 여기에 추가한다: combineSlices(adminRoleFilterSlice, ...)
+// 각 슬라이스의 reducerPath(기본값: name)가 state key가 된다.
+const rootReducer = combineSlices();
 
 export type RootState = ReturnType<typeof rootReducer>;
 

@@ -6,7 +6,7 @@ argument-hint: <서비스 이름 (kebab-case, 예: admin, user-profile)>
 
 # 새 서비스 추가
 
-먼저 `project-architecture` 스킬의 규칙을 따른다. 참고 구현은 `src/features/main` 과 `src/app/(main)` 이며, 아래 템플릿은 그 구조를 서비스 이름만 바꿔 옮긴 것이다.
+먼저 `project-architecture` 스킬의 규칙을 따른다. 이 프로젝트의 참고 구현은 이 스킬의 템플릿이다: 핵심 4개 파일은 아래에, 나머지 파일(마이그레이션, 타입, 슬라이스, 저장소, 뮤테이션, UI, Route Handler, 레이아웃, 에러 경계)은 같은 폴더의 [`templates.md`](templates.md) 에 있다.
 
 ## 0. 확인할 것
 
@@ -138,7 +138,7 @@ async function AdminUsersData() {
 }
 ```
 
-나머지 파일(`*.mutations.ts`, `ui/*`, `layout.tsx`, `error.tsx`, `route.ts`, 슬라이스)은 `src/features/main` / `src/app/(main)` / `src/app/api/main` 의 같은 이름 파일을 복사해 이름만 바꾼다.
+나머지 파일(마이그레이션, `*.types.ts`, 슬라이스, `*.repository.ts`, `*.mutations.ts`, `ui/*`, `route.ts`, `layout.tsx`, `error.tsx`)은 [`templates.md`](templates.md) 의 `admin` 예시를 서비스 이름만 바꿔 쓴다.
 
 ## 3. 연결
 

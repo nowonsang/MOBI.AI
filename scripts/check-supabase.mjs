@@ -233,13 +233,11 @@ if (supabaseUrl && probeKeyVar) {
     },
   );
   // 존재하지 않는 테이블을 조회해 스키마 노출 여부만 판별한다.
-  let schemaExposed = false;
   if (probe.code === "PGRST106") {
     fail(
       `스키마 ${SCHEMA}: Data API에 노출되어 있지 않습니다 (마이그레이션 실행 후 Dashboard → Data API → Exposed schemas 에 추가)`,
     );
   } else if (probe.code === "PGRST205" || probe.status === 404) {
-    schemaExposed = true;
     pass(`스키마 ${SCHEMA}: Data API에 노출됨`);
   } else {
     warn(
@@ -258,39 +256,6 @@ if (supabaseUrl && probeKeyVar) {
       fail(
         `서버 전용 키 응답 ${adminHealth.status} ${adminHealth.code ?? ""}`.trim(),
       );
-
-    if (schemaExposed) {
-      const table = await request(
-        `${supabaseUrl}/rest/v1/main_items?select=id&limit=1`,
-        secretKeyVar.value,
-        {
-          "Accept-Profile": SCHEMA,
-        },
-      );
-      if (table.status === 200)
-        pass(`${SCHEMA}.main_items: 서버 키로 조회 가능`);
-      else
-        fail(
-          `${SCHEMA}.main_items: 조회 실패 (응답 ${table.status} ${table.code ?? ""}) — 마이그레이션 SQL을 실행했는지 확인`.trim(),
-        );
-    }
-  }
-
-  // 공유 프로젝트이므로 공개용 키(공유 서비스 브라우저에 노출된 키)로는 mobi_ai에 접근할 수 없어야 한다.
-  if (publicKeyVar && schemaExposed) {
-    const anon = await request(
-      `${supabaseUrl}/rest/v1/main_items?select=id&limit=1`,
-      publicKeyVar.value,
-      {
-        "Accept-Profile": SCHEMA,
-      },
-    );
-    if (anon.status === 200)
-      fail(
-        `${SCHEMA}.main_items: 공개용 키로 조회됩니다 (권한 설정 확인 필요)`,
-      );
-    else
-      pass(`${SCHEMA}.main_items: 공개용 키 접근 차단됨 (응답 ${anon.status})`);
   }
 }
 

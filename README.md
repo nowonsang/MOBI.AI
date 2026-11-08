@@ -47,11 +47,11 @@ npm run check:migrations  # 마이그레이션 SQL의 mobi_ai 스키마 격리 �
 src/
 ├── app/                              # 라우팅 전용 (얇게 유지: 프리페치 + 조립)
 │   ├── layout.tsx                    # 루트 레이아웃, <Providers> 장착
-│   ├── (main)/                       # main 서비스 라우트 그룹 (URL에 포함되지 않음)
-│   │   ├── layout.tsx                # main 서비스 전용 레이아웃
-│   │   ├── page.tsx                  # "/" — 서버 데이터 → HydrationBoundary → feature UI
+│   ├── (main)/                       # 메인 라우트 그룹 (URL에 포함되지 않음)
+│   │   ├── layout.tsx                # 메인 전용 레이아웃
+│   │   ├── page.tsx                  # "/" 시작 화면
 │   │   └── error.tsx                 # 쿼리 에러 경계 (retry + QueryErrorReset)
-│   └── api/main/items/route.ts       # main 서비스 BFF Route Handler (브라우저 재요청용)
+│   └── api/<서비스>/...              # 서비스별 BFF Route Handler (브라우저 재요청용)
 │
 ├── core/                             # 앱 전역 인프라 (서비스들을 묶는 계층)
 │   ├── providers.tsx                 # StoreProvider + QueryProvider 합성
@@ -63,18 +63,16 @@ src/
 │       ├── hooks.ts                  # useAppDispatch / useAppSelector / useAppStore
 │       └── store-provider.tsx        # 렌더 트리마다 스토어 1개 생성
 │
-├── features/                         # 서비스(도메인) 단위 모듈
-│   └── main/
+├── features/                         # 서비스(도메인) 단위 모듈 (아직 비어 있음)
+│   └── <서비스>/
 │       ├── api/                      # 클라이언트 데이터 계층 (TanStack Query)
-│       │   ├── main.queries.ts       # 캐시 계약: query key + cache tag + queryOptions
-│       │   └── main.mutations.ts     # useMutation 훅 (낙관적 업데이트)
+│       │   ├── <서비스>.queries.ts   # 캐시 계약: query key + cache tag + queryOptions
+│       │   └── <서비스>.mutations.ts # useMutation 훅 (낙관적 업데이트)
 │       ├── model/                    # 타입, Redux 슬라이스, 순수 로직
-│       │   ├── main.types.ts
-│       │   └── main-filter.slice.ts
 │       ├── server/                   # 서버 전용 코드 = Data Access Layer
-│       │   ├── main.repository.ts    # 데이터 소스 접근 (DB/외부 API로 교체)
-│       │   ├── main.data.ts          # 'use cache' 읽기 함수
-│       │   └── main.actions.ts       # 'use server' 쓰기 (zod 검증) + updateTag
+│       │   ├── <서비스>.repository.ts # Supabase(mobi_ai) 접근
+│       │   ├── <서비스>.data.ts      # 'use cache' 읽기 함수
+│       │   └── <서비스>.actions.ts   # 'use server' 쓰기 (zod 검증) + updateTag
 │       └── ui/                       # 서비스 컴포넌트
 │
 └── shared/                           # 서비스 무관 공용 코드 (features를 import 하지 않음)
@@ -88,6 +86,7 @@ src/
 
 supabase/migrations/                  # DB 스키마 변경 이력 (SQL, 파일 이름 = 실행 순서)
 scripts/check-supabase.mjs            # Supabase 연결·키 보호 점검
+scripts/check-migrations.mjs          # 마이그레이션 SQL의 mobi_ai 격리 규칙 검사
 scripts/check-staged-secrets.mjs      # 커밋 전 비밀 값 검사 (.githooks/pre-commit 에서 실행)
 ```
 
@@ -101,7 +100,7 @@ app → core → features → shared
 - 서비스끼리 직접 import 하지 않는다 (`features/a` → `features/b` 금지). 공유가 필요하면 `shared`로 올리거나 `app`에서 조립한다.
 - 서비스는 core 중 `@/core/store/hooks`(타입 지정 훅)만 import 할 수 있다.
 - `src/` 아래 새 최상위 폴더를 만들면 `boundaries/no-unknown-files` 에러가 난다.
-- query key·cache tag·Redux 슬라이스 이름에는 서비스 이름을 접두어로 붙인다 (`["main", ...]`, `"main:items"`, `mainFilter`).
+- query key·cache tag·Redux 슬라이스 이름에는 서비스 이름을 접두어로 붙인다 (`["admin", ...]`, `"admin:users"`, `adminRoleFilter`).
 - 배럴 파일(`index.ts`)은 두지 않는다. 서버 전용 모듈과 클라이언트 모듈이 한 진입점에 섞이면 번들 경계가 깨진다.
 
 ## 상태 책임 분리
@@ -116,20 +115,22 @@ app → core → features → shared
 
 **서버에서 온 데이터를 Redux에 복사하지 않는다.** 캐시가 두 군데가 되면 동기화 버그가 생긴다.
 
-## 데이터 흐름 (main 서비스 예제)
+## 데이터 흐름 (서비스 공통 패턴)
 
 ```
-[읽기]  (main)/page.tsx (RSC)
-          └ getMainItems()        'use cache' + cacheTag("main:items") → Supabase mobi_ai.main_items
+[읽기]  app/(<서비스>)/.../page.tsx (RSC)
+          └ get*()                'use cache' + cacheTag("<서비스>:<대상>") → Supabase mobi_ai.<테이블>
           └ createHydrationState() → <HydrationBoundary>
-              └ MainItemList      useSuspenseQuery(mainQueries.items())
-                                  stale 이후 재요청 → GET /api/main/items
+              └ 클라이언트 컴포넌트   useSuspenseQuery(<서비스>Queries.<대상>())
+                                  stale 이후 재요청 → GET /api/<서비스>/...
 
-[쓰기]  MainItemList → useToggleMainItem()
+[쓰기]  클라이언트 컴포넌트 → use<동사><대상>()
           ├ onMutate   낙관적 업데이트 (실패 시 onError에서 롤백)
-          ├ mutationFn toggleMainItemAction()  'use server' → zod 검증 → rpc toggle_main_item → updateTag("main:items")
+          ├ mutationFn <동사><대상>Action()  'use server' → zod 검증 → 인증·인가 → repository → updateTag
           └ onSettled  invalidateQueries → 브라우저 캐시 재동기화
 ```
+
+실제 코드 예시는 `add-service` 스킬의 `SKILL.md` 와 `templates.md` 에 있다.
 
 ## 새 서비스 추가
 
@@ -141,7 +142,7 @@ app → core → features → shared
 4. `npm run lint && npm run typecheck && npm run build`
 
 > 라우트 그룹 이름 `(admin)`은 URL에 들어가지 않는다. URL은 그룹 안의 폴더(`admin/`)로 정한다.
-> 서로 다른 그룹이 같은 URL을 가지면 빌드 에러가 나므로, `/`는 main 서비스만 사용한다.
+> 서로 다른 그룹이 같은 URL을 가지면 빌드 에러가 나므로, `/`는 메인 라우트 그룹(`(main)`)만 사용한다.
 
 ## 앱 보안
 
@@ -193,7 +194,7 @@ app → core → features → shared
 
 ### 처음 설정 (Dashboard에서 1회)
 
-1. **SQL Editor** 에 `supabase/migrations/20261108000000_create_mobi_ai_schema.sql` 내용을 붙여넣고 실행한다 (여러 번 실행해도 안전).
+1. **SQL Editor** 에서 `supabase/migrations/` 의 파일을 **이름 순서대로** 모두 실행한다 (각 파일은 여러 번 실행해도 안전).
 2. **Project Settings → Data API → Exposed schemas** 에 `mobi_ai` 를 추가하고 저장한다.
 3. `npm run check:supabase` 가 "결과: 통과" 인지 확인한다.
 

@@ -28,7 +28,7 @@ description: MOBI.AI가 다른 서비스와 공유하는 Supabase 프로젝트�
 
 ## 2. 마이그레이션 작성 규칙
 
-파일: `supabase/migrations/<YYYYMMDDHHMMSS>_<snake_case 설명>.sql` (참고 구현: `20261108000000_create_mobi_ai_schema.sql`)
+파일: `supabase/migrations/<YYYYMMDDHHMMSS>_<snake_case 설명>.sql` (참고: 스키마·권한은 `20261108000000_create_mobi_ai_schema.sql`, 테이블 예시는 `add-service` 스킬의 `templates.md`)
 
 1. **모든 객체 이름에 `mobi_ai.` 를 붙인다.** 스키마를 생략하면 공유 서비스의 `public` 에 생성된다.
 2. 새 테이블은 같은 파일에서:
@@ -43,7 +43,7 @@ description: MOBI.AI가 다른 서비스와 공유하는 Supabase 프로젝트�
 5. 다시 실행해도 안전하게 쓴다: `create ... if not exists`, `create or replace`, `drop ... if exists`.
 6. 이미 실행한 마이그레이션 파일은 고치지 않는다. 변경은 새 파일로 추가한다.
 7. 금지: `drop schema`, `create extension`, `security definer`, 공유 스키마(`public`·`auth`·`storage`…) 객체 변경.
-8. 이름 규칙: 테이블 `<서비스>_<복수형>`(예: `main_items`), 함수 `<동사>_<대상>`(예: `toggle_main_item`), 트리거 `<테이블>_<동작>`, 정책 `"<누가> can <동작> <대상>"`, 버킷 `mobi-ai-<용도>`.
+8. 이름 규칙: 테이블 `<서비스>_<복수형>`(예: `admin_users`), 함수 `<동사>_<대상>`(예: `toggle_admin_user`), 트리거 `<테이블>_<동작>`, 정책 `"<누가> can <동작> <대상>"`, 버킷 `mobi-ai-<용도>`.
 
 ## 3. 작성 후 검증 (AI 필수)
 
