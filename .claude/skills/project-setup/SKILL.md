@@ -16,6 +16,7 @@ description: MOBI.AI 저장소를 처음 받은 팀원의 개발 환경 설정 �
 
 ```bash
 npm install
+npx playwright install chromium   # E2E 테스트용 브라우저 (처음 한 번)
 ```
 
 ## 2. `.env.local` 작성 (사람이 직접)
@@ -42,15 +43,16 @@ npm run secure:env
 - `.env.development.local` 처럼 env 파일을 새로 만들 때마다 다시 실행한다.
 - Windows는 이 권한 체계가 없어 건너뛴다.
 
-## 4. 커밋 전 비밀 값 검사 켜기 (사용자가 직접)
+## 4. 커밋·push 전 자동 검사 켜기 (사용자가 직접)
 
 git 설정을 바꾸는 단계라 AI가 실행하지 않는다. 사용자에게 Claude Code 입력창에 아래를 그대로 입력하도록 안내한다.
 
 ```
-! chmod +x .githooks/pre-commit && git config core.hooksPath .githooks
+! chmod +x .githooks/pre-commit .githooks/pre-push && git config core.hooksPath .githooks
 ```
 
-켜 두면 `.env*`·키 파일, Supabase 키·JWT·프로젝트 URL·DB 접속 문자열이 섞인 커밋이 자동으로 막힌다. 이 저장소는 GitHub에 공개되어 있으므로 반드시 켠다.
+- **커밋 전**: `.env*`·`.dev.vars`·키 파일, Supabase 키·JWT·프로젝트 URL·DB 접속 문자열이 섞인 커밋을 막는다. 이 저장소는 GitHub에 공개되어 있으므로 반드시 켠다.
+- **push 전**: `npm run verify`(린트·타입 검사·Playwright E2E)가 통과해야 push 된다 (`e2e-testing` 스킬).
 
 ## 5. 연결 확인
 

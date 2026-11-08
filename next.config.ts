@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === "development";
 
-// nonce 기반 CSP는 모든 페이지를 동적 렌더링으로 바꿔 Cache Components(PPR)와 함께 쓸 수 없다.
+// nonce 기반 CSP는 모든 페이지를 요청마다 동적 렌더링하게 만들어 정적 페이지를 쓸 수 없다.
 // 그래서 Next.js 공식 문서의 "Without Nonces" 정책을 사용한다. (node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md)
 // 외부 도메인(이미지 CDN, 분석 스크립트, API 서버 등)을 쓰게 되면 해당 지시어에 도메인을 추가한다.
 const contentSecurityPolicy = [
@@ -39,9 +39,9 @@ const securityHeaders = [
       ]),
 ];
 
+// Cache Components(cacheComponents·partialPrefetching)는 쓰지 않는다.
+// Cloudflare Workers 런타임의 setTimeout 구현과 맞지 않아 요청이 멈춘다 (2026-11 OpenNext 1.20.16 에서 확인).
 const nextConfig: NextConfig = {
-  cacheComponents: true,
-  partialPrefetching: true,
   reactCompiler: true,
   poweredByHeader: false,
   async headers() {

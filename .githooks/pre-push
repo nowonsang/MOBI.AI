@@ -1,0 +1,6 @@
+#!/bin/sh
+# push 전에 린트·타입 검사·Playwright E2E(Next 서버 + Cloudflare Workers 런타임)를 모두 통과해야 한다.
+# 활성화: chmod +x .githooks/pre-push && git config core.hooksPath .githooks
+cd "$(git rev-parse --show-toplevel)" || exit 1
+echo "[pre-push] npm run verify (린트 · 타입 검사 · E2E 테스트) 실행 중..."
+exec npm run verify

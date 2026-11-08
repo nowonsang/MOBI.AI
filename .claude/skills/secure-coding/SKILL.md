@@ -1,6 +1,6 @@
 ---
 name: secure-coding
-description: MOBI.AI 팀 공용 보안 코딩 규칙. Server Action, Route Handler, 인증·인가, 환경 변수·비밀 값, 캐시('use cache'), 외부 요청, 리다이렉트, HTML 렌더링, 의존성 추가, CSP·보안 헤더를 작성하거나 수정·리뷰할 때 반드시 로드한다. 보안 점검이나 감사 요청에도 사용한다.
+description: MOBI.AI 팀 공용 보안 코딩 규칙. Server Action, Route Handler, 인증·인가, 환경 변수·비밀 값, 서버 캐시, 외부 요청, 리다이렉트, HTML 렌더링, 의존성 추가, CSP·보안 헤더, Cloudflare 배포를 작성하거나 수정·리뷰할 때 반드시 로드한다. 보안 점검이나 감사 요청에도 사용한다.
 ---
 
 # MOBI.AI 보안 코딩 규칙
@@ -31,9 +31,16 @@ Server Action은 UI에서 호출하지 않아도 **누구나 직접 POST로 호�
 
 ## 3. 캐시와 사용자 데이터
 
-- `'use cache'` 결과는 **모든 사용자가 공유**한다. 로그인 사용자 정보, 권한별로 다른 데이터, `cookies()`·`headers()` 에 의존하는 데이터를 `'use cache'` 로 캐시하지 않는다.
-- 요청별 데이터는 캐시하지 않거나 `'use cache: private'` 를 쓴다 (서버 캐시에 저장되지 않음).
-- 쓰기 후에는 같은 `cacheTag` 를 `updateTag` 로 무효화한다.
+- 지금은 서버 캐시를 쓰지 않는다 (Cloudflare Workers 에서 Cache Components 미동작, 캐시 저장소 없음). DB 데이터 페이지는 요청마다 렌더한다.
+- 나중에 서버 캐시(`unstable_cache`, fetch 캐시)를 도입해도 그 결과는 **모든 사용자가 공유**한다. 로그인 사용자 정보, 권한별로 다른 데이터, `cookies()`·`headers()` 에 의존하는 데이터는 서버 캐시에 넣지 않는다.
+- 사용자별 데이터의 브라우저 캐시(TanStack Query)는 query key 에 사용자 구분을 넣고, 로그아웃 시 `queryClient.clear()` 한다.
+
+## 3-1. 배포 (Cloudflare Workers)
+
+- **로컬에서 Cloudflare 로 배포하지 않는다.** OpenNext 로컬 빌드는 `.env.local` 값을 번들(`.open-next/cloudflare/next-env.mjs`)에 넣는다. 배포는 Git 연동(Workers Builds)으로만 한다.
+- `npm run cf:deploy` 는 빌드 결과물에 비밀 값이 있으면 배포 전에 멈춘다 (`scripts/check-build-secrets.mjs`). 이 검사를 건너뛰는 명령(`npx opennextjs-cloudflare deploy` 직접 실행 등)을 쓰지 않는다.
+- 운영 비밀 값은 Cloudflare 대시보드 → Worker → Settings → Variables & Secrets 에 **Secret** 타입으로 넣는다. `wrangler.jsonc` 의 `vars` 에 비밀 값을 쓰지 않는다.
+- `.dev.vars` 는 로컬 비밀 파일이다. 커밋 금지(gitignore·커밋 전 검사 대상).
 
 ## 4. 서버/클라이언트 경계
 
@@ -57,7 +64,7 @@ Server Action은 UI에서 호출하지 않아도 **누구나 직접 POST로 호�
 - 사용자 입력으로 만든 URL로 `redirect()`·`router.push()` 하지 않는다 (open redirect). 허용 목록의 내부 경로만 허용한다.
 - 서버에서 사용자 입력 URL로 `fetch` 하지 않는다 (SSRF). 호출 대상 도메인은 코드에 고정한다.
 - 보안 헤더와 CSP는 `next.config.ts` 에 있다. 외부 도메인이 필요하면 해당 지시어(`img-src`, `connect-src` 등)에 **그 도메인만** 추가한다. `*` 나 `https:` 같은 와일드카드를 추가하지 않는다.
-- 현재 CSP는 Cache Components(PPR)와 호환되도록 `script-src 'unsafe-inline'` 을 허용한다 (nonce CSP는 모든 페이지를 동적 렌더링으로 바꾼다). 그러므로 XSS 방어는 위의 출력 규칙에 의존한다.
+- 현재 CSP는 정적 페이지를 유지하려고 `script-src 'unsafe-inline'` 을 허용한다 (nonce CSP는 모든 페이지를 요청마다 동적 렌더링하게 만든다). 그러므로 XSS 방어는 위의 출력 규칙에 의존한다.
 
 ## 7. 의존성
 
@@ -70,14 +77,15 @@ Server Action은 UI에서 호출하지 않아도 **누구나 직접 POST로 호�
 - `.claude/settings.json`, `.claude/settings.local.json`, `.claude/hooks/**` 는 AI가 수정할 수 없다. 변경이 필요하면 사용자가 직접 수정하고 PR 리뷰를 받는다.
 - 훅이 명령을 막으면 다른 명령으로 우회하지 말고, 막힌 이유를 사용자에게 설명한다. 코드 검색은 Grep 도구나 옵션 없는 `rg` 를 쓴다.
 - 환경 변수를 통째로 출력하거나(`process.env` 전체, `os.environ`), env 파일을 직접 불러오는(`dotenv`, `loadEnvConfig`) 코드·명령을 만들지 않는다. 키가 필요한 작업은 기존 `npm run` 스크립트를 쓴다.
-- 커밋은 `.githooks/pre-commit` 의 비밀 값 검사를 통과해야 한다. `--no-verify` 로 건너뛰지 않는다.
+- 커밋은 `.githooks/pre-commit` 의 비밀 값 검사를, push 는 `.githooks/pre-push` 의 `npm run verify`(린트·타입·Playwright E2E)를 통과해야 한다. `--no-verify` 로 건너뛰지 않는다.
 
 ## 9. 보안 체크리스트 (보안 관련 코드를 바꿨을 때)
 
 - [ ] Action/Route Handler 입력을 zod로 검증했다
 - [ ] Action/Route Handler 안에서 인증·인가(소유권)를 확인했다
 - [ ] 반환값이 필요한 필드만 담은 DTO다
-- [ ] 사용자별 데이터를 `'use cache'` 로 캐시하지 않았다
+- [ ] 사용자별 데이터를 서버 캐시에 넣지 않았다
+- [ ] 배포는 Git 연동(Workers Builds)으로만 하고, 비밀 값은 Cloudflare Secret 으로 넣었다
 - [ ] 비밀 값이 클라이언트 번들·로그·응답에 들어가지 않는다 (`NEXT_PUBLIC_` 확인)
 - [ ] 외부 도메인을 추가했다면 CSP에 그 도메인만 넣었다
 - [ ] 마이그레이션을 바꿨다면 `npm run check:migrations` 통과 + `database.types.ts` 갱신 (`supabase-schema` 스킬)

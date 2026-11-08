@@ -10,9 +10,17 @@
     "typecheck": "next typegen && tsc --noEmit",
     "check:supabase": "node scripts/check-supabase.mjs",
     "check:migrations": "node scripts/check-migrations.mjs",
-    "secure:env": "node scripts/secure-env-files.mjs"
+    "secure:env": "node scripts/secure-env-files.mjs",
+    "cf:build": "opennextjs-cloudflare build",
+    "cf:preview": "npm run cf:build && opennextjs-cloudflare preview",
+    "cf:deploy": "node scripts/check-build-secrets.mjs && opennextjs-cloudflare deploy -- --keep-vars",
+    "test:e2e": "playwright test",
+    "test:e2e:cf": "E2E_TARGET=cloudflare playwright test",
+    "verify": "npm run lint && npm run typecheck && npm run test:e2e && npm run test:e2e:cf",
+    "posttest:e2e:cf": "node -e \"require('node:fs').rmSync('.open-next',{recursive:true,force:true})\""
   },
   "dependencies": {
+    "@opennextjs/cloudflare": "^1.20.16",
     "@reduxjs/toolkit": "^2.14.0",
     "@supabase/supabase-js": "^2.119.0",
     "@tanstack/react-query": "^5.107.1",
@@ -26,6 +34,7 @@
   },
   "devDependencies": {
     "@next/env": "^16.4.5",
+    "@playwright/test": "^1.65.0",
     "@tailwindcss/turbopack": "^4",
     "@tanstack/eslint-plugin-query": "^5.107.1",
     "@types/node": "^20",
@@ -36,11 +45,18 @@
     "eslint-config-next": "16.4.5",
     "eslint-plugin-boundaries": "^7.4.2",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.158.0"
   },
   "overrides": {
     "@typescript-eslint/typescript-estree": {
       "minimatch": "^11.0.1"
+    },
+    "@node-minify/core": {
+      "glob": "^14.0.4"
+    },
+    "@opennextjs/cloudflare": {
+      "glob": "^14.0.4"
     }
   }
 }

@@ -20,6 +20,7 @@ Detailed rules live in project skills under `.claude/skills/`. Load them before 
 | `secure-coding` | Touching Server Actions, Route Handlers, auth, env vars, caching, external requests, CSP, or dependencies |
 | `supabase-schema` | Any database work: tables, SQL migrations, RLS, Supabase queries, auth users, storage, cleanup |
 | `ui-design` | Any web UI work: pages, components, layout, styles, forms, copy, images, animation |
+| `e2e-testing` | Before any `git push`, when writing or changing tests, or when adding/changing screens, routes, or APIs |
 
 Non-negotiable core rules:
 
@@ -27,11 +28,13 @@ Non-negotiable core rules:
 - Each service is `features/<service>/{model,server,api,ui}` + `app/(<service>)/` + `app/api/<service>/`. Follow the templates in the `add-service` skill (`SKILL.md`, `templates.md`) as the reference implementation. No barrel `index.ts` files.
 - Every web UI must be responsive (mobile-first; must work at 360, 768, 1024, and 1440px with no horizontal scroll) and follow the `ui-design` skill: Hyundai-derived colors and proportions, Toss-style UX rules. Use only the design tokens in `src/app/globals.css`; hard-coded colors are ESLint errors.
 - State: server data via Server Components + TanStack Query; client UI state via Redux; shareable state in the URL. Never copy server data into Redux.
-- Server Actions and Route Handlers are public endpoints: validate input with zod, re-check auth inside them, return minimal DTOs. Never cache per-user data with `'use cache'`.
+- Server Actions and Route Handlers are public endpoints: validate input with zod, re-check auth inside them, return minimal DTOs. Never put per-user data in a server cache.
+- Deployment target is Cloudflare Workers via OpenNext (not Cloudflare Pages). Do not use Cache Components (`cacheComponents`, `'use cache'`, `cacheLife`, `cacheTag`): requests hang on the Workers runtime. Pass server data to the client with TanStack `prefetchQuery` + `dehydrate`, and render DB-backed pages per request with `await connection()`. Never deploy from a local machine (the local OpenNext build embeds `.env.local` values); deploys go through Git (Workers Builds), with secrets set as Cloudflare Secrets.
+- Before every `git push`, run `npm run verify` (lint, typecheck, Playwright E2E on the Next server and on the Cloudflare Workers runtime) and push only if everything passes. Add E2E tests for new screens, routes, and APIs (`e2e-testing` skill).
 - Supabase (Free plan, hackathon) is shared with another live service, including API keys, auth users, and storage. All MOBI.AI database objects live in the `mobi_ai` schema; never modify `public`, `auth`, `storage`, extensions, or project settings. Access the DB only from `features/*/server` via `@/shared/supabase/admin`. Schema changes are new files in `supabase/migrations/` that must pass `npm run check:migrations`; the user runs them in the SQL Editor (never `supabase db push`). Verify connectivity only with `npm run check:supabase`.
 - Done means `npm run lint`, `npm run typecheck` (and `npm run build` for structural changes) all pass. Update `README.md` when structure or rules change.
 - If a structure outside these rules seems necessary, ask the user first instead of improvising.
 
 ## Sensitive files
 
-Never read, print, copy, or edit secret files (`.env*`, private keys, credentials) or dump environment variables. They are blocked by `.claude/settings.json` and `.claude/hooks/protect-sensitive-files.mjs`; do not try to work around a block. If a value is needed, ask the user for the variable name only. Env files must be owner-only (mode 600): run `npm run secure:env` (it changes permissions without reading contents). `.claude/settings*.json` and `.claude/hooks/**` are protected guard files: AI must not modify them; ask the user to change them directly.
+Never read, print, copy, or edit secret files (`.env*`, `.dev.vars*`, private keys, credentials) or the OpenNext build output's env file (`.open-next/cloudflare/next-env.mjs`), and never dump environment variables. They are blocked by `.claude/settings.json` and `.claude/hooks/protect-sensitive-files.mjs`; do not try to work around a block. If a value is needed, ask the user for the variable name only. Env files must be owner-only (mode 600): run `npm run secure:env` (it changes permissions without reading contents). `.claude/settings*.json` and `.claude/hooks/**` are protected guard files: AI must not modify them; ask the user to change them directly.

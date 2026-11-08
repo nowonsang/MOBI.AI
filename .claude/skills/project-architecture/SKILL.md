@@ -33,7 +33,7 @@ app → core → features → shared
 ```
 features/<서비스>/
 ├── model/    순수 타입·Redux 슬라이스·순수 함수. React·fetch·서버 API 금지
-├── server/   서버 전용 (Data Access Layer). Supabase(mobi_ai)·외부 API 접근, 'use cache' 읽기, 'use server' 쓰기
+├── server/   서버 전용 (Data Access Layer). Supabase(mobi_ai)·외부 API 접근, 서버 컴포넌트용 읽기, 'use server' 쓰기
 ├── api/      브라우저 데이터 계층. queryOptions(캐시 계약), useMutation 훅
 └── ui/       React 컴포넌트
 ```
@@ -68,7 +68,7 @@ features/<서비스>/
 
 | 상태 | 담당 | 금지 |
 | --- | --- | --- |
-| 초기 렌더용 서버 데이터 | Server Component + `server/*.data.ts` (`'use cache'` + `cacheTag`) | 클라이언트에서 첫 화면 데이터를 fetch만으로 그리기 |
+| 초기 렌더용 서버 데이터 | Server Component + `server/*.data.ts` → `prefetchQuery` + `<HydrationBoundary>` | 클라이언트에서 첫 화면 데이터를 fetch만으로 그리기 |
 | 브라우저 서버 데이터 (재요청·뮤테이션·낙관적 업데이트) | TanStack Query (`api/*`) | 서버 데이터를 Redux·useState에 복사 |
 | 클라이언트 전역 UI 상태 | Redux Toolkit 슬라이스 | 서버 응답을 슬라이스에 저장 |
 | 공유·북마크가 필요한 상태 (검색어, 페이지) | URL `searchParams` | 같은 값을 Redux에 중복 저장 |
@@ -77,9 +77,11 @@ features/<서비스>/
 ## 5. 서버/클라이언트 경계와 캐시
 
 - `"use client"` 는 상호작용이 필요한 **말단 컴포넌트**에만 붙인다. 훅 파일(`*.mutations.ts`)과 순수 모듈에는 붙이지 않는다.
-- 쿼리를 읽는 클라이언트 컴포넌트(`useSuspenseQuery`/`useQuery`)는 반드시 `<Suspense>` 안에 렌더한다 (Cache Components 프리렌더 제약).
-- 서버 → 클라이언트 캐시 전달은 `@/core/query/hydration`의 `createHydrationState` + `<HydrationBoundary>` 만 쓴다. TanStack의 `dehydrate()`를 직접 쓰지 않는다 (프리렌더 중 시각을 읽어 빌드 에러).
-- 쓰기는 Server Action에서 하고, 같은 태그를 `updateTag` 로 무효화한다. 클라이언트는 `onMutate`(낙관적) → `onError`(롤백) → `onSettled`(`invalidateQueries`) 순서를 지킨다.
+- **Cache Components 는 쓰지 않는다** (`cacheComponents`, `'use cache'`, `cacheLife`, `cacheTag`). 배포 환경인 Cloudflare Workers 에서 요청이 멈춘다. `'use cache'` 를 쓰면 빌드가 실패한다.
+- 서버 → 클라이언트 데이터 전달: 서버 컴포넌트에서 `new QueryClient()` → `prefetchQuery({ ...<서비스>Queries.x(), queryFn: () => getX() })` → `<HydrationBoundary state={dehydrate(queryClient)}>`. 쿼리 키는 반드시 캐시 계약(`api/*.queries.ts`)의 것을 쓴다.
+- DB 데이터를 읽는 페이지는 `await connection()` 으로 요청 시점에 렌더한다. 서버 캐시 저장소(R2·D1)가 없어 빌드 시점 데이터로 굳으면 갱신되지 않는다.
+- 쿼리를 읽는 클라이언트 컴포넌트는 `<Suspense>`(스켈레톤 fallback) 안에 두고 서버 쪽 데이터 조회도 그 안에서 한다 (스트리밍).
+- 쓰기는 Server Action에서 한다. 클라이언트는 `onMutate`(낙관적) → `onError`(롤백) → `onSettled`(`invalidateQueries`) 순서를 지킨다.
 - Server Action을 `mutationFn`에 그대로 넘기지 않는다: `mutationFn: (id: string) => someAction(id)`.
 - `error.tsx` 의 복구 함수는 `retry` 이고, `useQueryErrorResetBoundary().reset()` 을 먼저 호출한다.
 - Next.js 16 API는 학습 데이터와 다를 수 있다. 처음 쓰는 API는 `node_modules/next/dist/docs/` 에서 확인한다.
@@ -101,6 +103,7 @@ features/<서비스>/
 5. 보안 관련 코드(Server Action, Route Handler, 환경 변수, 인증)를 건드렸다면 `secure-coding` 스킬의 체크리스트 확인
 6. DB(테이블·SQL·Supabase 조회)를 건드렸다면 `supabase-schema` 스킬의 규칙과 검증 절차 확인
 7. 화면(UI)을 만들거나 바꿨다면 `ui-design` 스킬의 완료 체크리스트 확인 (반응형 360·768·1024·1440px 필수)
+8. 화면·라우트·API 를 추가했다면 E2E 테스트도 추가하고, push 전에 `npm run verify` 통과 (`e2e-testing` 스킬)
 
 > 파일을 수정할 때마다 PostToolUse 훅이 ESLint를 돌려 위반을 바로 알려준다. 훅이 위반을 보고하면 다음 작업으로 넘어가기 전에 고친다.
 

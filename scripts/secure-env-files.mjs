@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 프로젝트 루트의 환경 변수 파일(.env*) 권한을 본인만 읽고 쓸 수 있게(600) 바꾼다: `npm run secure:env`
+// 프로젝트 루트의 비밀 값 파일(.env*, wrangler 의 .dev.vars*) 권한을 본인만 읽고 쓸 수 있게(600) 바꾼다: `npm run secure:env`
 // 파일 내용은 읽지 않고 권한만 바꾼다. Windows는 이 방식의 파일 권한이 없어 건너뛴다.
 
 import { chmodSync, readdirSync, statSync } from "node:fs";
@@ -13,7 +13,8 @@ if (process.platform === "win32") {
 const projectDir = process.cwd();
 const envFiles = readdirSync(projectDir).filter(
   (name) =>
-    name.startsWith(".env") && statSync(path.join(projectDir, name)).isFile(),
+    (name.startsWith(".env") || name.startsWith(".dev.vars")) &&
+    statSync(path.join(projectDir, name)).isFile(),
 );
 
 if (envFiles.length === 0) {

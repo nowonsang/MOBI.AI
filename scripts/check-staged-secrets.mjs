@@ -12,6 +12,7 @@ const git = (args) =>
 // 커밋하면 안 되는 파일 (이름 기준)
 const FORBIDDEN_FILES = [
   /^\.env/i,
+  /^\.dev\.vars/i, // wrangler 로컬 비밀 값
   /\.(pem|key|p12|pfx|jks|keystore)$/i,
   /^id_(rsa|dsa|ecdsa|ed25519)/i,
   /^\.(npmrc|netrc|pgpass)$/i,

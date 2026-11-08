@@ -126,6 +126,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Cloudflare(OpenNext)·Playwright 생성물
+    ".open-next/**",
+    ".wrangler/**",
+    "test-results/**",
+    "playwright-report/**",
   ]),
 ]);
 

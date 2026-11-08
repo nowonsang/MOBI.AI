@@ -21,7 +21,7 @@ src/features/admin/
 ├── model/admin.types.ts
 ├── model/admin-<주제>.slice.ts      # 클라이언트 전역 UI 상태가 있을 때만
 ├── server/admin.repository.ts       # import "server-only"
-├── server/admin.data.ts             # 'use cache' 읽기
+├── server/admin.data.ts             # 서버 컴포넌트용 읽기 (권한 확인·DTO)
 ├── server/admin.actions.ts          # 'use server' 쓰기
 ├── api/admin.queries.ts             # 캐시 계약
 ├── api/admin.mutations.ts
@@ -46,10 +46,6 @@ export const adminKeys = {
   users: () => [...adminKeys.all, "users"] as const,
 };
 
-export const adminTags = {
-  users: "admin:users",
-};
-
 export const adminQueries = {
   users: () =>
     queryOptions({
@@ -65,29 +61,22 @@ export const adminQueries = {
 ```ts
 import "server-only";
 
-import { cacheLife, cacheTag } from "next/cache";
-import { adminTags } from "../api/admin.queries";
 import { findAdminUsers } from "./admin.repository";
 
+// 서버 컴포넌트용 읽기 함수. 인증·인가 확인과 DTO 변환을 여기(또는 repository)에서 한다.
 export async function getAdminUsers() {
-  "use cache";
-  cacheLife("max");
-  cacheTag(adminTags.users);
-
   return findAdminUsers();
 }
 ```
 
-> 사용자별 데이터(로그인 사용자 정보, 권한에 따라 다른 결과)는 `'use cache'` 로 캐시하지 않는다. 모든 사용자가 같은 결과를 공유하게 된다. `secure-coding` 스킬 참고.
+> 서버 캐시(`'use cache'`, `unstable_cache`)는 쓰지 않는다. Cloudflare Workers 에서 Cache Components 가 동작하지 않고, 서버 캐시 저장소(R2·D1)도 아직 없다. 브라우저 캐시는 TanStack Query 가 맡는다.
 
 **서버 쓰기** — `server/admin.actions.ts`
 
 ```ts
 "use server";
 
-import { updateTag } from "next/cache";
 import { z } from "zod";
-import { adminTags } from "../api/admin.queries";
 import { updateAdminUserRole } from "./admin.repository";
 
 const inputSchema = z.object({
@@ -99,9 +88,8 @@ export async function updateAdminUserRoleAction(input: z.input<typeof inputSchem
   const { userId, role } = inputSchema.parse(input);
   // 인증·인가 확인을 여기(또는 repository)에서 한다. 페이지의 인증 검사는 Action까지 보호하지 않는다.
 
-  const user = await updateAdminUserRole(userId, role);
-  updateTag(adminTags.users);
-  return user; // 화면에 필요한 필드만 담은 DTO
+  // 서버 캐시가 없으므로 무효화할 것이 없다. 브라우저 쪽은 뮤테이션 훅의 invalidateQueries 가 갱신한다.
+  return updateAdminUserRole(userId, role); // 화면에 필요한 필드만 담은 DTO
 }
 ```
 
@@ -109,9 +97,13 @@ export async function updateAdminUserRoleAction(input: z.input<typeof inputSchem
 
 ```tsx
 import { Suspense } from "react";
-import { HydrationBoundary } from "@tanstack/react-query";
-import { createHydrationState } from "@/core/query/hydration";
-import { adminKeys, adminTags } from "@/features/admin/api/admin.queries";
+import { connection } from "next/server";
+import {
+  HydrationBoundary,
+  QueryClient,
+  dehydrate,
+} from "@tanstack/react-query";
+import { adminQueries } from "@/features/admin/api/admin.queries";
 import { getAdminUsers } from "@/features/admin/server/admin.data";
 import { AdminUserList } from "@/features/admin/ui/admin-user-list";
 
@@ -133,14 +125,18 @@ export default function AdminPage() {
 }
 
 async function AdminUsersData() {
-  const users = await getAdminUsers();
-  const state = await createHydrationState(
-    [{ queryKey: adminKeys.users(), data: users }],
-    { tags: [adminTags.users] },
-  );
+  // DB 데이터는 요청마다 새로 읽는다 (빌드 시점 데이터로 정적 페이지가 굳지 않게).
+  await connection();
+
+  // 서버에서 같은 쿼리 키로 미리 채워 브라우저로 넘긴다. 상대 경로 fetch 는 서버에서 안 되므로 queryFn 을 서버 함수로 바꾼다.
+  const queryClient = new QueryClient();
+  await queryClient.prefetchQuery({
+    ...adminQueries.users(),
+    queryFn: () => getAdminUsers(),
+  });
 
   return (
-    <HydrationBoundary state={state}>
+    <HydrationBoundary state={dehydrate(queryClient)}>
       <AdminUserList />
     </HydrationBoundary>
   );

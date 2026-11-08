@@ -41,4 +41,15 @@ yarn-error.log*
 next-env.d.ts
 
 # claude code (개인 설정만 제외, .claude/settings.json·hooks는 팀 공유용으로 커밋)
- .claude/settings.local.json
+.claude/settings.local.json
+
+# cloudflare (OpenNext 빌드 결과, wrangler 로컬 상태, 로컬 비밀 값)
+/.open-next/
+/.wrangler/
+.dev.vars*
+
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
