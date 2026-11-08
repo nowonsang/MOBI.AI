@@ -55,11 +55,47 @@ const architecture = {
   },
 };
 
+// Supabase는 다른 서비스와 공유한다. DB 접근은 mobi_ai 스키마로 고정된 @/shared/supabase/admin 만 쓴다.
+const supabaseIsolation = [
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/shared/supabase/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@supabase/*"],
+              message:
+                "Supabase 클라이언트는 @/shared/supabase/admin 의 getSupabaseAdminClient()만 사용합니다 (mobi_ai 스키마 고정).",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.property.name='schema']",
+          message:
+            "Supabase 스키마 전환 금지: mobi_ai 외의 스키마(public 등)는 공유 서비스 소유입니다.",
+        },
+      ],
+    },
+  },
+];
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   ...pluginQuery.configs["flat/recommended"],
   architecture,
+  ...supabaseIsolation,
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

@@ -25,13 +25,15 @@ app → core → features → shared
 - `src/` 바로 아래에 새 최상위 폴더를 만들지 않는다 (`boundaries/no-unknown-files` 에러).
 - 배럴 파일(`index.ts`)을 만들지 않는다. 서버 전용 모듈과 클라이언트 모듈이 한 진입점에 섞이면 번들 경계가 깨진다. 항상 실제 파일 경로로 import 한다.
 - 다른 계층은 `@/` 별칭으로, 같은 서비스 내부는 상대 경로(`../model/...`)로 import 한다.
+- Supabase 클라이언트는 `src/shared/supabase/admin.ts` 하나만 쓴다 (서버 전용, 기본 스키마 `mobi_ai`, ESLint로 강제). 예외적으로 `shared/supabase/database.types.ts` 는 DB 전체의 타입 계약이라 테이블 이름을 알아도 된다. DB 규칙은 `supabase-schema` 스킬.
+- 저장소 루트의 `supabase/migrations/` 는 DB 스키마 변경 이력, `scripts/` 는 개발 도구 스크립트 자리다. 그 외 새 루트 폴더는 사용자와 먼저 상의한다.
 
 ## 2. 서비스 내부 구조
 
 ```
 features/<서비스>/
 ├── model/    순수 타입·Redux 슬라이스·순수 함수. React·fetch·서버 API 금지
-├── server/   서버 전용 (Data Access Layer). DB/외부 API 접근, 'use cache' 읽기, 'use server' 쓰기
+├── server/   서버 전용 (Data Access Layer). Supabase(mobi_ai)·외부 API 접근, 'use cache' 읽기, 'use server' 쓰기
 ├── api/      브라우저 데이터 계층. queryOptions(캐시 계약), useMutation 훅
 └── ui/       React 컴포넌트
 ```
@@ -92,11 +94,12 @@ features/<서비스>/
 
 작업을 끝냈다고 보고하기 전에 모두 확인한다. 하나라도 실패하면 고치고 다시 실행한다.
 
-1. `npm run lint` — 아키텍처 위반(`boundaries/*`) 포함 에러 0
+1. `npm run lint` — 아키텍처 위반(`boundaries/*`), Supabase 격리 규칙, 마이그레이션 검사 포함 에러 0
 2. `npm run typecheck`
 3. 구조·라우트·데이터 흐름을 바꿨다면 `npm run build`
 4. 폴더 구조나 규칙이 바뀌었다면 `README.md` 를 함께 갱신
 5. 보안 관련 코드(Server Action, Route Handler, 환경 변수, 인증)를 건드렸다면 `secure-coding` 스킬의 체크리스트 확인
+6. DB(테이블·SQL·Supabase 조회)를 건드렸다면 `supabase-schema` 스킬의 규칙과 검증 절차 확인
 
 > 파일을 수정할 때마다 PostToolUse 훅이 ESLint를 돌려 위반을 바로 알려준다. 훅이 위반을 보고하면 다음 작업으로 넘어가기 전에 고친다.
 

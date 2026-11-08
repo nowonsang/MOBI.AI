@@ -6,11 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "typecheck": "next typegen && tsc --noEmit"
+    "lint": "eslint && node scripts/check-migrations.mjs",
+    "typecheck": "next typegen && tsc --noEmit",
+    "check:supabase": "node scripts/check-supabase.mjs",
+    "check:migrations": "node scripts/check-migrations.mjs"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.14.0",
+    "@supabase/supabase-js": "^2.119.0",
     "@tanstack/react-query": "^5.107.1",
     "@tanstack/react-query-devtools": "^5.107.1",
     "next": "16.4.5",
@@ -21,6 +24,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@next/env": "^16.4.5",
     "@tailwindcss/turbopack": "^4",
     "@tanstack/eslint-plugin-query": "^5.107.1",
     "@types/node": "^20",

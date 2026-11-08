@@ -142,6 +142,7 @@ async function AdminUsersData() {
 
 ## 3. 연결
 
+0. 테이블이 필요하면 `supabase-schema` 스킬을 로드하고 그 규칙대로 `supabase/migrations/<YYYYMMDDHHMMSS>_create_<서비스>_<테이블>.sql` 을 만든다. 테이블 이름은 `mobi_ai.<서비스>_<복수형>` (예: `mobi_ai.admin_users`). `npm run check:migrations` 통과 → `src/shared/supabase/database.types.ts` 갱신 → 사용자에게 SQL Editor 실행 요청 순서로 진행한다.
 1. Redux 슬라이스를 만들었다면 `src/core/store/store.ts` 의 `combineSlices(...)` 에 추가한다.
 2. 외부 도메인(API 서버, 이미지 CDN)을 쓰면 `next.config.ts` 의 CSP 해당 지시어에 **필요한 도메인만** 추가한다.
 3. 새 환경 변수가 필요하면 `src/shared/config/server-env.ts` 스키마에 추가하고 README "환경 변수"에 이름만 기록한다.
@@ -149,4 +150,4 @@ async function AdminUsersData() {
 
 ## 4. 검증
 
-`npm run lint && npm run typecheck && npm run build` 가 모두 통과해야 완료다. 빌드 결과의 Route 표에서 새 페이지와 API 경로를 확인한다.
+`npm run lint && npm run typecheck && npm run build` 가 모두 통과해야 완료다 (`lint` 에 마이그레이션 검사 포함). 빌드 결과의 Route 표에서 새 페이지와 API 경로를 확인한다. 새 테이블을 썼다면 사용자가 SQL을 실행한 뒤에야 빌드가 통과한다.

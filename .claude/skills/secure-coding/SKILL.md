@@ -40,7 +40,17 @@ Server Action은 UI에서 호출하지 않아도 **누구나 직접 POST로 호�
 - 클라이언트 컴포넌트 props로 비밀 값·내부 ID·전체 레코드를 넘기지 않는다.
 - DB 클라이언트·SDK 키를 쓰는 모듈은 `server/` 밖에서 import 하지 않는다.
 
-## 5. 브라우저 보안
+## 5. Supabase (다른 서비스와 공유하는 프로젝트)
+
+스키마 격리·마이그레이션 규칙은 `supabase-schema` 스킬에 있다. DB 작업 전에 반드시 그 스킬을 로드한다. 보안 관점의 핵심만 여기 둔다.
+
+- `service_role` 키는 RLS를 우회하고 **공유 서비스 DB·로그인 사용자·스토리지 전체**에 대한 관리자 권한을 가진다. 그래서:
+  - 서버(`features/*/server` → `@/shared/supabase/admin`)에서만 쓴다. 브라우저용 Supabase 클라이언트를 만들지 않는다 (필요해지면 사용자와 먼저 상의 → 공개용 키 + RLS + CSP `connect-src` 추가).
+  - 조회는 필요한 컬럼만 명시하고, Supabase 에러 객체를 그대로 응답에 넣지 않는다 (`error.code` 만 담아 던진다).
+- `anon`·`authenticated` 역할은 공유 서비스의 공개 키·로그인 사용자와 공유된다. 이 역할에 `mobi_ai` 권한을 주는 변경은 반드시 사용자 확인을 받는다.
+- AI는 원격 DB에 SQL을 실행하지 않는다. 연결 점검은 `npm run check:supabase` 로만 한다 (키 값은 출력되지 않는다).
+
+## 6. 브라우저 보안
 
 - `dangerouslySetInnerHTML` 은 쓰지 않는다. 꼭 필요하면 신뢰할 수 있는 sanitizer를 거친 값만 넣고 사용자에게 알린다.
 - 사용자 입력으로 만든 URL로 `redirect()`·`router.push()` 하지 않는다 (open redirect). 허용 목록의 내부 경로만 허용한다.
@@ -48,18 +58,20 @@ Server Action은 UI에서 호출하지 않아도 **누구나 직접 POST로 호�
 - 보안 헤더와 CSP는 `next.config.ts` 에 있다. 외부 도메인이 필요하면 해당 지시어(`img-src`, `connect-src` 등)에 **그 도메인만** 추가한다. `*` 나 `https:` 같은 와일드카드를 추가하지 않는다.
 - 현재 CSP는 Cache Components(PPR)와 호환되도록 `script-src 'unsafe-inline'` 을 허용한다 (nonce CSP는 모든 페이지를 동적 렌더링으로 바꾼다). 그러므로 XSS 방어는 위의 출력 규칙에 의존한다.
 
-## 6. 의존성
+## 7. 의존성
 
 - 새 패키지는 꼭 필요할 때만 추가하고, 이유와 함께 사용자에게 알린다. 다운로드 수가 적거나 이름이 유명 패키지와 비슷한 패키지(typosquatting)는 피한다.
 - 추가·업데이트 후 `npm audit` 결과가 0건인지 확인한다. `package-lock.json` 을 함께 커밋한다.
 - `npm audit fix --force` 는 메이저 다운그레이드를 일으킬 수 있으므로 쓰지 않는다. 필요하면 `package.json` 의 `overrides` 를 쓰고 README "의존성 보안 메모"에 이유를 남긴다.
 
-## 7. AI 작업 보호 장치 (수정 금지)
+## 8. AI 작업 보호 장치 (수정 금지)
 
 - `.claude/settings.json`, `.claude/settings.local.json`, `.claude/hooks/**` 는 AI가 수정할 수 없다. 변경이 필요하면 사용자가 직접 수정하고 PR 리뷰를 받는다.
 - 훅이 명령을 막으면 다른 명령으로 우회하지 말고, 막힌 이유를 사용자에게 설명한다. 코드 검색은 Grep 도구나 옵션 없는 `rg` 를 쓴다.
+- 환경 변수를 통째로 출력하거나(`process.env` 전체, `os.environ`), env 파일을 직접 불러오는(`dotenv`, `loadEnvConfig`) 코드·명령을 만들지 않는다. 키가 필요한 작업은 기존 `npm run` 스크립트를 쓴다.
+- 커밋은 `.githooks/pre-commit` 의 비밀 값 검사를 통과해야 한다. `--no-verify` 로 건너뛰지 않는다.
 
-## 8. 보안 체크리스트 (보안 관련 코드를 바꿨을 때)
+## 9. 보안 체크리스트 (보안 관련 코드를 바꿨을 때)
 
 - [ ] Action/Route Handler 입력을 zod로 검증했다
 - [ ] Action/Route Handler 안에서 인증·인가(소유권)를 확인했다
@@ -67,4 +79,5 @@ Server Action은 UI에서 호출하지 않아도 **누구나 직접 POST로 호�
 - [ ] 사용자별 데이터를 `'use cache'` 로 캐시하지 않았다
 - [ ] 비밀 값이 클라이언트 번들·로그·응답에 들어가지 않는다 (`NEXT_PUBLIC_` 확인)
 - [ ] 외부 도메인을 추가했다면 CSP에 그 도메인만 넣었다
+- [ ] 마이그레이션을 바꿨다면 `npm run check:migrations` 통과 + `database.types.ts` 갱신 (`supabase-schema` 스킬)
 - [ ] `npm audit` 0건, `npm run lint` / `typecheck` / `build` 통과

@@ -17,6 +17,7 @@ Detailed rules live in project skills under `.claude/skills/`. Load them before 
 | `project-architecture` | Before adding, changing, moving, or reviewing any code |
 | `add-service` | Creating a new service (domain module) |
 | `secure-coding` | Touching Server Actions, Route Handlers, auth, env vars, caching, external requests, CSP, or dependencies |
+| `supabase-schema` | Any database work: tables, SQL migrations, RLS, Supabase queries, auth users, storage, cleanup |
 
 Non-negotiable core rules:
 
@@ -24,6 +25,7 @@ Non-negotiable core rules:
 - Each service is `features/<service>/{model,server,api,ui}` + `app/(<service>)/` + `app/api/<service>/`. Follow `features/main` as the reference implementation. No barrel `index.ts` files.
 - State: server data via Server Components + TanStack Query; client UI state via Redux; shareable state in the URL. Never copy server data into Redux.
 - Server Actions and Route Handlers are public endpoints: validate input with zod, re-check auth inside them, return minimal DTOs. Never cache per-user data with `'use cache'`.
+- Supabase (Free plan, hackathon) is shared with another live service, including API keys, auth users, and storage. All MOBI.AI database objects live in the `mobi_ai` schema; never modify `public`, `auth`, `storage`, extensions, or project settings. Access the DB only from `features/*/server` via `@/shared/supabase/admin`. Schema changes are new files in `supabase/migrations/` that must pass `npm run check:migrations`; the user runs them in the SQL Editor (never `supabase db push`). Verify connectivity only with `npm run check:supabase`.
 - Done means `npm run lint`, `npm run typecheck` (and `npm run build` for structural changes) all pass. Update `README.md` when structure or rules change.
 - If a structure outside these rules seems necessary, ask the user first instead of improvising.
 
