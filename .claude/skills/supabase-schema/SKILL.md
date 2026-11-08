@@ -75,4 +75,4 @@ description: MOBI.AI가 다른 서비스와 공유하는 Supabase 프로젝트�
 3. Storage 에서 `mobi-ai-` 로 시작하는 버킷 삭제
 4. `mobi_ai.profiles` 처럼 MOBI가 만든 사용자 데이터만 지워진다. 공유 로그인 사용자(`auth.users`)는 공유 서비스 사용자이므로 지우지 않는다.
 5. Organization → Team 에서 해커톤 팀원 초대 해제
-6. 팀원에게 키를 공유했다면 키 교체를 검토한다. 단, 기존 키 교체는 공유 서비스 배포에도 영향을 주므로 공유 서비스 쪽 env 갱신 계획과 함께 한다.
+6. Dashboard → API Keys 에서 MOBI.AI 전용 secret 키(`sb_secret_...`)를 삭제한다. 공유 서비스가 쓰는 키(legacy service_role 등)는 건드리지 않는다.

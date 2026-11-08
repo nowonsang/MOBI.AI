@@ -167,7 +167,8 @@ app → core → features → shared
 | --- | --- | --- |
 | `NODE_ENV` | 서버 | 실행 모드 (Next.js가 설정) |
 | `SUPABASE_URL` | 서버 | Supabase 프로젝트 URL (`https://<project-ref>.supabase.co`) |
-| `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용 | service_role 키. RLS를 우회하는 관리자 키이므로 절대 `NEXT_PUBLIC_` 를 붙이지 않는다 |
+| `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용 | **MOBI.AI 전용 secret 키**(`sb_secret_...`, Dashboard → API Keys 에서 발급). RLS를 우회하는 관리자 키이므로 절대 `NEXT_PUBLIC_` 를 붙이지 않는다. 변수 이름은 호환을 위해 유지 |
+| `SUPABASE_PUBLISHABLE_KEY` | 서버 (현재 미사용) | 공개용 키(`sb_publishable_...`). `mobi_ai` 에는 권한이 없다. 로그인·브라우저 클라이언트를 도입할 때만 사용 |
 
 모든 값은 각자의 `.env.local` 에만 둔다 (gitignore 대상). 파일 권한은 `chmod 600 .env.local` 로 본인만 읽게 한다.
 
@@ -218,7 +219,7 @@ app → core → features → shared
 2. Project Settings → Data API → Exposed schemas 에서 `mobi_ai` 제거
 3. Storage 에서 `mobi-ai-` 버킷 삭제 (공유 로그인 사용자는 공유 서비스 사용자이므로 지우지 않는다)
 4. Organization → Team 에서 해커톤 팀원 초대 해제
-5. 팀원에게 키를 나눠 줬다면 키 교체 검토 (공유 서비스 배포 env도 함께 갱신해야 하므로 계획 후 진행)
+5. Dashboard → API Keys 에서 **MOBI.AI 전용 secret 키를 삭제**한다. 공유 서비스는 다른 키를 쓰므로 영향이 없다
 
 ## AI 민감 파일 보호 (Claude Code 팀 공유 설정)
 

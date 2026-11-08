@@ -256,6 +256,32 @@ if (supabaseUrl && probeKeyVar) {
       fail(
         `서버 전용 키 응답 ${adminHealth.status} ${adminHealth.code ?? ""}`.trim(),
       );
+
+    // 앱과 같은 클라이언트(supabase-js)·같은 옵션으로 접속해, 새 형식 키(sb_secret_)도 실제 조회 경로에서 인증되는지 확인한다.
+    const { createClient } = await import("@supabase/supabase-js");
+    const client = createClient(supabaseUrl, secretKeyVar.value, {
+      db: { schema: SCHEMA },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    });
+    const { error, status } = await client
+      .from("__schema_probe__")
+      .select("*")
+      .limit(0);
+    if (error?.code === "PGRST205" || status === 404) {
+      pass(`앱 클라이언트(supabase-js)로 서버 키 인증 + ${SCHEMA} 접근 정상`);
+    } else if (error?.code === "PGRST106") {
+      fail(
+        `앱 클라이언트(supabase-js): ${SCHEMA} 스키마가 노출되어 있지 않습니다`,
+      );
+    } else {
+      fail(
+        `앱 클라이언트(supabase-js) 접근 실패 (응답 ${status} ${error?.code ?? ""})`.trim(),
+      );
+    }
   }
 }
 
