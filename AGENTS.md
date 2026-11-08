@@ -1,0 +1,32 @@
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
+
+## Team rules (shared by every contributor and every AI session)
+
+Detailed rules live in project skills under `.claude/skills/`. Load them before working:
+
+| Skill | Load when |
+| --- | --- |
+| `project-architecture` | Before adding, changing, moving, or reviewing any code |
+| `add-service` | Creating a new service (domain module) |
+| `secure-coding` | Touching Server Actions, Route Handlers, auth, env vars, caching, external requests, CSP, or dependencies |
+
+Non-negotiable core rules:
+
+- Layers: `app → core → features → shared`. No imports between services (`features/a` → `features/b`). Features may use only `@/core/store/hooks` from core. Enforced by ESLint (`boundaries/*`); a PostToolUse hook lints every file you edit, so fix reported violations before moving on.
+- Each service is `features/<service>/{model,server,api,ui}` + `app/(<service>)/` + `app/api/<service>/`. Follow `features/main` as the reference implementation. No barrel `index.ts` files.
+- State: server data via Server Components + TanStack Query; client UI state via Redux; shareable state in the URL. Never copy server data into Redux.
+- Server Actions and Route Handlers are public endpoints: validate input with zod, re-check auth inside them, return minimal DTOs. Never cache per-user data with `'use cache'`.
+- Done means `npm run lint`, `npm run typecheck` (and `npm run build` for structural changes) all pass. Update `README.md` when structure or rules change.
+- If a structure outside these rules seems necessary, ask the user first instead of improvising.
+
+## Sensitive files
+
+Never read, print, copy, or edit secret files (`.env*`, private keys, credentials) or dump environment variables. They are blocked by `.claude/settings.json` and `.claude/hooks/protect-sensitive-files.mjs`; do not try to work around a block. If a value is needed, ask the user for the variable name only. `.claude/settings*.json` and `.claude/hooks/**` are protected guard files: AI must not modify them; ask the user to change them directly.
