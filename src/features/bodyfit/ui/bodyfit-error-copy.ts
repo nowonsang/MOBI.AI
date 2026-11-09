@@ -19,7 +19,7 @@ export function describeBodyfitError(error: unknown): Copy {
       return {
         title: "이 차량은 시트 자동 조절을 지원하지 않아요",
         description:
-          "시트 버튼으로 직접 맞춘 뒤 '지금 자세 기억하기'를 눌러 주세요",
+          "'안내 받으며 맞추기'로 시트 버튼을 직접 움직여 맞춰 주세요",
       };
     case "ERR_SEAT_MOVE_FAILED":
       return {
@@ -36,7 +36,7 @@ export function describeBodyfitError(error: unknown): Copy {
       return {
         title: "이 차량에서는 아직 쓸 수 없는 기능이에요",
         description:
-          "시트 버튼으로 직접 맞춘 뒤 '지금 자세 기억하기'를 눌러 주세요",
+          "'안내 받으며 맞추기'로 시트 버튼을 직접 움직여 맞춰 주세요",
       };
     case "ERR_PLEOS_SERVICE":
       return {

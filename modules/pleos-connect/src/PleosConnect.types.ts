@@ -40,6 +40,8 @@ export type PleosConnectEvents = {
   onGearChanged: (event: { gear: Gear }) => void;
   onUxRestrictionsChanged: (event: UxRestrictions) => void;
   onDriverSeatOccupancyChanged: (event: { occupied: boolean }) => void;
+  /** 운전석 한 축의 위치가 바뀌었다 (원시 값). 운전자가 시트 버튼을 누를 때도 온다. */
+  onDriverSeatPositionChanged: (event: { axis: SeatAxis; value: number }) => void;
   onDestinationArrived: (event: Record<string, never>) => void;
   onSpeechPartial: (event: { text: string }) => void;
 };

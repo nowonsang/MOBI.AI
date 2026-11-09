@@ -71,6 +71,7 @@ JS 에서 쓰는 API (`@/shared/pleos/pleos` 의 `pleos()` 로만 접근):
 | `moveDriverSeatAxis(axis, target)` | 목표 위치까지 이동. **기어 P 에서만**, 이동 중에도 기어를 확인하고, 끝나면 항상 멈춤 |
 | `stopDriverSeat()` | 즉시 멈춤 |
 | `isDriverSeatOccupied()` · `onDriverSeatOccupancyChanged` | 운전석 착석 여부 |
+| `onDriverSeatPositionChanged` | 운전석 축별 위치 변경 알림 (가이드 조절, 운전자가 시트 버튼을 누를 때도 옴) |
 | `listen()` · `onSpeechPartial` · `stopListening()` | 한 문장 음성 인식 (한국어) |
 | `speak(text)` | 음성 안내 |
 | `onDestinationArrived` | 내비게이션 목적지 도착 |
@@ -132,7 +133,7 @@ src/
 ├── app/                      Expo Router 라우트 (조립만)
 │   ├── _layout.tsx           Providers + Stack
 │   ├── index.tsx             → /bodyfit
-│   └── (bodyfit)/            _layout.tsx (주행 감시), bodyfit/index · new · [profileId]
+│   └── (bodyfit)/            _layout.tsx (주행 감시), bodyfit/index · new · [profileId]/index · [profileId]/guide
 ├── core/                     Providers, Redux store
 ├── features/bodyfit/         참고 구현 서비스
 │   ├── model/                타입·zod 스키마·추천·학습·음성 해석·세션 슬라이스 (+ *.test.ts)

@@ -46,6 +46,7 @@ class DriverSeat(
   private val seat: Seat,
   private val gear: GearMonitor,
   private val onOccupancyChanged: (Boolean) -> Unit,
+  private val onPositionChanged: (SeatAxis, Int) -> Unit,
 ) {
   private val driver = SeatArea(SeatValue.ROW_1_LEFT)
   private val moveLock = Mutex()
@@ -53,6 +54,7 @@ class DriverSeat(
   @Volatile
   private var activeMove: Job? = null
   private var observingOccupancy = false
+  private val positionSubscriptions = mutableListOf<Subscription>()
 
   private val occupancyListener =
     object : SeatOccupancyListener {
@@ -127,6 +129,23 @@ class DriverSeat(
     if (!observingOccupancy) return
     seat.unregisterSeatOccupancy(driver, occupancyListener)
     observingOccupancy = false
+  }
+
+  // 가이드 조절: 운전자가 시트 버튼으로 움직이는 동안 축별 위치를 알린다. 조회만 하므로 CAR_SEATS 권한이면 된다.
+  @Synchronized
+  fun startPositionObserving() {
+    if (positionSubscriptions.isNotEmpty()) return
+    for (axis in SeatAxis.entries) {
+      val subscription = subscribePosition(axis, onValue = { onPositionChanged(axis, it) }, onError = {})
+      // 차량이 지원하지 않는 축은 등록이 실패할 수 있다. 나머지 축은 계속 알린다.
+      if (runCatching { subscription.register() }.isSuccess) positionSubscriptions += subscription
+    }
+  }
+
+  @Synchronized
+  fun stopPositionObserving() {
+    for (subscription in positionSubscriptions) runCatching { subscription.unregister() }
+    positionSubscriptions.clear()
   }
 
   private suspend fun moveLocked(axis: SeatAxis, target: Int): Int {

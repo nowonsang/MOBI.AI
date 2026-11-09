@@ -64,7 +64,7 @@ features/<서비스>/
 | 캐시 계약 | `api/<서비스>.queries.ts` → `<서비스>Keys`, `<서비스>Queries` | `bodyfitKeys.seat()`, `bodyfitQueries.profile(id)` |
 | 뮤테이션 훅 | `api/<서비스>.mutations.ts` → `use<동사><대상>` | `useMoveSeat` |
 | 컴포넌트 파일 | `ui/<서비스>-<이름>.tsx` (kebab-case), named export PascalCase | `bodyfit-seat-screen.tsx` → `BodyfitSeatScreen` |
-| 라우트 | `src/app/(<서비스>)/<서비스>/...` | `app/(bodyfit)/bodyfit/[profileId].tsx` |
+| 라우트 | `src/app/(<서비스>)/<서비스>/...` | `app/(bodyfit)/bodyfit/[profileId]/index.tsx` |
 
 - `export default` 는 Expo Router 라우트·레이아웃 파일에만 쓴다. 나머지는 named export.
 - query key는 `["<서비스>", ...]` 로 시작해 서비스 간 캐시 충돌을 막는다.

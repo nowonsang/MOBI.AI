@@ -17,7 +17,6 @@ import { colors, radius, spacing } from "@/shared/ui/theme";
 import {
   useDeleteBodyProfile,
   useMoveSeat,
-  useRecordSeatAdjustment,
   useStopSeat,
 } from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
@@ -49,7 +48,6 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   const restrictions = useUxRestrictions();
   const move = useMoveSeat();
   const stop = useStopSeat();
-  const record = useRecordSeatAdjustment();
   const remove = useDeleteBodyProfile();
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -106,14 +104,12 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
       },
     ]);
 
-  const rememberCurrent = () =>
-    record.mutate(
-      { profile: driver, source: "saved" },
-      {
-        onSuccess: () =>
-          setNotice("지금 자세를 기억했어요. 다음 추천에 반영할게요"),
-      },
-    );
+  // 주 경로: 운전자가 시트 버튼으로 맞추고 화면이 안내한다 (시트 제어 SDK 가 Coming Soon 이라도 동작한다).
+  const openGuide = () =>
+    router.push({
+      pathname: "/bodyfit/[profileId]/guide",
+      params: { profileId: driver.id },
+    });
 
   const confirmDelete = () =>
     Alert.alert(
@@ -132,7 +128,7 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
       ],
     );
 
-  const error = move.error ?? record.error ?? seat.error;
+  const error = move.error ?? seat.error;
 
   return (
     <Screen
@@ -143,51 +139,39 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
           : "체형으로 계산한 첫 추천이에요. 쓰실수록 몸에 맞춰져요"
       }
       footer={
-        !canControlSeat ? (
-          // market 빌드: 시트 제어 권한이 없어 운전자가 직접 맞춘 자세를 기억한다.
-          <Button
-            label="지금 자세 기억하기"
-            onPress={rememberCurrent}
-            disabled={!vehicleConnected}
-            loading={record.isPending}
-          />
-        ) : (
-          <>
-            {move.isPending ? (
-              <Button
-                label="멈추기"
-                variant="secondary"
-                onPress={() => stop.mutate()}
-              />
-            ) : (
-              <Button
-                label="지금 자세 기억하기"
-                variant="secondary"
-                onPress={rememberCurrent}
-                disabled={!vehicleConnected}
-                loading={record.isPending}
-              />
-            )}
+        <>
+          {!canControlSeat ? null : move.isPending ? (
             <Button
-              label="추천 자세로 맞추기"
+              label="멈추기"
+              variant="secondary"
+              onPress={() => stop.mutate()}
+            />
+          ) : (
+            // 확장 경로 (B-4): 시트 제어 권한이 열리면 쓰는 자동 조절.
+            <Button
+              label="자동으로 맞추기"
+              variant="secondary"
               onPress={applyRecommendation}
               disabled={!vehicleConnected || !parked}
-              loading={move.isPending}
               accessibilityHint="기어가 P 일 때만 시트가 움직여요"
             />
-          </>
-        )
+          )}
+          <Button
+            label="안내 받으며 맞추기"
+            onPress={openGuide}
+            disabled={!vehicleConnected || move.isPending}
+            accessibilityHint="시트 버튼을 움직이면 화면이 축별로 알려 드려요"
+          />
+        </>
       }
     >
       <View style={styles.status} accessibilityLiveRegion="polite">
         <AppText variant="bodyStrong">
           {!vehicleConnected
             ? "차량에 연결되어 있지 않아요"
-            : !canControlSeat
-              ? "시트 버튼으로 추천 자세에 맞춘 뒤 기억해 주세요"
-              : parked
-                ? "주차 중이에요. 시트를 움직일 수 있어요"
-                : "주행 중에는 시트를 움직이지 않아요"}
+            : parked
+              ? "주차 중이에요. 안내를 보며 시트를 맞출 수 있어요"
+              : "주행 중에는 시트를 맞추지 않아요"}
         </AppText>
         {!vehicleConnected ? (
           <AppText variant="secondary" tone="secondary">

@@ -40,9 +40,14 @@ class PleosConnectModule : Module() {
   }
 
   private val seatLazy = lazy {
-    DriverSeat(vehicleLazy.value.getSeat(), gear) { occupied ->
-      sendEvent("onDriverSeatOccupancyChanged", mapOf("occupied" to occupied))
-    }
+    DriverSeat(
+      vehicleLazy.value.getSeat(),
+      gear,
+      onOccupancyChanged = { occupied -> sendEvent("onDriverSeatOccupancyChanged", mapOf("occupied" to occupied)) },
+      onPositionChanged = { axis, value ->
+        sendEvent("onDriverSeatPositionChanged", mapOf("axis" to axis.value, "value" to value))
+      },
+    )
   }
   private val seat by seatLazy
 
@@ -62,7 +67,14 @@ class PleosConnectModule : Module() {
     ModuleDefinition {
       Name("PleosConnect")
 
-      Events("onGearChanged", "onUxRestrictionsChanged", "onDriverSeatOccupancyChanged", "onDestinationArrived", "onSpeechPartial")
+      Events(
+        "onGearChanged",
+        "onUxRestrictionsChanged",
+        "onDriverSeatOccupancyChanged",
+        "onDriverSeatPositionChanged",
+        "onDestinationArrived",
+        "onSpeechPartial",
+      )
 
       Function("isAutomotive") { isAutomotive }
 
@@ -95,6 +107,9 @@ class PleosConnectModule : Module() {
       OnStartObserving("onDriverSeatOccupancyChanged") { if (isAutomotive) seat.startOccupancyObserving() }
       OnStopObserving("onDriverSeatOccupancyChanged") { if (seatLazy.isInitialized()) seat.stopOccupancyObserving() }
 
+      OnStartObserving("onDriverSeatPositionChanged") { if (isAutomotive) seat.startPositionObserving() }
+      OnStopObserving("onDriverSeatPositionChanged") { if (seatLazy.isInitialized()) seat.stopPositionObserving() }
+
       OnStartObserving("onDestinationArrived") { if (isAutomotive) naviLazy.value.start() }
       OnStopObserving("onDestinationArrived") { if (naviLazy.isInitialized()) naviLazy.value.stop() }
 
@@ -112,6 +127,7 @@ class PleosConnectModule : Module() {
           // 시트가 움직이는 중일 수 있다. Vehicle 을 해제하기 전에 반드시 멈춘다.
           seat.stopAllBlocking(STOP_TIMEOUT_MS)
           seat.stopOccupancyObserving()
+          seat.stopPositionObserving()
         }
         if (vehicleLazy.isInitialized()) vehicleLazy.value.release()
         if (gearLazy.isInitialized()) gear.release()
