@@ -66,9 +66,9 @@ export function BodyfitConsentNotice({
           <View style={styles.text}>
             <AppText variant="body">음성 기능 사용에 동의해요 (선택)</AppText>
             <AppText variant="caption" tone="tertiary">
-              착좌감을 말로 답할 때 써요. 음성은 현대자동차그룹 Pleos 음성
-              인식에서 처리될 수 있고, 앱은 녹음을 저장하지 않아요. 동의하지
-              않아도 화면으로 모두 쓸 수 있어요
+              착좌감을 말로 답할 때 써요. 음성은 Pleos 음성
+              인식(현대자동차그룹)에서 처리될 수 있어요. 동의하지 않아도
+              화면으로 쓸 수 있어요
             </AppText>
           </View>
         </Pressable>
@@ -79,18 +79,20 @@ export function BodyfitConsentNotice({
 
 const styles = StyleSheet.create({
   container: { gap: spacing.md },
+  // 항목 사이(md)는 띄우고, 항목 이름과 내용(xs)은 붙여서 묶음이 보이게 한다.
   notice: {
-    gap: spacing.sm,
+    gap: spacing.md,
     padding: spacing.md,
     borderRadius: radius.control,
     backgroundColor: colors.sandLight,
   },
-  row: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  row: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
   label: { minWidth: 140 },
   text: { flex: 1, minWidth: 240, gap: spacing.xs },
   check: {
     flexDirection: "row",
-    alignItems: "center",
+    // 설명이 여러 줄이어도 체크 칸은 제목 줄 옆에 둔다.
+    alignItems: "flex-start",
     gap: spacing.md,
     minHeight: sizes.touchTarget,
     paddingVertical: spacing.sm,

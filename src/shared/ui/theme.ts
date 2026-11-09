@@ -70,4 +70,7 @@ export const layout = {
   narrow: 880, // 한 화면 한 작업(입력·확인)
   content: 1280, // 일반 화면
   gutter: 48, // 화면 좌우 여백
+  // 이 폭보다 좁은 창(1:1 분할 세로 창, 휴대폰 확인용)은 여백을 줄이고 하단 버튼을 세로로 쌓는다.
+  compactWidth: 720,
+  gutterCompact: 24,
 } as const;

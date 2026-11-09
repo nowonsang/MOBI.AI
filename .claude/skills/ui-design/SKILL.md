@@ -24,7 +24,9 @@ description: MOBI.AI 차량 앱 디자인 규칙(현대자동차 공모전, Pleo
 3. 화면은 가로로 넓다. 본문은 `Screen` 의 폭 제한(`layout.content` 1280, 한 작업 화면은 `width="narrow"` 880) 안에 가운데 정렬하고 좌우 여백은 `layout.gutter`(48).
 4. 고정 크기 대신 `flex`·`flexWrap`·`gap` 으로 배치해 해상도가 달라도 깨지지 않게 한다. 가로 스크롤이 생기면 안 된다. 여러 해상도를 확인할 때는 `useWindowDimensions` 로 분기한다.
 5. 주 행동은 `Screen` 의 `footer`(하단 고정)에 둔다. 운전자가 화면 아래쪽을 손으로 찾기 쉽다.
-6. 안전 영역은 `Screen`(react-native-safe-area-context)이 처리한다. 화면 루트에서 직접 여백을 계산하지 않는다.
+6. 안전 영역과 뒤로 가기는 `Screen` 이 처리한다 (네이티브 헤더는 끈다: 안전 영역 여백이 두 번 들어간다). 첫 화면은 `back={false}`. 화면 루트에서 직접 여백을 계산하지 않는다.
+7. 폭이 `layout.compactWidth`(720dp) 미만인 창(1:1 분할 세로 창, 휴대폰 확인용)에서는 `Screen` 이 좌우 여백을 `gutterCompact`(24)로 줄이고 하단 버튼을 폭에 맞춰 세로로 쌓는다. 그래서 `footer` 에는 보조 버튼을 먼저, 주 CTA 를 마지막에 둔다 (좁은 창에서 주 CTA 가 맨 아래). 글자 크기는 줄이지 않는다. 컴포넌트에서 분기가 필요하면 `useCompact()`.
+8. 입력칸의 단위는 라벨에 붙인다("키 (cm)"). 설명이 필요한 안내만 `hint` 로 라벨 아래에 둔다.
 7. 시스템 글자 크기 설정을 막지 않는다 (`allowFontScaling={false}` 금지).
 
 ## 1-1. Pleos Connect UI 디자인 가이드 기준

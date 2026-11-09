@@ -1,23 +1,19 @@
 import { Stack } from "expo-router";
 
 import { BodyfitDriveMonitor } from "@/features/bodyfit/ui/bodyfit-drive-monitor";
-import { colors, typography } from "@/shared/ui/theme";
+import { colors } from "@/shared/ui/theme";
 
+// 헤더(뒤로 가기)는 공용 Screen 이 그린다. 네이티브 헤더와 함께 쓰면 제목 위 여백이 두 번 들어간다.
 export default function BodyfitLayout() {
   return (
     <>
       <BodyfitDriveMonitor />
       <Stack
         screenOptions={{
-          title: "",
-          headerShadowVisible: false,
-          headerTintColor: colors.primary,
-          headerTitleStyle: { fontSize: typography.secondary.fontSize },
+          headerShown: false,
           contentStyle: { backgroundColor: colors.surface },
         }}
-      >
-        <Stack.Screen name="bodyfit/index" options={{ headerShown: false }} />
-      </Stack>
+      />
     </>
   );
 }

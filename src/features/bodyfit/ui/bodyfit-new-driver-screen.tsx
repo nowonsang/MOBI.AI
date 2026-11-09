@@ -94,24 +94,22 @@ export function BodyfitNewDriverScreen() {
           returnKeyType="next"
         />
         <TextField
-          label="키"
-          hint="cm"
+          label="키 (cm)"
           value={values.heightCm}
           onChangeText={change("heightCm")}
           error={errors.heightCm}
           keyboardType="decimal-pad"
         />
         <TextField
-          label="몸무게"
-          hint="kg"
+          label="몸무게 (kg)"
           value={values.weightKg}
           onChangeText={change("weightKg")}
           error={errors.weightKg}
           keyboardType="decimal-pad"
         />
         <TextField
-          label="앉은키 (선택)"
-          hint="cm · 모르면 비워 두세요. 키로 추정해요"
+          label="앉은키 (cm, 선택)"
+          hint="모르면 비워 두세요. 키로 추정해요"
           value={values.sittingHeightCm}
           onChangeText={change("sittingHeightCm")}
           error={errors.sittingHeightCm}

@@ -19,15 +19,23 @@ export function BodyfitDriverListScreen() {
   return (
     <Screen
       title="누가 운전하나요?"
+      back={false}
       description="운전자를 고르면 몸에 맞는 시트 자세를 추천해 드려요"
       footer={
         profiles.data && profiles.data.length > 0 ? (
-          <Button label="운전자 추가하기" variant="secondary" onPress={goToNew} />
+          <Button
+            label="운전자 추가하기"
+            variant="secondary"
+            onPress={goToNew}
+          />
         ) : null
       }
     >
       {profiles.isPending ? (
-        <View style={styles.list} accessibilityLabel="운전자 목록을 불러오는 중">
+        <View
+          style={styles.list}
+          accessibilityLabel="운전자 목록을 불러오는 중"
+        >
           {[0, 1].map((key) => (
             <View key={key} style={[styles.row, styles.skeleton]} />
           ))}
@@ -85,5 +93,8 @@ const styles = StyleSheet.create({
   },
   // Pleos 인터랙션 가이드: 눌린 요소는 95% 로 줄이고 배경색을 바꾼다.
   pressed: { backgroundColor: colors.sandLight, transform: [{ scale: 0.95 }] },
-  skeleton: { backgroundColor: colors.sandLight, borderColor: colors.sandLight },
+  skeleton: {
+    backgroundColor: colors.sandLight,
+    borderColor: colors.sandLight,
+  },
 });

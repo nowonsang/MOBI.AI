@@ -18,12 +18,21 @@ export function TextField({ label, error, hint, ...props }: TextFieldProps) {
 
   return (
     <View style={styles.field}>
-      <AppText variant="secondary" tone="secondary">
-        {label}
-      </AppText>
+      <View style={styles.labels}>
+        <AppText variant="secondary" tone="secondary">
+          {label}
+        </AppText>
+        {/* 단위·형식 안내는 라벨 바로 밑에 둔다. 입력칸 아래에 두면 다음 칸의 라벨처럼 읽힌다. */}
+        {hint ? (
+          <AppText variant="caption" tone="tertiary">
+            {hint}
+          </AppText>
+        ) : null}
+      </View>
       <TextInput
         {...props}
         accessibilityLabel={label}
+        accessibilityHint={hint}
         placeholderTextColor={colors.inkDisabled}
         onFocus={(event) => {
           setFocused(true);
@@ -43,10 +52,6 @@ export function TextField({ label, error, hint, ...props }: TextFieldProps) {
         <AppText variant="caption" tone="danger">
           {error}
         </AppText>
-      ) : hint ? (
-        <AppText variant="caption" tone="tertiary">
-          {hint}
-        </AppText>
       ) : null}
     </View>
   );
@@ -54,6 +59,7 @@ export function TextField({ label, error, hint, ...props }: TextFieldProps) {
 
 const styles = StyleSheet.create({
   field: { gap: spacing.xs },
+  labels: {},
   input: {
     ...typography.body,
     minHeight: sizes.input,
