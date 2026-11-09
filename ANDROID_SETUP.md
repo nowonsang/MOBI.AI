@@ -53,6 +53,8 @@ React Native(Gradle)는 JDK 17 을 쓴다. 둘 중 하나를 고른다.
 
 확인: `java --version` 이 17 을 출력해야 한다.
 
+> JDK 21 이상으로 Gradle 을 실행해도 되지만, React Native 가 컴파일 대상과 Kotlin 컴파일용 JDK 를 17 로 고정하므로 얻는 게 없고 JDK 17 이 따로 필요할 수 있다. 팀은 Expo 권장·Pleos 샘플 앱 기준과 같은 **JDK 17 로 통일**한다.
+
 ## 4. 환경 변수
 
 **macOS** (`~/.zprofile` 에 추가 후 새 터미널):
