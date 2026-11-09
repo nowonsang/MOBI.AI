@@ -36,6 +36,7 @@ export function Button({
       style={({ pressed }) => [
         styles.base,
         primary ? styles.primary : styles.secondary,
+        pressed && styles.pressed,
         pressed && (primary ? styles.primaryPressed : styles.secondaryPressed),
         inactive && styles.inactive,
       ]}
@@ -60,12 +61,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  // Pleos 인터랙션 가이드: 눌린 요소는 95% 로 줄이고 배경색을 바꾼다.
+  pressed: { transform: [{ scale: 0.95 }] },
   primary: { backgroundColor: colors.primary },
   primaryPressed: { backgroundColor: colors.primaryStrong },
   secondary: {
     backgroundColor: colors.surface,
     borderWidth: 2,
-    borderColor: colors.line,
+    // 버튼 경계는 정보다. 구분선용 line(대비 1.3:1) 대신 4.5:1 이상인 색을 쓴다.
+    borderColor: colors.inkTertiary,
   },
   secondaryPressed: { backgroundColor: colors.sandLight },
   inactive: { opacity: 0.4 },

@@ -27,7 +27,8 @@ app → core → features → shared → native(modules/*)
 - **차량 SDK(Pleos)는 `src/shared/pleos/*` 를 통해서만 쓴다.** `@modules/*` 직접 import 는 `shared/pleos` 밖에서 ESLint 에러다.
   - `pleos.ts`: `pleos()`(차량이 아니면 `PleosUnavailableError`), `isPleosAvailable()`, `pleosErrorCode()`
   - `pleos.types.ts`: 타입·`SEAT_AXES`. 네이티브 모듈을 불러오지 않으므로 `model` 과 테스트는 이 파일만 import 한다.
-  - `use-gear.ts`, `use-pleos-event.ts`: 기어·차량 이벤트 구독 훅
+  - `use-gear.ts`, `use-ux-restrictions.ts`, `use-pleos-event.ts`: 기어·플랫폼 주행 제한(CarUxRestrictions)·차량 이벤트 구독 훅
+- 개인정보는 `src/shared/storage/encrypted-storage.ts` 로만 저장한다. 빌드 종류(contest/market)별 기능 여부는 `src/shared/config/app-variant.ts`.
 - `src/` 바로 아래에 새 최상위 폴더를 만들지 않는다 (`boundaries/no-unknown-files` 에러).
 - 배럴 파일(`index.ts`)을 만들지 않는다. 항상 실제 파일 경로로 import 한다.
 - 다른 계층은 `@/` 별칭(`src/`), 네이티브 모듈은 `@modules/` 별칭, 같은 서비스 내부는 상대 경로(`../model/...`)로 import 한다.

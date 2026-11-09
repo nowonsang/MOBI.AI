@@ -7,7 +7,9 @@ const profile = (overrides: Partial<BodyProfile> = {}): BodyProfile => ({
   heightCm: 172,
   weightKg: 68,
   sittingHeightCm: null,
+  voiceConsent: false,
   createdAt: 0,
+  consentedAt: 0,
   ...overrides,
 });
 

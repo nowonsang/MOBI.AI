@@ -1,5 +1,9 @@
-import Storage from "expo-sqlite/kv-store";
 import { z } from "zod";
+
+import {
+  getEncryptedItem,
+  setEncryptedItem,
+} from "@/shared/storage/encrypted-storage";
 
 import {
   bodyProfileSchema,
@@ -11,7 +15,7 @@ import type {
   SeatAdjustment,
 } from "../model/bodyfit.types";
 
-// 체형 정보는 민감한 개인정보라 기기 안(SQLite)에만 저장하고 서버로 보내지 않는다.
+// 체형 정보는 민감한 개인정보라 기기 안(SQLite)에만 암호화해 저장하고 서버로 보내지 않는다.
 const PROFILES_KEY = "bodyfit:profiles";
 const ADJUSTMENTS_KEY = "bodyfit:adjustments";
 // 학습에는 최근 기록만 쓰므로 운전자별로 이 개수만 남긴다.
@@ -22,7 +26,7 @@ const adjustmentsSchema = z.array(seatAdjustmentSchema);
 
 // 저장된 값도 앱 버전이 바뀌면 형식이 다를 수 있다. 검증에 실패하면 빈 목록으로 본다.
 async function readList<T>(key: string, schema: z.ZodType<T[]>): Promise<T[]> {
-  const raw = await Storage.getItem(key);
+  const raw = await getEncryptedItem(key);
   if (!raw) return [];
   try {
     const parsed = schema.safeParse(JSON.parse(raw));
@@ -33,7 +37,7 @@ async function readList<T>(key: string, schema: z.ZodType<T[]>): Promise<T[]> {
 }
 
 async function writeList<T>(key: string, items: readonly T[]) {
-  await Storage.setItem(key, JSON.stringify(items));
+  await setEncryptedItem(key, JSON.stringify(items));
 }
 
 export function findBodyProfiles(): Promise<BodyProfile[]> {
@@ -52,6 +56,8 @@ export async function createBodyProfile(
     ...input,
     id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     createdAt: Date.now(),
+    // 등록은 "동의하고 등록하기" 버튼으로만 일어난다.
+    consentedAt: Date.now(),
   };
   const profiles = await findBodyProfiles();
   await writeList(PROFILES_KEY, [...profiles, profile]);

@@ -25,6 +25,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.math.abs
@@ -93,6 +95,21 @@ class DriverSeat(
     for (axis in SeatAxis.entries) orNull { sendMove(axis, MoveControl.STOP) }
   }
 
+  // 모듈이 내려갈 때(suspend 불가)·앱이 화면에서 사라질 때 쓴다. Vehicle.release() 전에 STOP 이 전달되도록
+  // 응답을 잠깐 기다린다. 콜백이 같은 스레드로 오면 기다리지 못하므로 시간 제한을 둔다.
+  fun stopAllBlocking(timeoutMs: Long) {
+    activeMove?.cancel()
+    val pending = CountDownLatch(SeatAxis.entries.size)
+    for (axis in SeatAxis.entries) {
+      try {
+        requestMove(axis, MoveControl.STOP, { pending.countDown() }, { pending.countDown() })
+      } catch (e: Exception) {
+        pending.countDown()
+      }
+    }
+    pending.await(timeoutMs, TimeUnit.MILLISECONDS)
+  }
+
   suspend fun isOccupied(): Boolean =
     suspendPleos<Boolean?> { resume, fail ->
       seat.getCurrentSeatOccupancy(driver, { occupied: Boolean? -> resume(occupied) }, { e: Throwable? -> fail(e) })
@@ -140,7 +157,8 @@ class DriverSeat(
       // 취소·실패·성공 어느 경우든 반드시 멈춘다.
       withContext(NonCancellable) {
         orNull { sendMove(axis, MoveControl.STOP) }
-        subscription.unregister()
+        // 모듈 종료로 Vehicle 이 먼저 해제됐을 수 있다. 해제 실패로 STOP 결과를 덮지 않는다.
+        runCatching { subscription.unregister() }
       }
     }
   }
@@ -211,16 +229,23 @@ class DriverSeat(
     }
 
   private suspend fun sendMove(axis: SeatAxis, control: MoveControl) =
-    suspendPleos<Unit> { resume, fail ->
-      val done = { _: SeatArea?, _: MoveControl? -> resume(Unit) }
-      val failed = { e: Throwable? -> fail(e) }
-      when (axis) {
-        SeatAxis.FORE_AFT -> seat.moveSeatForeAft(driver, control, done, failed)
-        SeatAxis.HEIGHT -> seat.moveSeatHeight(driver, control, done, failed)
-        SeatAxis.BACKREST -> seat.moveSeatBackrestAngle(driver, control, done, failed)
-        SeatAxis.TILT -> seat.moveSeatTilt(driver, control, done, failed)
-      }
+    suspendPleos<Unit> { resume, fail -> requestMove(axis, control, { resume(Unit) }, fail) }
+
+  private fun requestMove(
+    axis: SeatAxis,
+    control: MoveControl,
+    onDone: () -> Unit,
+    onFailed: (Throwable?) -> Unit,
+  ) {
+    val done = { _: SeatArea?, _: MoveControl? -> onDone() }
+    val failed = { e: Throwable? -> onFailed(e) }
+    when (axis) {
+      SeatAxis.FORE_AFT -> seat.moveSeatForeAft(driver, control, done, failed)
+      SeatAxis.HEIGHT -> seat.moveSeatHeight(driver, control, done, failed)
+      SeatAxis.BACKREST -> seat.moveSeatBackrestAngle(driver, control, done, failed)
+      SeatAxis.TILT -> seat.moveSeatTilt(driver, control, done, failed)
     }
+  }
 
   private class Subscription(val register: () -> Unit, val unregister: () -> Unit)
 
@@ -315,11 +340,7 @@ internal suspend fun <T> suspendPleos(call: (resume: (T) -> Unit, fail: (Throwab
   suspendCancellableCoroutine { cont ->
     call(
       { value -> if (cont.isActive) cont.resume(value) },
-      { error ->
-        if (cont.isActive) {
-          cont.resumeWithException(PleosServiceException("Pleos 호출 실패: ${error?.message}", error))
-        }
-      },
+      { error -> if (cont.isActive) cont.resumeWithException(pleosFailure(error)) },
     )
   }
 

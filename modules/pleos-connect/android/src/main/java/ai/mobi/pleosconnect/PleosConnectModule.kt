@@ -28,6 +28,12 @@ class PleosConnectModule : Module() {
   }
   private val gear by gearLazy
 
+  private val uxLazy = lazy {
+    requireAutomotive()
+    UxRestrictionsMonitor(context) { sendEvent("onUxRestrictionsChanged", it) }
+  }
+  private val ux by uxLazy
+
   private val vehicleLazy = lazy {
     requireAutomotive()
     Vehicle(context).apply { initialize() }
@@ -48,15 +54,21 @@ class PleosConnectModule : Module() {
 
   private val naviLazy = lazy { NaviEvents(context) { sendEvent("onDestinationArrived", mapOf<String, Any?>()) } }
 
+  private companion object {
+    const val STOP_TIMEOUT_MS = 1_000L
+  }
+
   override fun definition() =
     ModuleDefinition {
       Name("PleosConnect")
 
-      Events("onGearChanged", "onDriverSeatOccupancyChanged", "onDestinationArrived", "onSpeechPartial")
+      Events("onGearChanged", "onUxRestrictionsChanged", "onDriverSeatOccupancyChanged", "onDestinationArrived", "onSpeechPartial")
 
       Function("isAutomotive") { isAutomotive }
 
       AsyncFunction("getGear") Coroutine { -> gear.current() }
+
+      AsyncFunction("getUxRestrictions") Coroutine { -> ux.current() }
 
       AsyncFunction("getDriverSeatState") Coroutine { -> seat.readState() }
 
@@ -77,18 +89,33 @@ class PleosConnectModule : Module() {
       OnStartObserving("onGearChanged") { if (isAutomotive) gear.startObserving() }
       OnStopObserving("onGearChanged") { if (gearLazy.isInitialized()) gear.stopObserving() }
 
+      OnStartObserving("onUxRestrictionsChanged") { if (isAutomotive) ux.startObserving() }
+      OnStopObserving("onUxRestrictionsChanged") { if (uxLazy.isInitialized()) ux.stopObserving() }
+
       OnStartObserving("onDriverSeatOccupancyChanged") { if (isAutomotive) seat.startOccupancyObserving() }
       OnStopObserving("onDriverSeatOccupancyChanged") { if (seatLazy.isInitialized()) seat.stopOccupancyObserving() }
 
       OnStartObserving("onDestinationArrived") { if (isAutomotive) naviLazy.value.start() }
       OnStopObserving("onDestinationArrived") { if (naviLazy.isInitialized()) naviLazy.value.stop() }
 
+      // Pleos 앱 구조 가이드: 백그라운드로 가면 즉시 중단할 수 있는 작업을 정리한다.
+      // 멈추기 버튼이 보이지 않는 동안 시트가 움직이거나 마이크가 열려 있지 않게 한다.
+      OnActivityEntersBackground {
+        if (seatLazy.isInitialized()) seat.stopAllBlocking(0)
+        if (voiceLazy.isInitialized()) voice.stopAll()
+      }
+
       OnDestroy {
         if (naviLazy.isInitialized()) naviLazy.value.stop()
         if (voiceLazy.isInitialized()) voice.release()
-        if (seatLazy.isInitialized()) seat.stopOccupancyObserving()
+        if (seatLazy.isInitialized()) {
+          // 시트가 움직이는 중일 수 있다. Vehicle 을 해제하기 전에 반드시 멈춘다.
+          seat.stopAllBlocking(STOP_TIMEOUT_MS)
+          seat.stopOccupancyObserving()
+        }
         if (vehicleLazy.isInitialized()) vehicleLazy.value.release()
         if (gearLazy.isInitialized()) gear.release()
+        if (uxLazy.isInitialized()) ux.release()
       }
     }
 }

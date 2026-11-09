@@ -59,7 +59,8 @@ const styles = StyleSheet.create({
     minHeight: sizes.input,
     paddingHorizontal: spacing.md,
     borderWidth: 2,
-    borderColor: colors.line,
+    // 입력칸 경계는 정보다. 구분선용 line(대비 1.3:1) 대신 4.5:1 이상인 색을 쓴다.
+    borderColor: colors.inkTertiary,
     borderRadius: radius.control,
     color: colors.ink,
     backgroundColor: colors.surface,

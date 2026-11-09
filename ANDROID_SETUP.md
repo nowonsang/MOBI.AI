@@ -95,6 +95,15 @@ Android Studio → More Actions(또는 View → Tool Windows) → **Device Manag
 4. Advanced Settings → RAM **4GB**, Startup → Default boot **Cold** (퀵 부트면 차량 값(VHAL)이 동작하지 않는다)
 5. 기본 언어는 한국어. 영어는 차량 설정 → 일반 설정 → 언어/Language. CRN 입력은 필요 없다 (Emulator 2.1.0 부터).
 6. 기어·착석 등 차량 상태는 Virtual Console 로 바꾼다: `adb forward tcp:8088 tcp:8088` → http://127.0.0.1:8088/
+7. 음성 인식(STT)을 시험하려면 마이크 입력을 켠다: 에뮬레이터 패널 **⋯ (Extended Controls)** → **Microphone** → 호스트 오디오 입력 허용 ("Virtual microphone uses host audio input"). 끄면 음성이 들리지 않아 인식 시간 초과로 끝난다.
+
+#### 화면 크기·방향 확인 (Pleos 폼 팩터 테스트)
+
+Pleos 앱 테스트 가이드는 디스플레이 종류(예: 12.9인치 세로, 14.6인치 가로)와 방향을 바꿔 가며 화면을 확인하라고 한다. 에뮬레이터의 **FormFactorConsole** 앱에서 디스플레이와 방향을 바꾸고 아래를 본다.
+
+- 글자·버튼이 잘리거나 겹치지 않는다. 가로 스크롤이 생기지 않는다.
+- 가로·세로 모두 하단 버튼 줄이 화면 안에 보인다. 창을 1:1 로 나눈 세로 창에서도 확인한다.
+- 방향을 바꿔도 입력하던 값과 보고 있던 화면이 유지된다.
 
 > 이름에 `Pleos` 나 `Automotive` 가 들어간 AVD 를 `npm run android:emulator` 가 먼저 고른다.
 

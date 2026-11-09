@@ -97,6 +97,12 @@ class VoiceServices(
     stt?.stop()
   }
 
+  // Pleos 오디오 포커스·Suspend 가이드: 화면에서 사라지면 재생·인식을 즉시 멈춘다. 다시 보여도 자동으로 이어 하지 않는다.
+  fun stopAll() {
+    stt?.stop()
+    tts?.stop()
+  }
+
   suspend fun speak(text: String) =
     ttsLock.withLock {
       val client = textToSpeech()
@@ -143,74 +149,86 @@ class VoiceServices(
   private suspend fun speechToText(): SpeechToText {
     stt?.let { return it }
     val client = SpeechToText(context, if (credentials != null) SttMode.HYBRID else SttMode.ON_DEVICE)
-    suspendCancellableCoroutine<Unit> { cont ->
-      client.initialize(
-        object : SttInitListener {
-          override fun onSuccess() {
-            if (cont.isActive) cont.resume(Unit)
-          }
-
-          override fun onFailure(error: SttError) {
-            if (cont.isActive) cont.resumeWithException(PleosServiceException("음성 인식 초기화 실패: $error"))
-          }
-        },
-      )
-    }
-    credentials?.let { (id, secret) ->
+    // 초기화·앱 등록에 실패한 클라이언트는 해제하고 버린다 (다시 시도할 때 새로 만든다).
+    try {
       suspendCancellableCoroutine<Unit> { cont ->
-        client.registerApp(
-          id,
-          secret,
-          object : SttConnectionListener {
-            override fun onConnected() {
+        client.initialize(
+          object : SttInitListener {
+            override fun onSuccess() {
               if (cont.isActive) cont.resume(Unit)
             }
 
-            override fun onFailed(error: SttError) {
-              if (cont.isActive) cont.resumeWithException(PleosServiceException("음성 인식 앱 등록 실패: $error"))
+            override fun onFailure(error: SttError) {
+              if (cont.isActive) cont.resumeWithException(PleosServiceException("음성 인식 초기화 실패: $error"))
             }
           },
         )
       }
+      credentials?.let { (id, secret) ->
+        suspendCancellableCoroutine<Unit> { cont ->
+          client.registerApp(
+            id,
+            secret,
+            object : SttConnectionListener {
+              override fun onConnected() {
+                if (cont.isActive) cont.resume(Unit)
+              }
+
+              override fun onFailed(error: SttError) {
+                if (cont.isActive) cont.resumeWithException(PleosServiceException("음성 인식 앱 등록 실패: $error"))
+              }
+            },
+          )
+        }
+      }
+    } catch (e: Throwable) {
+      client.release()
+      throw e
     }
-    client.setLocale(Locale.KOREAN)
+    client.setLocale(Locale.KOREA)
     return client.also { stt = it }
   }
 
   private suspend fun textToSpeech(): TextToSpeech {
     tts?.let { return it }
     val client = TextToSpeech(context, if (credentials != null) TtsMode.HYBRID else TtsMode.ON_DEVICE)
-    suspendCancellableCoroutine<Unit> { cont ->
-      client.initialize(
-        object : TtsInitListener {
-          override fun onSuccess() {
-            if (cont.isActive) cont.resume(Unit)
-          }
-
-          override fun onFailure(error: TtsError) {
-            if (cont.isActive) cont.resumeWithException(PleosServiceException("음성 안내 초기화 실패: $error"))
-          }
-        },
-      )
-    }
-    credentials?.let { (id, secret) ->
+    // 초기화·앱 등록에 실패한 클라이언트는 해제하고 버린다 (다시 시도할 때 새로 만든다).
+    try {
       suspendCancellableCoroutine<Unit> { cont ->
-        client.registerApp(
-          id,
-          secret,
-          object : TtsConnectionListener {
-            override fun onConnected() {
+        client.initialize(
+          object : TtsInitListener {
+            override fun onSuccess() {
               if (cont.isActive) cont.resume(Unit)
             }
 
-            override fun onFailed(error: TtsError) {
-              if (cont.isActive) cont.resumeWithException(PleosServiceException("음성 안내 앱 등록 실패: $error"))
+            override fun onFailure(error: TtsError) {
+              if (cont.isActive) cont.resumeWithException(PleosServiceException("음성 안내 초기화 실패: $error"))
             }
           },
         )
       }
+      credentials?.let { (id, secret) ->
+        suspendCancellableCoroutine<Unit> { cont ->
+          client.registerApp(
+            id,
+            secret,
+            object : TtsConnectionListener {
+              override fun onConnected() {
+                if (cont.isActive) cont.resume(Unit)
+              }
+
+              override fun onFailed(error: TtsError) {
+                if (cont.isActive) cont.resumeWithException(PleosServiceException("음성 안내 앱 등록 실패: $error"))
+              }
+            },
+          )
+        }
+      }
+    } catch (e: Throwable) {
+      client.release()
+      throw e
     }
-    client.setLocale(Locale.KOREAN)
+    client.setLocale(Locale.KOREA)
     return client.also { tts = it }
   }
 

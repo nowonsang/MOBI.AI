@@ -9,10 +9,14 @@ export type BodyProfile = {
   weightKg: number;
   /** 앉은키. 모르면 키로 추정한다. */
   sittingHeightCm: number | null;
+  /** 음성 기능 선택 동의. 음성은 Pleos 음성 인식 서버에서 처리될 수 있다. */
+  voiceConsent: boolean;
   createdAt: number;
+  /** 체형 정보 수집·이용 필수 동의 시각. 등록 버튼("동의하고 등록하기")을 누른 때다. */
+  consentedAt: number;
 };
 
-export type BodyProfileInput = Omit<BodyProfile, "id" | "createdAt">;
+export type BodyProfileInput = Omit<BodyProfile, "id" | "createdAt" | "consentedAt">;
 
 /**
  * 축별 위치를 차량이 지원하는 범위 안의 비율(0 = 최소, 1 = 최대)로 나타낸다.

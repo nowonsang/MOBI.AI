@@ -5,12 +5,14 @@ import type {
   Gear,
   PleosConnectEvents,
   SeatAxis,
+  UxRestrictions,
 } from "./PleosConnect.types";
 
 declare class PleosConnectModule extends NativeModule<PleosConnectEvents> {
   /** Android Automotive(Pleos Connect) 기기인지. false 면 차량 기능을 쓸 수 없다. */
   isAutomotive(): boolean;
   getGear(): Promise<Gear>;
+  getUxRestrictions(): Promise<UxRestrictions>;
   getDriverSeatState(): Promise<DriverSeatState>;
   /** 기어 P 에서만 움직이고, 목표에 닿거나 실패하면 멈춘 뒤 최종 위치를 돌려준다. */
   moveDriverSeatAxis(axis: SeatAxis, target: number): Promise<number>;

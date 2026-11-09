@@ -35,9 +35,10 @@ description: MOBI.AI 팀 공용 보안·안전 코딩 규칙 (Expo/React Native 
 
 ## 3-1. Pleos 앱 보안 가이드 (심사 기준)
 
-- 기기에 저장하는 민감 정보(SQLite·SharedPreferences·파일·캐시)는 암호화하고, 키는 Android Keystore 에 둔다. 코드에 키를 하드코딩하지 않는다. **지금 체형 정보는 암호화 없이 SQLite 에 저장되므로 제출 전에 바꿔야 한다.**
+- 기기에 저장하는 민감 정보(SQLite·SharedPreferences·파일·캐시)는 암호화하고, 키는 Android Keystore 에 둔다. 코드에 키를 하드코딩하지 않는다. 개인정보는 `src/shared/storage/encrypted-storage.ts`(AES-GCM, 키는 `expo-secure-store`)로만 저장한다. `expo-sqlite/kv-store` 를 직접 쓰지 않는다.
 - 자동 백업은 끈다 (`app.config.ts` 의 `allowBackup: false`, 적용됨).
-- 릴리스 빌드는 배포용 인증서로 서명하고 디버깅을 끈다. 디버그 로그에 민감 정보를 남기지 않는다.
+- 릴리스 빌드는 배포용 인증서로 서명하고 디버깅을 끈다 (README 'APK 서명': 키 정보는 `~/.gradle/gradle.properties` 에만).
+- 승인 전 Pleos 권한이 필요한 기능은 `src/shared/config/app-variant.ts` 로 가리고, 앱 마켓 제출은 `npm run android:build:market` 으로 만든다. 디버그 로그에 민감 정보를 남기지 않는다.
 - 필요 없는 컴포넌트(Activity·Service·Receiver·Provider)는 export 하지 않는다. 통신은 HTTPS(TLS 1.2 이상)만.
 - 개인정보는 수집 항목·목적·보관 기간·거부 권리를 알리고 **명시적으로 동의**받는다 (동의 버튼 외의 동작은 동의가 아니다). 동의 철회 시 데이터를 지운다.
 

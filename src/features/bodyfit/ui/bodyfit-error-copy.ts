@@ -27,6 +27,17 @@ export function describeBodyfitError(error: unknown): Copy {
         description:
           "시트 주변에 걸리는 물건이 없는지 확인하고 다시 시도해 주세요",
       };
+    case "ERR_DRIVING_RESTRICTED":
+      return {
+        title: "주행 중에는 할 수 없어요",
+        description: "차를 세운 뒤 다시 시도해 주세요",
+      };
+    case "ERR_PERMISSION_DENIED":
+      return {
+        title: "이 차량에서는 아직 쓸 수 없는 기능이에요",
+        description:
+          "시트 버튼으로 직접 맞춘 뒤 '지금 자세 기억하기'를 눌러 주세요",
+      };
     case "ERR_PLEOS_SERVICE":
       return {
         title: "차량 서비스에 연결하지 못했어요",

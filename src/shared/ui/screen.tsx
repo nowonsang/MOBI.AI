@@ -25,7 +25,10 @@ export function Screen({
   const maxWidth = width === "narrow" ? layout.narrow : layout.content;
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "bottom", "left", "right"]}>
+    <SafeAreaView
+      style={styles.safe}
+      edges={["top", "bottom", "left", "right"]}
+    >
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={[styles.body, { maxWidth }]}>
           <View style={styles.header}>
@@ -69,6 +72,8 @@ const styles = StyleSheet.create({
   footerInner: {
     width: "100%",
     flexDirection: "row",
+    // 1:1 로 나눈 세로 창처럼 좁으면 버튼을 다음 줄로 내린다 (가로 넘침 방지).
+    flexWrap: "wrap",
     justifyContent: "flex-end",
     gap: spacing.md,
   },

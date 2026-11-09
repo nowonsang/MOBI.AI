@@ -83,6 +83,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  pressed: { backgroundColor: colors.sandLight },
+  // Pleos 인터랙션 가이드: 눌린 요소는 95% 로 줄이고 배경색을 바꾼다.
+  pressed: { backgroundColor: colors.sandLight, transform: [{ scale: 0.95 }] },
   skeleton: { backgroundColor: colors.sandLight, borderColor: colors.sandLight },
 });

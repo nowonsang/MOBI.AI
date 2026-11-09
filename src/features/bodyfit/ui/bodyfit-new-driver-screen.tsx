@@ -3,6 +3,7 @@ import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { z } from "zod";
 
+import { canUseVoice } from "@/shared/config/app-variant";
 import { AppText } from "@/shared/ui/app-text";
 import { Button } from "@/shared/ui/button";
 import { Screen } from "@/shared/ui/screen";
@@ -12,6 +13,7 @@ import { spacing } from "@/shared/ui/theme";
 import { useCreateBodyProfile } from "../api/bodyfit.mutations";
 import { parseMeasurement } from "../model/bodyfit-drive";
 import { bodyProfileInputSchema } from "../model/bodyfit.schema";
+import { BodyfitConsentNotice } from "./bodyfit-consent-notice";
 import { describeBodyfitError } from "./bodyfit-error-copy";
 
 type Field = "name" | "heightCm" | "weightKg" | "sittingHeightCm";
@@ -26,6 +28,7 @@ export function BodyfitNewDriverScreen() {
     sittingHeightCm: "",
   });
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
+  const [voiceConsent, setVoiceConsent] = useState(false);
 
   const change = (field: Field) => (text: string) =>
     setValues((current) => ({ ...current, [field]: text }));
@@ -39,6 +42,7 @@ export function BodyfitNewDriverScreen() {
       sittingHeightCm: values.sittingHeightCm.trim()
         ? parseMeasurement(values.sittingHeightCm)
         : null,
+      voiceConsent: canUseVoice && voiceConsent,
     });
     if (!parsed.success) {
       const fieldErrors = z.flattenError(parsed.error).fieldErrors;
@@ -63,10 +67,21 @@ export function BodyfitNewDriverScreen() {
   return (
     <Screen
       title="운전자 등록"
-      description="체형 정보는 이 차량 안에만 저장되고 밖으로 보내지 않아요"
+      description="체형 정보는 이 차량 안에만 암호화해 저장해요"
       width="narrow"
       footer={
-        <Button label="등록하기" onPress={submit} loading={create.isPending} />
+        <>
+          <Button
+            label="동의하지 않아요"
+            variant="secondary"
+            onPress={() => router.back()}
+          />
+          <Button
+            label="동의하고 등록하기"
+            onPress={submit}
+            loading={create.isPending}
+          />
+        </>
       }
     >
       <View style={styles.form}>
@@ -101,6 +116,11 @@ export function BodyfitNewDriverScreen() {
           onChangeText={change("sittingHeightCm")}
           error={errors.sittingHeightCm}
           keyboardType="decimal-pad"
+        />
+        <BodyfitConsentNotice
+          askVoice={canUseVoice}
+          voiceConsent={voiceConsent}
+          onVoiceConsentChange={setVoiceConsent}
         />
         {create.isError ? (
           <AppText variant="caption" tone="danger">

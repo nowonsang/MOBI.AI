@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { useRef } from "react";
 
 import { useAppDispatch, useAppSelector } from "@/core/store/hooks";
+import { canUseVoice } from "@/shared/config/app-variant";
 import type { Gear } from "@/shared/pleos/pleos.types";
 import { usePleosEvent } from "@/shared/pleos/use-pleos-event";
 
@@ -42,6 +43,8 @@ export function BodyfitDriveMonitor() {
 
   const askComfort = () => {
     if (!driverId || askedThisDrive.current || ask.isPending) return;
+    // 마이크를 여는 질문은 음성 기능에 동의한 운전자에게만 한다.
+    if (!canUseVoice || !driver.data?.voiceConsent) return;
     if (!isLongDrive(driveStartedAt, Date.now())) return;
     askedThisDrive.current = true;
     ask.mutate(

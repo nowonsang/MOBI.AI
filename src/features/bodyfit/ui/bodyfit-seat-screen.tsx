@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 
 import { useAppDispatch } from "@/core/store/hooks";
+import { canControlSeat, canUseVoice } from "@/shared/config/app-variant";
 import { isPleosAvailable } from "@/shared/pleos/pleos";
 import { useGear } from "@/shared/pleos/use-gear";
+import { useUxRestrictions } from "@/shared/pleos/use-ux-restrictions";
 import { AppText } from "@/shared/ui/app-text";
 import { Button } from "@/shared/ui/button";
 import { Screen } from "@/shared/ui/screen";
@@ -39,8 +41,12 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   const vehicleConnected = isPleosAvailable();
   const profile = useQuery(bodyfitQueries.profile(profileId));
   const adjustments = useQuery(bodyfitQueries.adjustments(profileId));
-  const seat = useQuery({ ...bodyfitQueries.seat(), enabled: vehicleConnected });
+  const seat = useQuery({
+    ...bodyfitQueries.seat(),
+    enabled: vehicleConnected,
+  });
   const gear = useGear();
+  const restrictions = useUxRestrictions();
   const move = useMoveSeat();
   const stop = useStopSeat();
   const record = useRecordSeatAdjustment();
@@ -66,7 +72,10 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
         <StatusView
           title="운전자 정보가 없어요"
           description="목록에서 운전자를 다시 골라 주세요"
-          action={{ label: "운전자 목록으로", onPress: () => router.replace("/bodyfit") }}
+          action={{
+            label: "운전자 목록으로",
+            onPress: () => router.replace("/bodyfit"),
+          }}
         />
       </Screen>
     );
@@ -75,7 +84,9 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   const driver = profile.data;
   const recommended = recommendSeat(driver, learnOffsets(adjustments.data));
   const current = seat.data ? toSeatRatios(seat.data) : null;
-  const parked = gear === "park";
+  // 시트 조절은 플랫폼 제한(CarUxRestrictions NO_SETUP)이 없고 기어가 P 일 때만 연다.
+  // 네이티브도 움직이기 전과 도중에 기어 P 를 다시 확인한다 (DriverSeat.kt).
+  const parked = gear === "park" && !restrictions.noSetup;
   const learnedCount = adjustments.data.length;
 
   const applyRecommendation = () =>
@@ -98,7 +109,10 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   const rememberCurrent = () =>
     record.mutate(
       { profile: driver, source: "saved" },
-      { onSuccess: () => setNotice("지금 자세를 기억했어요. 다음 추천에 반영할게요") },
+      {
+        onSuccess: () =>
+          setNotice("지금 자세를 기억했어요. 다음 추천에 반영할게요"),
+      },
     );
 
   const confirmDelete = () =>
@@ -129,39 +143,51 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
           : "체형으로 계산한 첫 추천이에요. 쓰실수록 몸에 맞춰져요"
       }
       footer={
-        <>
-          {move.isPending ? (
-            <Button
-              label="멈추기"
-              variant="secondary"
-              onPress={() => stop.mutate()}
-            />
-          ) : (
-            <Button
-              label="지금 자세 기억하기"
-              variant="secondary"
-              onPress={rememberCurrent}
-              disabled={!vehicleConnected}
-              loading={record.isPending}
-            />
-          )}
+        !canControlSeat ? (
+          // market 빌드: 시트 제어 권한이 없어 운전자가 직접 맞춘 자세를 기억한다.
           <Button
-            label="추천 자세로 맞추기"
-            onPress={applyRecommendation}
-            disabled={!vehicleConnected || !parked}
-            loading={move.isPending}
-            accessibilityHint="기어가 P 일 때만 시트가 움직여요"
+            label="지금 자세 기억하기"
+            onPress={rememberCurrent}
+            disabled={!vehicleConnected}
+            loading={record.isPending}
           />
-        </>
+        ) : (
+          <>
+            {move.isPending ? (
+              <Button
+                label="멈추기"
+                variant="secondary"
+                onPress={() => stop.mutate()}
+              />
+            ) : (
+              <Button
+                label="지금 자세 기억하기"
+                variant="secondary"
+                onPress={rememberCurrent}
+                disabled={!vehicleConnected}
+                loading={record.isPending}
+              />
+            )}
+            <Button
+              label="추천 자세로 맞추기"
+              onPress={applyRecommendation}
+              disabled={!vehicleConnected || !parked}
+              loading={move.isPending}
+              accessibilityHint="기어가 P 일 때만 시트가 움직여요"
+            />
+          </>
+        )
       }
     >
       <View style={styles.status} accessibilityLiveRegion="polite">
         <AppText variant="bodyStrong">
           {!vehicleConnected
             ? "차량에 연결되어 있지 않아요"
-            : parked
-              ? "주차 중이에요. 시트를 움직일 수 있어요"
-              : "주행 중에는 시트를 움직이지 않아요"}
+            : !canControlSeat
+              ? "시트 버튼으로 추천 자세에 맞춘 뒤 기억해 주세요"
+              : parked
+                ? "주차 중이에요. 시트를 움직일 수 있어요"
+                : "주행 중에는 시트를 움직이지 않아요"}
         </AppText>
         {!vehicleConnected ? (
           <AppText variant="secondary" tone="secondary">
@@ -173,16 +199,22 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
       <BodyfitSeatAxes recommended={recommended} current={current} />
 
       {notice ? (
-        <AppText variant="secondary" tone="secondary" accessibilityLiveRegion="polite">
+        <AppText
+          variant="secondary"
+          tone="secondary"
+          accessibilityLiveRegion="polite"
+        >
           {notice}
         </AppText>
       ) : null}
-      {error ? (
-        <StatusView {...describeBodyfitError(error)} />
-      ) : null}
+      {error ? <StatusView {...describeBodyfitError(error)} /> : null}
 
-      {vehicleConnected ? (
-        <BodyfitVoiceFeedback profile={driver} seat={seat.data} parked={parked} />
+      {vehicleConnected && canUseVoice && driver.voiceConsent ? (
+        <BodyfitVoiceFeedback
+          profile={driver}
+          seat={seat.data}
+          parked={parked}
+        />
       ) : null}
 
       <View style={styles.manage}>

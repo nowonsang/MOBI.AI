@@ -28,7 +28,8 @@ npm start              # JS 만 바꿨을 때 개발 서버만 (Fast Refresh)
 npm run android:prebuild        # android/ 생성·동기화
 npm run android:prebuild:clean  # android/ 를 처음부터 다시 생성 (.env.local·app.config.ts 를 바꾼 뒤)
 npm run android:build:debug     # 디버그 APK (-- --arch arm64-v8a)
-npm run android:build:release   # 릴리스 APK (디버그 키 서명, 제출용 아님)
+npm run android:build:release   # 릴리스 APK, 공모전 시연용 contest (배포 키가 없으면 디버그 키 서명 + 경고)
+npm run android:build:market    # 릴리스 APK, Pleos 앱 마켓 심사용 market (승인 전 권한·기능 제외)
 npm run lint           # ESLint(아키텍처·차량 SDK 창구·디자인 토큰) + 마이그레이션 검사
 npm run typecheck
 npm test               # Jest 단위 테스트
@@ -81,7 +82,8 @@ JS 에서 쓰는 API (`@/shared/pleos/pleos` 의 `pleos()` 로만 접근):
 - **SDK 사용 상태 (2026-11 기준)**: Vehicle State·NaviHelper 는 신청 없이 사용. **Vehicle Control(시트 이동)·SpeechToText·TextToSpeech 는 "준비 중"** 이라 아직 신청할 수 없다 → 에뮬레이터 개발은 가능하지만 배포 전 사용 승인을 다시 확인한다.
 - **종료된 것**: LLM SDK, CRN(Emulator 2.1.0 부터 주입 불필요), 블루투스 동글 연동 (2026-10-19).
 - **앱에 넣은 Pleos 필수 설정**: `com.hmg.rotary.ROTARY_SUPPORTED=false` (CCP 미지원 앱, `app.plugin.js`), `allowBackup=false` (보안 가이드), `versionCode` (심사·배포마다 올림, `app.config.ts`), minSdk 28 (서명 키 로테이션·리니지).
-- **제출 전 남은 일**: 릴리스 서명 키로 서명한 **APK**(600MB 미만, 디버깅 비활성화), 기기 저장 개인정보 암호화(Keystore 키), 개인정보 수집 명시적 동의 화면, 아이콘 512×512 PNG/JPEG(1MB 이하), IVI 스크린샷 2~8장, 개인정보처리방침 URL, IARC 연령 등급, 영어 앱 이름 태그.
+- **빌드 종류 (`MOBI_APP_VARIANT`)**: `contest`(기본, 공모전 시연: 시트 자동 조절·음성 포함) / `market`(앱 마켓 심사: 승인 전 권한 `CONTROL_CAR_SEATS`·`STT_SERVICE`·`TTS_SERVICE` 를 매니페스트에서 `tools:node="remove"` 로 빼고, 화면에서도 자동 조절·음성을 숨긴다). Pleos 심사는 "승인되지 않은 퍼미션을 선언하거나 해당 API 를 호출"하면 통과할 수 없다. 권한이 승인되면 `app.plugin.js` 의 `UNAPPROVED_PERMISSIONS` 와 `src/shared/config/app-variant.ts` 에서 뺀다.
+- **제출 전 남은 일**: 배포 키로 서명한 **APK**(아래 'APK 서명'), 아이콘 512×512 PNG/JPEG(1MB 이하), IVI 스크린샷 2~8장, 개인정보처리방침 URL, IARC 연령 등급, 영어 앱 이름 태그.
 - 앱 마켓은 자동 업데이트를 지원하지 않는다. 업데이트 안내가 필요하면 `market://detail?package=ai.mobi.app` 로 연결한다.
 
 ## BodyFit AI 흐름
@@ -114,13 +116,14 @@ JS 에서 쓰는 API (`@/shared/pleos/pleos` 의 `pleos()` 로만 접근):
 ```
 app.config.ts                 Expo 설정 (Android 전용, minSdk 28, Pleos Maven 저장소, config plugin)
 modules/pleos-connect/        Pleos Connect SDK 로컬 Expo 모듈
-├── app.plugin.js             .env.local 의 Pleos 앱 등록 정보 → 매니페스트 meta-data
+├── app.plugin.js             .env.local 의 Pleos 앱 등록 정보 → 매니페스트 meta-data, market 빌드의 승인 전 권한 제거
 ├── android/build.gradle      Pleos SDK 의존성
 ├── android/src/main/AndroidManifest.xml   Pleos 권한
 ├── android/src/main/java/ai/mobi/pleosconnect/
 │   ├── PleosConnectModule.kt JS 로 노출하는 함수·이벤트
 │   ├── DriverSeat.kt         시트 읽기·목표 위치 이동(주차 확인·항상 STOP)
 │   ├── GearMonitor.kt        Android Car API GEAR_SELECTION
+│   ├── UxRestrictionsMonitor.kt  플랫폼 주행 중 UX 제한 (CarUxRestrictions, NO_SETUP)
 │   ├── VoiceServices.kt      STT · TTS
 │   ├── NaviEvents.kt         목적지 도착 이벤트
 │   └── PleosErrors.kt        JS 에러 코드
@@ -136,7 +139,9 @@ src/
 │   ├── api/                  기기 저장소, 캐시 계약, 뮤테이션, 음성 묶음
 │   └── ui/                   화면(*-screen.tsx), 시트 막대, 음성 피드백, 주행 감시
 └── shared/
-    ├── pleos/                차량 SDK 접근 창구 (pleos.ts, pleos.types.ts, use-gear, use-pleos-event)
+    ├── pleos/                차량 SDK 접근 창구 (pleos.ts, pleos.types.ts, use-gear, use-ux-restrictions, use-pleos-event)
+    ├── storage/              기기 저장 값 암호화 (encrypted-storage.ts)
+    ├── config/               빌드 종류별 기능 (app-variant.ts: contest/market)
     └── ui/                   디자인 토큰(theme.ts)과 공용 컴포넌트
 scripts/                      개발 도구 (비밀 검사, env 권한, 마이그레이션 검사, Supabase 점검)
 scripts/android/              Android 스크립트 (점검·기기 목록·prebuild·빌드·에뮬레이터·실기기 실행, 공용 lib.mjs)
@@ -168,7 +173,8 @@ app → core → features → shared → native(modules/*)
 
 - 차량을 움직이는 동작은 **기어 P 에서만**, 운전자 확인 후에만, 끝나면 **항상 STOP**. 기어를 알 수 없으면 주차가 아닌 것으로 본다.
 - 음성 인식 결과는 신뢰하지 않는 입력이다. 조절안으로만 만들고 운전자 확인 후에만 적용한다.
-- 체형·자세 기록은 기기 안에만 저장하고, 운전자가 지울 수 있다.
+- 체형·자세 기록은 기기 안에만 **AES-GCM 으로 암호화**해 저장한다 (`src/shared/storage/encrypted-storage.ts`, 키는 `expo-secure-store` 로 Android Keystore 가 보호). 운전자가 지울 수 있다.
+- 운전자 등록 화면에서 수집 항목·목적·보관·거부 권리를 알리고 **"동의하고 등록하기"** 버튼으로만 필수 동의를 받는다. 음성 기능은 별도 선택 동의(음성은 Pleos 서버에서 처리될 수 있음)이며, 동의한 운전자에게만 마이크를 연다.
 - `EXPO_PUBLIC_*` 변수와 앱 설정 값은 APK 에 들어간다. 비밀 값을 넣지 않는다.
 
 ### 환경 변수 (`.env.local`, 이름만 기록)
@@ -212,6 +218,16 @@ app → core → features → shared → native(modules/*)
 
 - 2026-11-09 기준 `npm audit` 의 moderate 31건·low 1건은 모두 개발·빌드 도구(Expo CLI, Jest, ESLint)가 쓰는 `glob`([GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4))·`minimatch`([GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249))·`deepmerge`([GHSA-gcqx-w48m-w2h4](https://github.com/advisories/GHSA-gcqx-w48m-w2h4))에서 나온다. 앱(APK)에 들어가는 코드가 아니다.
 - `overrides` 로 강제 업그레이드하면 Expo CLI·Metro 와 어긋날 수 있어 지금은 두지 않았다. Expo SDK 패치 버전이 올라오면 `npx expo install --fix` 후 다시 확인한다. `npm audit fix --force` 는 쓰지 않는다.
+
+## APK 서명
+
+Pleos 앱 보안 가이드: 배포용 앱은 디버그 인증서가 아닌 **배포용 인증서**로 서명한다 (minSdk 28 → v2·v3 서명, 키 로테이션).
+
+1. 배포 키를 한 번 만든다. 저장소 밖에 둔다 (예: `~/keys/` 폴더): `keytool -genkeypair -v -keystore <키 파일 경로> -alias mobi -keyalg RSA -keysize 2048 -validity 10000`
+2. 키 위치·비밀번호를 **`~/.gradle/gradle.properties`(저장소 밖)** 에 적는다. 이름만 기록: `MOBI_UPLOAD_STORE_FILE`, `MOBI_UPLOAD_STORE_PASSWORD`, `MOBI_UPLOAD_KEY_ALIAS`, `MOBI_UPLOAD_KEY_PASSWORD` (또는 같은 이름 앞에 `ORG_GRADLE_PROJECT_` 를 붙인 환경 변수).
+3. `npm run android:build:release` (또는 `android:build:market`). 속성이 없으면 디버그 키로 서명되고 스크립트가 경고한다.
+
+`app.config.ts` 의 `withReleaseSigning` 은 생성된 `android/app/build.gradle` 에 이 속성을 읽는 서명 설정만 넣는다. 키 파일·비밀번호는 저장소와 `android/` 어디에도 기록되지 않는다. **키를 잃어버리면 같은 앱으로 업데이트할 수 없으니** 팀에서 안전하게 보관한다.
 
 ## 배포
 

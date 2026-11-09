@@ -19,11 +19,18 @@ export const bodyProfileInputSchema = z.object({
     .min(60, "앉은키는 60~120cm 사이로 입력해 주세요")
     .max(120, "앉은키는 60~120cm 사이로 입력해 주세요")
     .nullable(),
+  // 선택 동의. 거부해도 화면만으로 모든 기능을 쓸 수 있다.
+  voiceConsent: z.boolean(),
 });
 
+// 저장된 목록은 배열 전체를 한 번에 검증한다. 동의 필드가 생기기 전에 저장된 운전자 하나 때문에
+// 목록 전체가 비지 않도록, 예전 기록은 기본값(음성 미동의, 동의 시각 0 = 기록 없음)으로 읽는다.
 export const bodyProfileSchema = bodyProfileInputSchema.extend({
+  voiceConsent: z.boolean().default(false),
   id: z.string().min(1),
   createdAt: z.number(),
+  /** 필수 동의(체형 정보 수집·이용)를 받은 시각. 0 이면 동의 화면 이전에 등록된 운전자다. */
+  consentedAt: z.number().default(0),
 });
 
 const ratio = z.number().min(0).max(1);
