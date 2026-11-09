@@ -1,158 +1,51 @@
 ---
 name: add-service
-description: MOBI.AI에 새 서비스(도메인 모듈)를 추가하는 절차. "새 서비스/도메인/기능 영역 추가", "admin·user·payment 같은 서비스 만들기", "features 폴더에 새 모듈" 같은 요청에 사용한다. features/<서비스> + app/(<서비스>) + app/api/<서비스>를 main 서비스와 같은 모양으로 만든다.
-argument-hint: <서비스 이름 (kebab-case, 예: admin, user-profile)>
+description: MOBI.AI에 새 서비스(도메인 모듈)를 추가하는 절차. "새 서비스/도메인/기능 영역 추가", "새 기능 화면 만들기", "features 폴더에 새 모듈" 같은 요청에 사용한다. features/<서비스> + app/(<서비스>)/<서비스> 를 참고 구현인 bodyfit 서비스와 같은 모양으로 만든다.
+argument-hint: <서비스 이름 (kebab-case, 예: climate, trip-log)>
 ---
 
 # 새 서비스 추가
 
-먼저 `project-architecture` 스킬의 규칙을 따른다. 이 프로젝트의 참고 구현은 이 스킬의 템플릿이다: 핵심 4개 파일은 아래에, 나머지 파일(마이그레이션, 타입, 슬라이스, 저장소, 뮤테이션, UI, Route Handler, 레이아웃, 에러 경계)은 같은 폴더의 [`templates.md`](templates.md) 에 있다.
+먼저 `project-architecture` 스킬의 규칙을 따른다. **참고 구현은 `src/features/bodyfit` 이다.** 새 파일은 bodyfit 의 같은 역할 파일을 열어 모양(이름·export·주석 밀도)을 그대로 따른다.
 
 ## 0. 확인할 것
 
-- 서비스 이름: 소문자 kebab-case 단수 (`admin`, `user-profile`). 식별자에는 camelCase(`userProfile`)·PascalCase(`UserProfile`)로 쓴다.
-- URL: 라우트 그룹 `(서비스)`는 URL에 나타나지 않는다. 페이지 URL을 사용자에게 확인한다 (예: `/admin`). `/` 는 main 서비스 전용이다.
+- 서비스 이름: 소문자 kebab-case 단수 (`climate`, `trip-log`). 식별자에는 camelCase(`tripLog`)·PascalCase(`TripLog`)로 쓴다.
+- 경로: 라우트 그룹 `(서비스)`는 URL에 나타나지 않는다. 화면 경로를 사용자에게 확인한다 (예: `/climate`). `/` 는 첫 화면으로 보내는 `src/app/index.tsx` 전용이다.
 - 다른 서비스의 데이터가 필요하면 서비스끼리 import 하지 말고 `app` 에서 조립하거나 `shared` 로 추출한다.
+- 새 차량 기능(Pleos SDK 의 다른 도메인·권한)이 필요하면 **먼저 사용자와 상의한다.** Pleos 권한은 Pleos App Market 과 사전 협의된 범위만 쓸 수 있다 (`secure-coding` 스킬 5장).
 
-## 1. 만들 파일 (`admin` 예시)
+## 1. 만들 파일 (`climate` 예시, 괄호는 bodyfit 의 대응 파일)
 
 ```
-src/features/admin/
-├── model/admin.types.ts
-├── model/admin-<주제>.slice.ts      # 클라이언트 전역 UI 상태가 있을 때만
-├── server/admin.repository.ts       # import "server-only"
-├── server/admin.data.ts             # 서버 컴포넌트용 읽기 (권한 확인·DTO)
-├── server/admin.actions.ts          # 'use server' 쓰기
-├── api/admin.queries.ts             # 캐시 계약
-├── api/admin.mutations.ts
-└── ui/admin-<이름>.tsx
-src/app/(admin)/layout.tsx
-src/app/(admin)/admin/page.tsx
-src/app/(admin)/admin/error.tsx
-src/app/api/admin/<리소스>/route.ts
+src/features/climate/
+├── model/climate.types.ts             (bodyfit.types.ts)
+├── model/climate.schema.ts            (bodyfit.schema.ts)     입력·저장값을 검증할 때
+├── model/climate-<주제>.ts + .test.ts (bodyfit-recommend.ts)  순수 로직
+├── model/climate-<주제>.slice.ts      (bodyfit-session.slice.ts) 앱 전역 UI 상태가 있을 때만
+├── api/climate.storage.ts             (bodyfit.storage.ts)    기기 안 저장이 필요할 때
+├── api/climate.queries.ts             (bodyfit.queries.ts)    캐시 계약
+├── api/climate.mutations.ts           (bodyfit.mutations.ts)
+└── ui/climate-<이름>-screen.tsx        (bodyfit-seat-screen.tsx)
+src/app/(climate)/_layout.tsx          ((bodyfit)/_layout.tsx)
+src/app/(climate)/climate/index.tsx    ((bodyfit)/bodyfit/index.tsx)
 ```
 
-## 2. 핵심 템플릿
+## 2. 규칙 요약
 
-**캐시 계약** — `api/admin.queries.ts`
-
-```ts
-import { queryOptions } from "@tanstack/react-query";
-import { http } from "@/shared/api/http";
-import type { AdminUser } from "../model/admin.types";
-
-export const adminKeys = {
-  all: ["admin"] as const,
-  users: () => [...adminKeys.all, "users"] as const,
-};
-
-export const adminQueries = {
-  users: () =>
-    queryOptions({
-      queryKey: adminKeys.users(),
-      queryFn: ({ signal }) => http<AdminUser[]>("/api/admin/users", { signal }),
-      staleTime: 30_000,
-    }),
-};
-```
-
-**서버 읽기** — `server/admin.data.ts`
-
-```ts
-import "server-only";
-
-import { findAdminUsers } from "./admin.repository";
-
-// 서버 컴포넌트용 읽기 함수. 인증·인가 확인과 DTO 변환을 여기(또는 repository)에서 한다.
-export async function getAdminUsers() {
-  return findAdminUsers();
-}
-```
-
-> 서버 캐시(`'use cache'`, `unstable_cache`)는 쓰지 않는다. Cloudflare Workers 에서 Cache Components 가 동작하지 않고, 서버 캐시 저장소(R2·D1)도 아직 없다. 브라우저 캐시는 TanStack Query 가 맡는다.
-
-**서버 쓰기** — `server/admin.actions.ts`
-
-```ts
-"use server";
-
-import { z } from "zod";
-import { updateAdminUserRole } from "./admin.repository";
-
-const inputSchema = z.object({
-  userId: z.string().min(1).max(64),
-  role: z.enum(["member", "admin"]),
-});
-
-export async function updateAdminUserRoleAction(input: z.input<typeof inputSchema>) {
-  const { userId, role } = inputSchema.parse(input);
-  // 인증·인가 확인을 여기(또는 repository)에서 한다. 페이지의 인증 검사는 Action까지 보호하지 않는다.
-
-  // 서버 캐시가 없으므로 무효화할 것이 없다. 브라우저 쪽은 뮤테이션 훅의 invalidateQueries 가 갱신한다.
-  return updateAdminUserRole(userId, role); // 화면에 필요한 필드만 담은 DTO
-}
-```
-
-**페이지 조립** — `app/(admin)/admin/page.tsx`
-
-```tsx
-import { Suspense } from "react";
-import { connection } from "next/server";
-import {
-  HydrationBoundary,
-  QueryClient,
-  dehydrate,
-} from "@tanstack/react-query";
-import { adminQueries } from "@/features/admin/api/admin.queries";
-import { getAdminUsers } from "@/features/admin/server/admin.data";
-import { AdminUserList } from "@/features/admin/ui/admin-user-list";
-
-export default function AdminPage() {
-  return (
-    // 로딩은 실제 목록 모양의 스켈레톤으로 (ui-design 스킬 6장)
-    <Suspense
-      fallback={
-        <div
-          role="status"
-          aria-label="불러오는 중"
-          className="h-56 animate-pulse rounded-control bg-sand-light"
-        />
-      }
-    >
-      <AdminUsersData />
-    </Suspense>
-  );
-}
-
-async function AdminUsersData() {
-  // DB 데이터는 요청마다 새로 읽는다 (빌드 시점 데이터로 정적 페이지가 굳지 않게).
-  await connection();
-
-  // 서버에서 같은 쿼리 키로 미리 채워 브라우저로 넘긴다. 상대 경로 fetch 는 서버에서 안 되므로 queryFn 을 서버 함수로 바꾼다.
-  const queryClient = new QueryClient();
-  await queryClient.prefetchQuery({
-    ...adminQueries.users(),
-    queryFn: () => getAdminUsers(),
-  });
-
-  return (
-    <HydrationBoundary state={dehydrate(queryClient)}>
-      <AdminUserList />
-    </HydrationBoundary>
-  );
-}
-```
-
-나머지 파일(마이그레이션, `*.types.ts`, 슬라이스, `*.repository.ts`, `*.mutations.ts`, `ui/*`, `route.ts`, `layout.tsx`, `error.tsx`)은 [`templates.md`](templates.md) 의 `admin` 예시를 서비스 이름만 바꿔 쓴다.
+- **캐시 계약**: `<서비스>Keys`(`["<서비스>", ...]`)와 `<서비스>Queries`(`queryOptions`)를 한 파일에. 차량 값처럼 밖에서 바뀌는 데이터는 `staleTime: 0`.
+- **차량 호출**: `api/` 에서 `pleos()` (`@/shared/pleos/pleos`) 로만. 차량이 아니면 `PleosUnavailableError` 가 던져지므로 화면은 `isPleosAvailable()` 로 미리 분기하고, 에러는 `pleosErrorCode()` 로 문구를 고른다.
+- **뮤테이션**: `onSettled` 에서 관련 query key 를 `invalidateQueries` 한다. 차량을 움직이는 뮤테이션은 화면에서 확인 대화상자를 거친 뒤에만 호출한다.
+- **화면**: 라우트 파일은 `ui/*-screen.tsx` 를 렌더하고 URL 파라미터만 넘긴다. 레이아웃은 `@/shared/ui/screen` 의 `Screen` 을 쓴다.
+- **저장**: 개인정보는 기기 안(`expo-sqlite/kv-store`)에만 저장하고, 읽을 때 zod 로 검증한다 (형식이 다르면 빈 값으로).
 
 ## 3. 연결
 
-0. 테이블이 필요하면 `supabase-schema` 스킬을 로드하고 그 규칙대로 `supabase/migrations/<YYYYMMDDHHMMSS>_create_<서비스>_<테이블>.sql` 을 만든다. 테이블 이름은 `mobi_ai.<서비스>_<복수형>` (예: `mobi_ai.admin_users`). `npm run check:migrations` 통과 → `src/shared/supabase/database.types.ts` 갱신 → 사용자에게 SQL Editor 실행 요청 순서로 진행한다.
-1. Redux 슬라이스를 만들었다면 `src/core/store/store.ts` 의 `combineSlices(...)` 에 추가한다.
-2. 외부 도메인(API 서버, 이미지 CDN)을 쓰면 `next.config.ts` 의 CSP 해당 지시어에 **필요한 도메인만** 추가한다.
-3. 새 환경 변수가 필요하면 `src/shared/config/server-env.ts` 스키마에 추가하고 README "환경 변수"에 이름만 기록한다.
+1. Redux 슬라이스를 만들었다면 `src/core/store/store.ts` 의 `reducer` 에 `[slice.name]: slice.reducer` 로 추가한다.
+2. 새 네이티브 기능이 필요하면 `modules/pleos-connect` 의 Kotlin(`PleosConnectModule.kt`)과 JS 계약(`src/PleosConnect.types.ts`, `src/PleosConnectModule.ts`)을 함께 고치고, 권한은 모듈 `AndroidManifest.xml` 에 이유 주석과 함께 추가한다.
+3. 새 환경 변수가 필요하면 사용자와 상의한다. `EXPO_PUBLIC_` 변수는 앱 번들에 그대로 들어가므로 비밀 값에 쓰지 않는다.
 4. `README.md` 폴더 구조에 서비스를 추가한다.
 
 ## 4. 검증
 
-`npm run lint && npm run typecheck && npm run build` 가 모두 통과해야 완료다 (`lint` 에 마이그레이션 검사 포함). 빌드 결과의 Route 표에서 새 페이지와 API 경로를 확인한다. 새 테이블을 썼다면 사용자가 SQL을 실행한 뒤에야 빌드가 통과한다.
+`npm run lint && npm run typecheck && npm test` 가 모두 통과해야 완료다. 네이티브 모듈이나 `app.config.ts` 를 바꿨다면 `npm run android:build:debug` 도 통과해야 한다.

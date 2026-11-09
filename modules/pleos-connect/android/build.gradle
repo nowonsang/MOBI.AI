@@ -1,0 +1,30 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'ai.mobi.pleosconnect'
+version = '0.1.0'
+
+android {
+  namespace "ai.mobi.pleosconnect"
+  // 기어(GEAR_SELECTION)는 Pleos Gear API 가 deprecated 되어 Android Car API 로 읽는다.
+  // 컴파일에만 쓰이고, 런타임에는 Android Automotive OS 가 제공한다.
+  useLibrary 'android.car'
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+  lintOptions {
+    abortOnError false
+  }
+}
+
+// Pleos Connect SDK. 저장소(nexus-playground.pleos.ai)는 app.config.ts 의 expo-build-properties 에서 추가한다.
+// 버전을 올릴 때는 저장소의 maven-metadata.xml 과 Pleos 문서의 변경 사항을 함께 확인한다.
+dependencies {
+  implementation 'ai.pleos.playground:Vehicle:2.3.2'
+  implementation 'ai.pleos.playground:NaviHelper:3.0.5'
+  implementation 'ai.pleos.playground:SpeechToText:3.3.1'
+  implementation 'ai.pleos.playground:TextToSpeech:3.3.1'
+}

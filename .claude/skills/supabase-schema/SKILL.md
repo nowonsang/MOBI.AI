@@ -5,6 +5,11 @@ description: MOBI.AI가 다른 서비스와 공유하는 Supabase 프로젝트�
 
 # Supabase 스키마 격리 규칙 (공유 프로젝트)
 
+> **현재 상태 (2026-11-09):** 앱이 Expo(React Native) 차량 앱으로 바뀌면서 **앱 코드는 DB 를 쓰지 않는다.** 체형·자세 기록은 기기 안에만 저장한다.
+> 앱 번들에 들어간 키는 누구나 꺼낼 수 있으므로 앱에서 Supabase 에 직접 접속하지 않는다 (`@supabase/*` import 는 ESLint 에러).
+> DB 가 다시 필요해지면 키를 서버에만 두는 백엔드 구조를 **사용자와 먼저 정한 뒤** 이 스킬의 규칙을 그대로 따른다.
+> 이미 만든 `mobi_ai` 스키마와 마이그레이션 이력(`supabase/migrations/`), 6장의 정리 절차는 그대로 유효하다.
+
 ## 배경 — 왜 규칙이 필요한가
 
 - MOBI.AI는 **해커톤용 단발 프로젝트**다. Supabase Free 플랜이라 다른 서비스(이하 '공유 서비스')와 **같은 프로젝트**를 쓰고, 제출 후 MOBI.AI 데이터는 정리한다.
@@ -28,7 +33,7 @@ description: MOBI.AI가 다른 서비스와 공유하는 Supabase 프로젝트�
 
 ## 2. 마이그레이션 작성 규칙
 
-파일: `supabase/migrations/<YYYYMMDDHHMMSS>_<snake_case 설명>.sql` (참고: 스키마·권한은 `20261108000000_create_mobi_ai_schema.sql`, 테이블 예시는 `add-service` 스킬의 `templates.md`)
+파일: `supabase/migrations/<YYYYMMDDHHMMSS>_<snake_case 설명>.sql` (참고: 스키마·권한은 `20261108000000_create_mobi_ai_schema.sql`)
 
 1. **모든 객체 이름에 `mobi_ai.` 를 붙인다.** 스키마를 생략하면 공유 서비스의 `public` 에 생성된다.
 2. 새 테이블은 같은 파일에서:
@@ -48,7 +53,7 @@ description: MOBI.AI가 다른 서비스와 공유하는 Supabase 프로젝트�
 ## 3. 작성 후 검증 (AI 필수)
 
 1. `npm run check:migrations` — 스키마 생략, 공유 스키마 변경, RLS 누락, 위험 구문을 검사한다. `npm run lint` 에도 포함되어 있다. **오류가 있으면 고칠 때까지 완료로 보고하지 않는다.**
-2. `src/shared/supabase/database.types.ts` 에 새 테이블·함수 타입을 추가한다.
+2. 이 테이블을 쓰는 백엔드 코드가 있다면 그쪽 DB 타입을 함께 갱신한다.
 3. 사용자에게 SQL Editor 실행을 요청하고, 실행 후 `npm run check:supabase` 로 확인한다.
 
 ## 4. 실행 방법 (사람이 한다)
@@ -60,8 +65,8 @@ description: MOBI.AI가 다른 서비스와 공유하는 Supabase 프로젝트�
 
 ## 5. 애플리케이션 코드 규칙
 
-- DB 접근은 `features/<서비스>/server/*.repository.ts` 에서 `getSupabaseAdminClient()` (`@/shared/supabase/admin`) 로만 한다. 기본 스키마가 `mobi_ai` 로 고정되어 있다.
-- `@supabase/*` 직접 import 와 `.schema(...)` 호출은 ESLint 에러다 (`src/shared/supabase/` 제외).
+- **모바일 앱(`src/`)은 DB 에 직접 접속하지 않는다.** `@supabase/*` import 는 ESLint 에러다. 공개용(anon) 키 + RLS 로 앱에서 직접 쓰는 구조도 공유 서비스의 `anon` 역할을 건드리므로 사용자 확인 없이 만들지 않는다.
+- 백엔드를 두기로 정했다면: 클라이언트는 기본 스키마를 `mobi_ai` 로 고정해 하나만 만들고, `.schema(...)` 로 다른 스키마로 바꾸지 않는다.
 - 조회는 필요한 컬럼만 명시한다 (`select("id, title")`). Supabase 에러는 `error.code` 만 담아 서버에서 던진다.
 - 원자적으로 처리해야 하는 변경(토글, 카운터, 여러 테이블 동시 변경)은 `mobi_ai` 함수로 만들고 `.rpc()` 로 호출한다.
 - `service_role` 키는 공유 서비스 데이터까지 접근 가능한 관리자 키다. 서버 밖으로 내보내지 않는다 (`secure-coding` 스킬 참고).

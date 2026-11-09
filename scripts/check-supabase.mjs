@@ -4,18 +4,32 @@
 // 출력 직전에 env 파일에서 읽은 모든 값을 [REDACTED]로 치환하는 안전장치를 둔다.
 
 import { execFileSync } from "node:child_process";
-import { statSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import nextEnv from "@next/env";
+import { parseEnv } from "node:util";
 
 const SCHEMA = "mobi_ai";
 const projectDir = process.cwd();
 
-// Next.js와 같은 규칙(.env.local 우선)으로 불러온다. 파일 경로 로그는 끈다.
-const { parsedEnv = {} } = nextEnv.loadEnvConfig(projectDir, true, {
-  info: () => {},
-  error: () => {},
-});
+// Expo CLI와 같은 규칙(.env.local 우선)으로 불러온다. 셸에서 이미 지정한 값은 덮어쓰지 않는다.
+const parsedEnv = {};
+for (const file of [".env", ".env.local"]) {
+  try {
+    Object.assign(
+      parsedEnv,
+      parseEnv(readFileSync(path.join(projectDir, file), "utf8")),
+    );
+  } catch {
+    // 파일이 없으면 건너뛴다.
+  }
+}
+for (const [name, value] of Object.entries(parsedEnv)) {
+  process.env[name] ??= value;
+}
+
+// 이 접두어가 붙은 변수는 앱(JS 번들)에 그대로 들어가 누구나 꺼내 볼 수 있다.
+const isBundledName = (name) =>
+  name.startsWith("EXPO_PUBLIC_") || name.startsWith("NEXT_PUBLIC_");
 
 const secretValues = Object.values(parsedEnv).filter(
   (value) => typeof value === "string" && value.length >= 8,
@@ -93,8 +107,14 @@ console.log(
   `env 파일에서 찾은 Supabase 관련 변수: ${relatedNames.join(", ") || "(없음)"}`,
 );
 
-const urlVar = pick(["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_URL"]);
+const urlVar = pick([
+  "SUPABASE_URL",
+  "EXPO_PUBLIC_SUPABASE_URL",
+  "NEXT_PUBLIC_SUPABASE_URL",
+]);
 const publicKeyVar = pick([
+  "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+  "EXPO_PUBLIC_SUPABASE_ANON_KEY",
   "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   "SUPABASE_PUBLISHABLE_KEY",
@@ -108,7 +128,7 @@ const secretKeyVar = pick([
 
 let supabaseUrl = null;
 if (!urlVar) {
-  fail("Supabase URL 변수가 없습니다 (NEXT_PUBLIC_SUPABASE_URL)");
+  fail("Supabase URL 변수가 없습니다 (SUPABASE_URL)");
 } else {
   try {
     const parsed = new URL(urlVar.value);
@@ -145,8 +165,10 @@ if (!secretKeyVar) {
   );
 } else {
   const { kind, secret } = describeKey(secretKeyVar.value);
-  if (secretKeyVar.name.startsWith("NEXT_PUBLIC_")) {
-    fail(`${secretKeyVar.name}: 서버 전용 키에 NEXT_PUBLIC_ 접두어가 있습니다`);
+  if (isBundledName(secretKeyVar.name)) {
+    fail(
+      `${secretKeyVar.name}: 서버 전용 키에 EXPO_PUBLIC_/NEXT_PUBLIC_ 접두어가 있습니다`,
+    );
   } else if (!secret) {
     warn(
       `${secretKeyVar.name}: 서버 전용 변수에 공개용 키(${kind})가 들어 있습니다`,
@@ -156,17 +178,15 @@ if (!secretKeyVar) {
   }
 }
 
-// NEXT_PUBLIC_ 변수는 브라우저 번들에 그대로 들어가므로 서버 전용 키가 섞이면 즉시 유출이다.
-for (const name of Object.keys(parsedEnv).filter((key) =>
-  key.startsWith("NEXT_PUBLIC_"),
-)) {
+// 앱 번들에 들어가는 변수에 서버 전용 키가 섞이면 배포 즉시 유출이다.
+for (const name of Object.keys(parsedEnv).filter(isBundledName)) {
   const value = parsedEnv[name];
   if (
     value.startsWith("sb_secret_") ||
     (value.startsWith("eyJ") && describeKey(value).secret)
   ) {
     fail(
-      `${name}: 브라우저에 노출되는 변수에 서버 전용 키가 들어 있습니다 (즉시 키 교체 필요)`,
+      `${name}: 앱 번들에 노출되는 변수에 서버 전용 키가 들어 있습니다 (즉시 키 교체 필요)`,
     );
   }
 }

@@ -1,0 +1,17 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!--
+    Pleos 권한은 Pleos App Market 과 사전 협의·승인된 범위에서만 쓸 수 있다. 쓰지 않는 권한은 넣지 않는다 (심사 탈락 사유).
+    각 이름은 SDK 메서드의 @RequiresPermission 값과 맞춘 것이다.
+  -->
+  <!-- 시트 위치 읽기 (getCurrentSeat*, registerSeat*, checkSeat*Capabilities) -->
+  <uses-permission android:name="pleos.car.permission.CAR_SEATS" />
+  <!-- 시트 이동 (moveSeat*) -->
+  <uses-permission android:name="pleos.car.permission.CONTROL_CAR_SEATS" />
+  <!-- 기어 상태 (Android Car API GEAR_SELECTION). 주차(P) 중에만 시트를 움직이기 위해 필요 -->
+  <uses-permission android:name="android.car.permission.CAR_POWERTRAIN" />
+  <!-- 음성 인식 · 음성 안내 (LLM SDK 는 2026-10-19 제공 종료되어 쓰지 않는다) -->
+  <uses-permission android:name="pleos.car.permission.STT_SERVICE" />
+  <uses-permission android:name="pleos.car.permission.TTS_SERVICE" />
+  <!-- 내비게이션 도착 이벤트 (장거리 주행 후 착좌감 질문) -->
+  <uses-permission android:name="pleos.car.permission.NAVI_ROUTE" />
+</manifest>

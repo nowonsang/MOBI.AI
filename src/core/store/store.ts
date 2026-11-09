@@ -1,17 +1,16 @@
-import { combineSlices, configureStore } from "@reduxjs/toolkit";
+import { configureStore } from "@reduxjs/toolkit";
 
-// 새 슬라이스는 여기에 추가한다: combineSlices(adminRoleFilterSlice, ...)
-// 각 슬라이스의 reducerPath(기본값: name)가 state key가 된다.
-const rootReducer = combineSlices();
+import { bodyfitSessionSlice } from "@/features/bodyfit/model/bodyfit-session.slice";
 
-export type RootState = ReturnType<typeof rootReducer>;
-
-export function makeStore(preloadedState?: Partial<RootState>) {
+// 클라이언트 전역 UI 상태만 둔다. 저장된 데이터·차량 값은 TanStack Query 캐시가 담당한다.
+export function makeStore() {
   return configureStore({
-    reducer: rootReducer,
-    preloadedState,
+    reducer: {
+      [bodyfitSessionSlice.name]: bodyfitSessionSlice.reducer,
+    },
   });
 }
 
 export type AppStore = ReturnType<typeof makeStore>;
+export type RootState = ReturnType<AppStore["getState"]>;
 export type AppDispatch = AppStore["dispatch"];

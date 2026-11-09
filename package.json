@@ -2,61 +2,71 @@
   "name": "mobi-ai",
   "version": "0.1.0",
   "private": true,
+  "main": "expo-router/entry",
+  "engines": {
+    "node": "^22.13.0 || >=24.3.0"
+  },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint && node scripts/check-migrations.mjs",
-    "typecheck": "next typegen && tsc --noEmit",
+    "start": "expo start",
+    "android:doctor": "node scripts/android/doctor.mjs",
+    "android:devices": "node scripts/android/devices.mjs",
+    "android:prebuild": "node scripts/android/prebuild.mjs",
+    "android:prebuild:clean": "node scripts/android/prebuild.mjs --clean",
+    "android:build:debug": "node scripts/android/build.mjs debug",
+    "android:build:release": "node scripts/android/build.mjs release",
+    "android:emulator": "node scripts/android/run-emulator.mjs",
+    "android:device": "node scripts/android/run-device.mjs",
+    "lint": "eslint . && node scripts/check-migrations.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "verify": "npm run lint && npm run typecheck && npm test && node scripts/android/build.mjs debug --arch arm64-v8a",
     "check:supabase": "node scripts/check-supabase.mjs",
     "check:migrations": "node scripts/check-migrations.mjs",
-    "secure:env": "node scripts/secure-env-files.mjs",
-    "cf:build": "opennextjs-cloudflare build",
-    "cf:preview": "npm run cf:build && opennextjs-cloudflare preview",
-    "cf:deploy": "node scripts/check-build-secrets.mjs && opennextjs-cloudflare deploy -- --keep-vars",
-    "test:e2e": "playwright test",
-    "test:e2e:cf": "E2E_TARGET=cloudflare playwright test",
-    "verify": "npm run lint && npm run typecheck && npm run test:e2e && npm run test:e2e:cf",
-    "posttest:e2e:cf": "node -e \"require('node:fs').rmSync('.open-next',{recursive:true,force:true})\""
+    "secure:env": "node scripts/secure-env-files.mjs"
+  },
+  "jest": {
+    "preset": "jest-expo",
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1",
+      "^@modules/(.*)$": "<rootDir>/modules/$1"
+    },
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/android/"
+    ]
   },
   "dependencies": {
-    "@opennextjs/cloudflare": "^1.20.16",
     "@reduxjs/toolkit": "^2.14.0",
-    "@supabase/supabase-js": "^2.119.0",
     "@tanstack/react-query": "^5.107.1",
-    "@tanstack/react-query-devtools": "^5.107.1",
-    "next": "16.4.5",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1",
+    "expo": "~58.0.23",
+    "expo-build-properties": "~58.0.12",
+    "expo-constants": "~58.0.15",
+    "expo-linking": "~58.0.16",
+    "expo-router": "~58.0.30",
+    "expo-splash-screen": "~58.0.13",
+    "expo-sqlite": "~58.0.15",
+    "expo-status-bar": "~58.0.4",
+    "expo-system-ui": "~58.0.7",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-safe-area-context": "~5.11.1",
+    "react-native-screens": "~4.30.1",
     "react-redux": "^9.3.1",
-    "server-only": "^0.0.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@next/env": "^16.4.5",
-    "@playwright/test": "^1.65.0",
-    "@tailwindcss/turbopack": "^4",
+    "@supabase/supabase-js": "^2.119.0",
     "@tanstack/eslint-plugin-query": "^5.107.1",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "babel-plugin-react-compiler": "1.0.0",
-    "eslint": "^9",
-    "eslint-config-next": "16.4.5",
+    "@types/jest": "^30.0.0",
+    "@types/react": "^19.3.0",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "^58.0.4",
+    "eslint-import-resolver-typescript": "^4.4.5",
     "eslint-plugin-boundaries": "^7.4.2",
-    "tailwindcss": "^4",
-    "typescript": "^5",
-    "wrangler": "^4.158.0"
-  },
-  "overrides": {
-    "@typescript-eslint/typescript-estree": {
-      "minimatch": "^11.0.1"
-    },
-    "@node-minify/core": {
-      "glob": "^14.0.4"
-    },
-    "@opennextjs/cloudflare": {
-      "glob": "^14.0.4"
-    }
+    "globals": "^17.14.0",
+    "jest": "^30.5.2",
+    "jest-expo": "^58.0.14",
+    "typescript": "^6.0.3"
   }
 }
