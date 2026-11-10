@@ -17,7 +17,7 @@ description: MOBI.AI 차량 앱 디자인 규칙(현대자동차 공모전, Pleo
 | 공모전 | **디자인 규정 없음** | 공모전 사이트(appdevchallenge.auto-hmg.io) 접수·심사·FAQ·유의사항 확인 (2026-11-10). 심사 항목 중 차량특화성("주행·정차 맥락 및 차량 기능과 유기적으로 결합")과 기술 활용성("핵심 기능과 사용 경험에 적절히 활용")이 디자인과 관련된다. 2차 PT 심사 기준은 아직 공개되지 않았다 |
 
 **토큰은 `src/shared/ui/theme.ts` 에 있다.** 컴포넌트에서 색·크기를 직접 정하지 말고 토큰(`colors.*`, `typography.*`, `spacing.*`, `sizes.*`, `radius.*`, `layout.*`)만 쓴다. 이 파일 밖의 임의 색상(`"#..."`, `"rgb(...)"`)은 ESLint 에러다.
-공용 컴포넌트(`src/shared/ui/`): `AppText`, `Button`, `TextField`, `Screen`, `Columns`, `StatusView`, `Card`·`SummaryCard`, `InfoRow`, `IconBadge`, `ChipGroup`·`ToggleChip`. 새 화면은 이것부터 쓴다.
+공용 컴포넌트(`src/shared/ui/`): `AppText`, `Button`, `TextField`, `Screen`, `Columns`, `StatusView`, `Card`·`SummaryCard`, `InfoRow`, `IconBadge`, `ChipGroup`·`ToggleChip`, `ConfirmDialog`. 새 화면은 이것부터 쓴다.
 
 ## 1. 차량 화면 크기와 배치
 
@@ -141,7 +141,7 @@ description: MOBI.AI 차량 앱 디자인 규칙(현대자동차 공모전, Pleo
 
 - **주 CTA**: `<Button label="..." />` (primary). 동사형 문구("맞추기", "등록하기"). 처리 중에는 `loading` 으로 중복 입력을 막는다.
 - **보조 버튼**: `variant="secondary"` (흰 면 + 옅은 테두리). 주 CTA보다 눈에 띄면 안 된다.
-- **차량을 움직이는 버튼**: 누르면 `Alert.alert` 로 확인 → 확인 후 실행. 실행 중에는 같은 자리에 "멈추기".
+- **차량을 움직이는 버튼**: 누르면 `ConfirmDialog` 로 확인 → 확인 후 실행. 실행 중에는 같은 자리에 "멈추기". 시스템 `Alert` 는 글자·버튼이 차량 기준보다 작아 쓰지 않는다.
 - **입력**: `TextField` (라벨은 위, placeholder 로 라벨 대신 금지). 오류는 입력칸 아래에 이유와 고치는 방법을 함께. 숫자는 `keyboardType="decimal-pad"`.
 - **목록**: 행 높이 최소 `sizes.touchTarget` + 여백. 섹션당 7개 이하.
 - **카드**: `Card` (흰 면 + 연한 그림자, 제목·개수 표시·구분선·› 포함). 화면 바탕은 `Screen` 이 옅은 회색으로 깐다.

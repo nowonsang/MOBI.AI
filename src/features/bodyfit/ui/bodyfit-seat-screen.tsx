@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { useAppDispatch } from "@/core/store/hooks";
 import { canControlSeat, canUseVoice } from "@/shared/config/app-variant";
@@ -12,6 +12,7 @@ import { AppText } from "@/shared/ui/app-text";
 import { Button } from "@/shared/ui/button";
 import { Card, SummaryCard } from "@/shared/ui/card";
 import { ChipGroup } from "@/shared/ui/chip";
+import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { Columns } from "@/shared/ui/columns";
 import { IconBadge } from "@/shared/ui/icon-badge";
 import { InfoRow } from "@/shared/ui/info-row";
@@ -74,6 +75,7 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   const stop = useStopSeat();
   const remove = useDeleteBodyProfile();
   const [notice, setNotice] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<"move" | "delete" | null>(null);
 
   // 이 화면을 연 운전자를 이번 주행의 운전자로 본다 (주행 시작 자세·주행 후 질문에 쓴다).
   useEffect(() => {
@@ -128,22 +130,18 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
         ? "지금 자세가 딱 좋아요"
         : `${guide.axes.length}곳 중 ${toAdjust}곳 조절`;
 
-  const applyRecommendation = () =>
-    Alert.alert(MOVE_CONFIRM.title, MOVE_CONFIRM.description, [
-      { text: "취소", style: "cancel" },
-      {
-        text: "맞추기",
-        onPress: () =>
-          move.mutate(recommended, {
-            onSuccess: () => {
-              setNotice("추천 자세로 맞췄어요");
-              void speakQuietly(
-                "추천 자세로 맞췄어요. 불편한 곳이 있으면 말로 알려 주세요",
-              );
-            },
-          }),
+  // 운전자가 확인 창에서 "맞추기"를 누른 뒤에만 움직인다 (secure-coding 1장).
+  const applyRecommendation = () => {
+    setConfirming(null);
+    move.mutate(recommended, {
+      onSuccess: () => {
+        setNotice("추천 자세로 맞췄어요");
+        void speakQuietly(
+          "추천 자세로 맞췄어요. 불편한 곳이 있으면 말로 알려 주세요",
+        );
       },
-    ]);
+    });
+  };
 
   // 주 경로: 운전자가 시트 버튼으로 맞추고 화면이 안내한다 (시트 제어 SDK 가 Coming Soon 이라도 동작한다).
   const openGuide = () =>
@@ -159,22 +157,12 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
       params: { profileId: driver.id },
     });
 
-  const confirmDelete = () =>
-    Alert.alert(
-      `${driver.name}님의 정보를 지울까요?`,
-      "체형 정보와 자세 기록이 모두 지워지고 되돌릴 수 없어요",
-      [
-        { text: "취소", style: "cancel" },
-        {
-          text: "지우기",
-          style: "destructive",
-          onPress: () =>
-            remove.mutate(driver.id, {
-              onSuccess: () => router.replace("/bodyfit"),
-            }),
-        },
-      ],
-    );
+  const deleteDriver = () => {
+    setConfirming(null);
+    remove.mutate(driver.id, {
+      onSuccess: () => router.replace("/bodyfit"),
+    });
+  };
 
   const error = move.error ?? seat.error;
   const status = !vehicleConnected
@@ -204,7 +192,7 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
             <Button
               label="자동으로 맞추기"
               variant="secondary"
-              onPress={applyRecommendation}
+              onPress={() => setConfirming("move")}
               disabled={!vehicleConnected || !parked}
               accessibilityHint="기어가 P 일 때만 시트가 움직여요"
             />
@@ -225,6 +213,22 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
         </>
       }
     >
+      <ConfirmDialog
+        visible={confirming === "move"}
+        title={MOVE_CONFIRM.title}
+        description={MOVE_CONFIRM.description}
+        confirmLabel="맞추기"
+        onConfirm={applyRecommendation}
+        onCancel={() => setConfirming(null)}
+      />
+      <ConfirmDialog
+        visible={confirming === "delete"}
+        title={`${driver.name}님의 정보를 지울까요?`}
+        description="체형 정보와 자세 기록이 모두 지워지고 되돌릴 수 없어요"
+        confirmLabel="지우기"
+        onConfirm={deleteDriver}
+        onCancel={() => setConfirming(null)}
+      />
       <Columns
         left={
           <>
@@ -322,7 +326,7 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                 <Button
                   label="운전자 정보 지우기"
                   variant="secondary"
-                  onPress={confirmDelete}
+                  onPress={() => setConfirming("delete")}
                   loading={remove.isPending}
                   accessibilityHint="체형 정보와 자세 기록을 모두 지워요"
                 />

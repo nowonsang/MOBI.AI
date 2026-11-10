@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Alert, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { useAppDispatch, useAppSelector } from "@/core/store/hooks";
 import type { DriverSeatState } from "@/shared/pleos/pleos.types";
 import { usePleosEvent } from "@/shared/pleos/use-pleos-event";
 import { AppText } from "@/shared/ui/app-text";
 import { Button } from "@/shared/ui/button";
+import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { colors, radius, spacing } from "@/shared/ui/theme";
 
 import {
@@ -44,6 +45,7 @@ export function BodyfitVoiceFeedback({
   const record = useRecordSeatAdjustment();
   const [partial, setPartial] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   usePleosEvent("onSpeechPartial", (event) => setPartial(event.text));
 
@@ -65,33 +67,32 @@ export function BodyfitVoiceFeedback({
     );
   };
 
+  // 음성 결과는 신뢰하지 않는 입력이다: 조절안을 화면에 보여 주고 운전자가 확인 창에서 고른 뒤에만 움직인다.
   const applyPending = () => {
+    setConfirming(false);
     if (!pending || !seat) return;
     const target = applyNudges(toSeatRatios(seat), pending.nudges);
-    Alert.alert(
-      "시트를 움직일게요",
-      "시트 주변에 물건이나 사람이 끼지 않았는지 확인해 주세요",
-      [
-        { text: "취소", style: "cancel" },
-        {
-          text: "조절하기",
-          onPress: () =>
-            move.mutate(target, {
-              onSuccess: () => {
-                record.mutate({ profile, source: "voice" });
-                dispatch(feedbackDismissed());
-                setMessage("말씀하신 대로 조절했어요. 다음 추천에 반영할게요");
-              },
-            }),
-        },
-      ],
-    );
+    move.mutate(target, {
+      onSuccess: () => {
+        record.mutate({ profile, source: "voice" });
+        dispatch(feedbackDismissed());
+        setMessage("말씀하신 대로 조절했어요. 다음 추천에 반영할게요");
+      },
+    });
   };
 
   const error = listen.error ?? move.error;
 
   return (
     <View style={styles.section}>
+      <ConfirmDialog
+        visible={confirming}
+        title="시트를 움직일게요"
+        description="시트 주변에 물건이나 사람이 끼지 않았는지 확인해 주세요"
+        confirmLabel="조절하기"
+        onConfirm={applyPending}
+        onCancel={() => setConfirming(false)}
+      />
       <View style={styles.heading}>
         <AppText variant="heading" accessibilityRole="header">
           불편한 곳이 있나요?
@@ -113,7 +114,7 @@ export function BodyfitVoiceFeedback({
             <Button
               label="이대로 조절하기"
               variant="secondary"
-              onPress={applyPending}
+              onPress={() => setConfirming(true)}
               disabled={!parked || !seat}
               loading={move.isPending}
             />
