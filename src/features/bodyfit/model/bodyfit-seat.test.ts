@@ -1,5 +1,11 @@
 import { parseMeasurement } from "./bodyfit-drive";
-import { applyNudges, toSeatRatios, toSeatTargets } from "./bodyfit-seat";
+import {
+  SEAT_REREAD_LIMIT,
+  applyNudges,
+  shouldRereadSeat,
+  toSeatRatios,
+  toSeatTargets,
+} from "./bodyfit-seat";
 
 const state = {
   foreAft: { value: 50, min: 0, max: 200, movable: true },
@@ -51,5 +57,24 @@ describe("parseMeasurement", () => {
 
   it("숫자가 없으면 NaN", () => {
     expect(parseMeasurement("모름")).toBeNaN();
+  });
+});
+
+describe("shouldRereadSeat", () => {
+  it("축을 하나도 읽지 못한 빈 상태면 다시 읽는다 (앱을 켠 직후)", () => {
+    expect(shouldRereadSeat({}, 1)).toBe(true);
+  });
+
+  it("축을 하나라도 읽었으면 다시 읽지 않는다", () => {
+    expect(shouldRereadSeat({ foreAft: state.foreAft }, 1)).toBe(false);
+  });
+
+  it("아직 한 번도 읽지 않았으면 다시 읽기를 예약하지 않는다", () => {
+    expect(shouldRereadSeat(undefined, 0)).toBe(false);
+  });
+
+  it("정해진 횟수까지만 다시 읽는다 (축이 없는 차량에서 끝없이 읽지 않게)", () => {
+    expect(shouldRereadSeat({}, SEAT_REREAD_LIMIT - 1)).toBe(true);
+    expect(shouldRereadSeat({}, SEAT_REREAD_LIMIT)).toBe(false);
   });
 });

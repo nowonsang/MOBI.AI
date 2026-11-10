@@ -2,6 +2,8 @@ import { queryOptions } from "@tanstack/react-query";
 
 import { pleos } from "@/shared/pleos/pleos";
 
+import { shouldRereadSeat } from "../model/bodyfit-seat";
+
 import {
   findBodyProfile,
   findBodyProfiles,
@@ -40,5 +42,10 @@ export const bodyfitQueries = {
       queryKey: bodyfitKeys.seat(),
       queryFn: () => pleos().getDriverSeatState(),
       staleTime: 0,
+      // 앱을 켠 직후에는 차량 서비스 연결 전이라 빈 상태가 온다. 그때만 1초 간격으로 몇 번 더 읽는다.
+      refetchInterval: (query) =>
+        shouldRereadSeat(query.state.data, query.state.dataUpdateCount)
+          ? 1000
+          : false,
     }),
 };

@@ -15,8 +15,9 @@ type ScreenProps = {
   /** 화면 하단에 고정할 행동. 보조 버튼을 먼저, 주 CTA 를 마지막에 둔다 (좁은 창에서는 주 CTA 가 맨 아래). */
   footer?: ReactNode;
   /**
-   * 뒤로 가기 버튼. 첫 화면은 false 로 둔다: 시작할 때 거치는 Redirect(/) 가 스택에 남아
-   * canGoBack 이 true 여도 돌아갈 화면이 없다.
+   * 뒤로 가기 버튼. 첫 화면만 false 로 둔다. 돌아갈 화면이 스택에 없으면 첫 화면(/)으로 보낸다.
+   * 렌더 중의 canGoBack() 은 화면 전환 직후 예전 값을 줄 수 있어 버튼을 보일지 판단하는 데 쓰지 않는다
+   * (운전자 목록 → 맞춤 자세에서 버튼이 사라졌다).
    */
   back?: boolean;
   children: ReactNode;
@@ -36,7 +37,7 @@ export function Screen({
   const compact = useCompact();
   const maxWidth = width === "narrow" ? layout.narrow : layout.content;
   const gutter = compact ? layout.gutterCompact : layout.gutter;
-  const showBack = back && router.canGoBack();
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace("/"));
 
   return (
     <SafeAreaView
@@ -60,11 +61,11 @@ export function Screen({
           ]}
         >
           <View style={styles.headerRow}>
-            {showBack ? (
+            {back ? (
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="뒤로 가기"
-                onPress={() => router.back()}
+                onPress={goBack}
                 style={({ pressed }) => [
                   styles.back,
                   pressed && styles.backPressed,
