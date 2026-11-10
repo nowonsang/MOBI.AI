@@ -138,8 +138,8 @@ npm run android:doctor  # "결과: 통과" 확인
 | `npm run android:prebuild:clean` | `android/` 를 지우고 처음부터 다시 생성 | — |
 | `npm run android:build:debug` | 디버그 APK 빌드 (설치·실행 안 함) | `-- --arch arm64-v8a` |
 | `npm run android:build:release` | 릴리스 APK 빌드 (디버그 키 서명, 제출용 아님) | `-- --arch arm64-v8a` |
-| `npm run android:emulator` | Pleos Connect 에뮬레이터를 (꺼져 있으면 콜드 부트로) 켜고 빌드·설치·실행. 설치돼 있지 않으면 설치 안내 후 중단 | `-- --avd <이름>`, `-- --variant release` |
-| `npm run android:device` | 내 기기(실기기)에서 빌드·설치·실행 | `-- --device <시리얼>`, `-- --variant release` |
+| `npm run android:emulator` | Pleos Connect 에뮬레이터를 (꺼져 있으면 콜드 부트로) 켜고 빌드·설치·실행. 설치돼 있지 않으면 설치 안내 후 중단 | `-- --avd <이름>`, `-- --variant release`, `-- --market` |
+| `npm run android:device` | 내 기기(실기기)에서 빌드·설치·실행 | `-- --device <시리얼>`, `-- --variant release`, `-- --market` |
 | `npm start` | 개발 서버만 (앱이 이미 설치돼 있고 JS 만 바꿨을 때) | — |
 
 예:
@@ -150,6 +150,7 @@ npm run android:device -- --device R3CT40ABCDE
 npm run android:build:release
 ```
 
+- `android:emulator`·`android:device` 는 빌드 전에 항상 prebuild 로 `android/` 를 `app.config.ts` 와 맞춘다. 빌드 종류는 기본 contest(공모전 시연용, 시트 자동 조절·음성 포함)이고, `-- --market` 을 붙이면 market(앱 마켓 심사용, 승인 전 권한·기능 제외)이다.
 - `android:emulator`·`android:device` 는 빌드 후 개발 서버(Metro)를 켜 둔 채로 남는다. 끝낼 때는 터미널에서 Ctrl+C.
 - APK 위치: `android/app/build/outputs/apk/<debug|release>/app-<debug|release>.apk`
 

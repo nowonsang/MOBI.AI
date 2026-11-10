@@ -122,7 +122,9 @@ npm run android:emulator
 
 1. **Pleos Connect 에뮬레이터를 찾는다.** 없으면 설치 안내를 출력하고 끝난다 (다른 AVD 로 대신 실행하지 않는다) → 2-2 로 돌아간다.
 2. **켠다.** 꺼져 있으면 콜드 부트로 켜고 부팅이 끝날 때까지 기다린다 (1~3분). 이미 켜져 있으면 그대로 쓴다. 일반 Android 에뮬레이터가 켜져 있어도 거기에는 설치하지 않는다.
-3. **빌드·설치·실행한다.** 개발 빌드를 만들어 설치하고 개발 서버(Metro)를 켜 둔다. 처음은 수 분.
+3. **빌드·설치·실행한다.** prebuild 로 `android/` 를 `app.config.ts` 와 맞춘 뒤 개발 빌드를 만들어 설치하고 개발 서버(Metro)를 켜 둔다. 처음은 수 분.
+   - 빌드 종류는 기본 contest(공모전 시연용: 시트 자동 조절·음성 포함). 앱 마켓 심사용(승인 전 권한·기능 제외)으로 확인하려면 `npm run android:emulator -- --market`.
+   - prebuild 를 매번 하는 이유: `expo run:android` 는 `android/` 가 없을 때만 prebuild 해서, 건너뛰면 이전 빌드 종류의 매니페스트가 남는다 (예: market 빌드 뒤 시트 제어 권한이 빠진 채 설치됨).
 
 출력의 `대상 에뮬레이터: emulator-XXXX (<Pleos AVD 이름>)` 줄로 Pleos Connect 에뮬레이터에 올라갔는지 확인한다.
 

@@ -22,8 +22,8 @@ Expo SDK 58 (React Native 0.88, prebuild) + TanStack Query v5 + Redux Toolkit v2
 ```bash
 npm run android:doctor          # Node·JDK·SDK·Pleos Connect 에뮬레이터 점검 (없으면 설치 안내)
 npm run android:devices         # 연결된 기기 시리얼·AVD 목록 (Pleos Connect AVD 표시)
-npm run android:emulator        # Pleos Connect 에뮬레이터를 켜고 빌드·설치·실행 (-- --avd <이름>, -- --variant release)
-npm run android:device          # 내 기기 빌드·설치·실행 (-- --device <시리얼>)
+npm run android:emulator        # Pleos Connect 에뮬레이터를 켜고 prebuild·빌드·설치·실행 (-- --avd <이름>, -- --variant release, -- --market)
+npm run android:device          # 내 기기 prebuild·빌드·설치·실행 (-- --device <시리얼>, -- --market)
 npm start              # JS 만 바꿨을 때 개발 서버만 (Fast Refresh)
 npm run android:prebuild        # android/ 생성·동기화
 npm run android:prebuild:clean  # android/ 를 처음부터 다시 생성 (.env.local·app.config.ts 를 바꾼 뒤)

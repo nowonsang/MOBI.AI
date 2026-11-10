@@ -60,6 +60,18 @@ export function expo(args) {
   run("npx", ["expo", ...args], { cwd: projectRoot });
 }
 
+/**
+ * 빌드 종류(MOBI_APP_VARIANT: contest | market)를 정하고 android/ 를 app.config.ts 와 맞춘다.
+ * `expo run:android` 는 android/ 가 없을 때만 prebuild 하므로, 실행 스크립트도 빌드 전에 반드시 부른다.
+ * 건너뛰면 이전 빌드 종류의 매니페스트가 남는다 (예: market 으로 만든 뒤 시트 제어 권한이 빠진 채 설치됨).
+ * 이후 명령(Gradle, 앱 설정 포함)도 같은 빌드 종류를 쓰도록 childEnv 에 넣는다.
+ */
+export function prebuildAndroid({ market = false } = {}) {
+  childEnv.MOBI_APP_VARIANT = market ? "market" : (childEnv.MOBI_APP_VARIANT ?? "contest");
+  console.log(`빌드 종류: ${childEnv.MOBI_APP_VARIANT}`);
+  expo(["prebuild", "--platform", "android", "--no-install"]);
+}
+
 /** `adb devices -l` → [{ serial, state, model, emulator }] */
 export function listDevices() {
   return capture(adbPath, ["devices", "-l"])

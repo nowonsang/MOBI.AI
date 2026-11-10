@@ -36,6 +36,8 @@ PR 은 만들지 않는다. 브랜치에서 작업하고, 검사를 통과하면
 | `npm run android:build:debug` | prebuild + `./gradlew assembleDebug` | 네이티브 모듈·설정·SDK 의존성 확인 (처음은 수 분) |
 | `npm run android:emulator` | Pleos Connect 에뮬레이터를 켜고 빌드·설치·실행 (없으면 설치 안내 후 중단, `project-setup` 스킬 2·6장) | 직접 확인 |
 | `npm run android:device` | 내 기기에 빌드·설치·실행 (`-- --device <시리얼>`) | 직접 확인 |
+
+`android:emulator`·`android:device` 는 빌드 전에 prebuild 를 다시 하고, 기본은 contest 빌드다. market 빌드로 확인할 때는 `-- --market` 을 붙인다.
 | `npm run verify` | 위 전부 | push 전 필수 |
 
 - 빌드 스크립트는 기존 `android/` 를 유지한 채 prebuild 한다. 설정이 꼬였으면 `npm run android:prebuild:clean` 으로 다시 만든다.

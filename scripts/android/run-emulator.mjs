@@ -3,10 +3,11 @@
 // 이 앱의 실행 대상은 일반 Android 에뮬레이터가 아니라 Pleos Connect 에뮬레이터다.
 //   1) Pleos Connect 에뮬레이터(AVD)가 없으면 설치 방법을 안내하고 끝낸다. 다른 AVD 로 대신 실행하지 않는다.
 //   2) 꺼져 있으면 콜드 부트로 켜고 부팅이 끝날 때까지 기다린다. 이미 켜져 있으면 그대로 쓴다.
-//   3) `expo run:android --device <시리얼>` 로 빌드·설치·실행한다.
+//   3) android/ 를 app.config.ts 와 맞춘 뒤(prebuild) `expo run:android --device <시리얼>` 로 빌드·설치·실행한다.
 // 옵션: --avd <이름>             AVD 를 직접 고른다. Pleos Connect AVD 가 여러 개일 때,
 //                                또는 차량이 아닌 기기의 안내 화면을 확인할 때(일반 AVD)만 쓴다.
-//       --variant <debug|release> 빌드 종류 (기본 debug)
+//       --variant <debug|release> Gradle 빌드 종류 (기본 debug)
+//       --market                  Pleos 앱 마켓 심사용 빌드 (승인 전 권한·기능 제외). 기본은 공모전 시연용 contest
 
 import { spawn } from "node:child_process";
 import { parseArgs } from "node:util";
@@ -24,6 +25,7 @@ import {
   listDevices,
   listPleosAvds,
   pleosInstallGuide,
+  prebuildAndroid,
   requireSdk,
   sleep,
 } from "./lib.mjs";
@@ -32,6 +34,7 @@ const { values } = parseArgs({
   options: {
     avd: { type: "string" },
     variant: { type: "string", default: "debug" },
+    market: { type: "boolean", default: false },
   },
 });
 
@@ -93,4 +96,5 @@ async function resolveEmulator() {
 
 const serial = await resolveEmulator();
 console.log(`\n대상 에뮬레이터: ${serial} (${avdNameOf(serial)})`);
+prebuildAndroid({ market: values.market });
 expo(["run:android", "--device", serial, "--variant", values.variant]);

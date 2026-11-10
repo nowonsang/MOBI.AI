@@ -8,7 +8,7 @@ import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 
-import { androidDir, capture, childEnv, expo, run, sdkRoot } from "./lib.mjs";
+import { androidDir, capture, prebuildAndroid, run, sdkRoot } from "./lib.mjs";
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -21,11 +21,8 @@ if (!["debug", "release"].includes(variant)) {
   process.exit(1);
 }
 
-childEnv.MOBI_APP_VARIANT = values.market ? "market" : (childEnv.MOBI_APP_VARIANT ?? "contest");
-console.log(`빌드 종류: ${childEnv.MOBI_APP_VARIANT}`);
-
 // android/ 를 app.config.ts 와 맞춘다 (없으면 만든다).
-expo(["prebuild", "--platform", "android", "--no-install"]);
+prebuildAndroid({ market: values.market });
 
 const task = variant === "release" ? "assembleRelease" : "assembleDebug";
 const gradlew = process.platform === "win32" ? "gradlew.bat" : "./gradlew";
