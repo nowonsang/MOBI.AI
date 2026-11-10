@@ -42,6 +42,11 @@ export const seatRatiosSchema = z.object({
   tilt: ratio.optional(),
 });
 
+export const driveSessionSchema = z.object({
+  profileId: z.string().min(1),
+  startedAt: z.number(),
+});
+
 export const seatAdjustmentSchema = z.object({
   profileId: z.string().min(1),
   at: z.number(),

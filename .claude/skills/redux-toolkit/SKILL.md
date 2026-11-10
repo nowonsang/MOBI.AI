@@ -11,7 +11,8 @@ Redux 공식 스타일 가이드를 이 프로젝트에 맞춘 규칙이다. 참
 
 | 상태 | 어디에 |
 | --- | --- |
-| 앱 전역 UI·세션 상태 (현재 운전자, 확인 대기 중인 조절안, 주행 시작 시각) | **Redux** |
+| 앱 전역 UI·세션 상태 (현재 운전자, 확인 대기 중인 조절안) | **Redux** |
+| 앱이 종료돼도 남아야 하는 상태 (진행 중인 주행: 기어가 P 에서 벗어나면 차량이 앱을 종료한다) | 기기 저장소 + `useMutation`. Redux 는 메모리라 사라진다 |
 | 저장소·차량에서 비동기로 읽는 데이터 (프로필, 시트 위치) | TanStack Query (`react-query` 스킬). Redux 에 복사하지 않는다 |
 | 화면을 식별하는 값 (어떤 운전자 화면인지) | 라우트 파라미터 |
 | 한 컴포넌트 안의 상태 (입력 중인 폼 값, 열림/닫힘) | `useState` |
@@ -30,8 +31,8 @@ Redux 공식 스타일 가이드를 이 프로젝트에 맞춘 규칙이다. 참
 
 - 위치·이름: `features/<서비스>/model/<서비스>-<주제>.slice.ts`, 변수 `<서비스><주제>Slice`, `name` 은 camelCase (`"bodyfitSession"`).
 - `createSlice` 하나에 `initialState`, `reducers`, `selectors` 를 함께 둔다. 상태 타입은 파일 안에서 선언한다.
-- **액션은 "무슨 일이 일어났는지"(과거형 이벤트)로 이름 짓는다**: `driverSelected`, `driveStarted`, `feedbackProposed`. `setX`·`updateX` 같은 세터 이름을 쓰지 않는다.
-- 로직은 리듀서에 둔다. 컴포넌트에서 다음 상태를 계산해 통째로 넘기지 않는다 (예: `driveStarted` 는 이미 시작된 주행이면 시각을 덮어쓰지 않는다 — 그 판단은 리듀서가 한다).
+- **액션은 "무슨 일이 일어났는지"(과거형 이벤트)로 이름 짓는다**: `driverSelected`, `feedbackProposed`, `feedbackDismissed`. `setX`·`updateX` 같은 세터 이름을 쓰지 않는다.
+- 로직은 리듀서에 둔다. 컴포넌트에서 다음 상태를 계산해 통째로 넘기지 않는다 (예: 이미 값이 있을 때 덮어쓸지 말지 같은 판단은 리듀서가 한다).
 - 리듀서는 Immer 로 "변경하듯" 쓴다. 리듀서 안에서 비동기·랜덤·현재 시각 읽기 금지 (시각은 payload 로 받는다).
 - 셀렉터는 슬라이스의 `selectors` 로 정의하고 `select<대상>` 으로 export 한다. 여러 값을 조합해 새 객체·배열을 만드는 셀렉터는 `createSelector` 로 메모이즈한다 (그대로 두면 매 렌더마다 리렌더된다).
 - 목록·사전형 데이터를 Redux 에 둘 일이 생기면 `createEntityAdapter` 로 정규화한다. 단, 저장소에서 읽은 데이터라면 Redux 가 아니라 TanStack Query 다.

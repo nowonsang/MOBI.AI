@@ -166,7 +166,8 @@ app → core → features → shared → native(modules/*)
 | --- | --- |
 | 기기 저장소·차량 값 (비동기로 읽는 데이터) | TanStack Query (`api/*.queries.ts`) |
 | 저장·차량 제어 | `useMutation` (`api/*.mutations.ts`) |
-| 현재 운전자, 주행 시작 시각, 확인 대기 중인 조절안 | Redux (`bodyfit-session.slice.ts`) |
+| 현재 운전자, 확인 대기 중인 조절안 | Redux (`bodyfit-session.slice.ts`) |
+| 진행 중인 주행 (누가 언제 출발했는지) | 기기 저장소 (`useStartDriveSession`·`useEndDriveSession`). 주행 중 차량이 앱을 종료해도 남아야 한다 |
 | 어떤 운전자 화면인지 | 라우트 파라미터 `[profileId]` |
 | 기어·착석·도착 | 차량 이벤트 (`usePleosEvent`, `useGear`) |
 

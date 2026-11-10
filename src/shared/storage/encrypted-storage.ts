@@ -51,6 +51,10 @@ export async function setEncryptedItem(key: string, value: string) {
   await Storage.setItem(key, await encrypt(value));
 }
 
+export async function removeEncryptedItem(key: string) {
+  await Storage.removeItem(key);
+}
+
 /**
  * 복호화한 값을 돌려준다. 없거나 복호화할 수 없으면(키 분실 등) null.
  * 암호화 전 버전이 남긴 평문은 읽은 뒤 바로 암호화해 다시 저장한다.

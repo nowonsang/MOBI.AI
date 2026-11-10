@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { bodyProfileSchema } from "./bodyfit.schema";
+import { bodyProfileSchema, driveSessionSchema } from "./bodyfit.schema";
 
 const legacyProfile = {
   id: "p1",
@@ -30,5 +30,26 @@ describe("bodyProfileSchema", () => {
       .safeParse([legacyProfile, current]);
     expect(parsed.success).toBe(true);
     expect(parsed.data).toHaveLength(2);
+  });
+});
+
+describe("driveSessionSchema", () => {
+  it("누가 언제 출발했는지 읽는다", () => {
+    expect(
+      driveSessionSchema.parse({ profileId: "p1", startedAt: 1_000 }),
+    ).toEqual({ profileId: "p1", startedAt: 1_000 });
+  });
+
+  it("운전자나 출발 시각이 없는 저장 값은 받지 않는다", () => {
+    expect(driveSessionSchema.safeParse({ startedAt: 1_000 }).success).toBe(
+      false,
+    );
+    expect(
+      driveSessionSchema.safeParse({ profileId: "", startedAt: 1_000 }).success,
+    ).toBe(false);
+    expect(
+      driveSessionSchema.safeParse({ profileId: "p1", startedAt: "어제" })
+        .success,
+    ).toBe(false);
   });
 });

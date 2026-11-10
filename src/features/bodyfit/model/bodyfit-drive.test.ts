@@ -2,6 +2,7 @@ import type { Gear } from "@/shared/pleos/pleos.types";
 
 import {
   LONG_DRIVE_MS,
+  STALE_DRIVE_MS,
   comfortPromptFor,
   isLongDrive,
   parseMeasurement,
@@ -31,37 +32,53 @@ describe("isLongDrive", () => {
 });
 
 describe("trackGear", () => {
-  it("처음 알게 된 기어는 기준으로만 삼는다", () => {
-    expect(trackGear(null, "park")).toEqual({ gear: "park", event: null });
+  it("처음 알게 된 기어가 P 면 주차로 본다 (앱이 꺼진 사이 끝난 주행을 닫는다)", () => {
+    expect(trackGear(null, "park")).toEqual({ gear: "park", event: "parked" });
+  });
+
+  it("처음 알게 된 기어가 P 가 아니면 기준으로만 삼는다", () => {
     expect(trackGear(null, "drive")).toEqual({ gear: "drive", event: null });
+    expect(trackGear(null, "reverse")).toEqual({
+      gear: "reverse",
+      event: null,
+    });
   });
 
   it("주차(P)에서 벗어나면 출발이다", () => {
-    expect(eventsOf(["park", "drive"])).toEqual([null, "started"]);
+    expect(eventsOf(["park", "drive"])).toEqual(["parked", "started"]);
     // 후진으로 주차 칸을 빠져나가는 것도 출발이다.
-    expect(eventsOf(["park", "reverse"])).toEqual([null, "started"]);
+    expect(eventsOf(["park", "reverse"])).toEqual(["parked", "started"]);
   });
 
   it("주차(P)로 돌아오면 주차다", () => {
     expect(eventsOf(["drive", "park"])).toEqual([null, "parked"]);
   });
 
-  it("달리는 중의 기어 변화와 같은 기어 반복은 이벤트가 아니다", () => {
-    expect(eventsOf(["park", "drive", "neutral", "drive", "drive"])).toEqual([
-      null,
-      "started",
-      null,
+  it("주행 중 앱이 다시 켜진 뒤 주차해도 주차를 잡는다", () => {
+    // 차량이 앱을 종료했다가 다시 켠 경우: 출발은 보지 못했고 D 가 처음 알게 된 기어다.
+    expect(eventsOf(["drive", "neutral", "park"])).toEqual([
       null,
       null,
+      "parked",
     ]);
+  });
+
+  it("달리는 중의 기어 변화와 같은 기어 반복은 이벤트가 아니다", () => {
+    expect(
+      eventsOf(["park", "park", "drive", "neutral", "drive", "drive"]),
+    ).toEqual(["parked", null, "started", null, null, null]);
   });
 
   it("기어를 알 수 없는 순간은 건너뛴다", () => {
     // 주차 중 값을 잠깐 놓쳐도 출발로 기록하지 않는다.
-    expect(eventsOf(["park", "unknown", "park"])).toEqual([null, null, null]);
+    expect(eventsOf(["park", "unknown", "park"])).toEqual([
+      "parked",
+      null,
+      null,
+    ]);
     // 놓친 뒤에 온 실제 변화는 그대로 잡는다.
     expect(eventsOf(["park", "unknown", "drive"])).toEqual([
-      null,
+      "parked",
       null,
       "started",
     ]);
@@ -72,10 +89,10 @@ describe("trackGear", () => {
     ]);
   });
 
-  it("기어를 모르는 채로 시작하면 처음 알게 된 기어가 기준이다", () => {
+  it("기어를 모르는 채로 시작하면 처음 알게 된 기어부터 따진다", () => {
     expect(eventsOf(["unknown", "park", "drive"])).toEqual([
       null,
-      null,
+      "parked",
       "started",
     ]);
   });
@@ -86,7 +103,6 @@ describe("comfortPromptFor", () => {
     startedAt: 0,
     now: LONG_DRIVE_MS,
     parked: true,
-    alreadyAsked: false,
     voice: false,
   };
 
@@ -105,10 +121,21 @@ describe("comfortPromptFor", () => {
     expect(comfortPromptFor({ ...longDrive, startedAt: null })).toBeNull();
   });
 
-  it("한 번의 주행에 한 번만 묻는다", () => {
-    expect(comfortPromptFor({ ...longDrive, alreadyAsked: true })).toBeNull();
+  it("출발한 지 너무 오래된 기록으로는 묻지 않는다", () => {
+    expect(comfortPromptFor({ ...longDrive, now: STALE_DRIVE_MS })).toBe(
+      "screen",
+    );
     expect(
-      comfortPromptFor({ ...longDrive, alreadyAsked: true, voice: true }),
+      comfortPromptFor({ ...longDrive, now: STALE_DRIVE_MS + 1 }),
+    ).toBeNull();
+    expect(
+      comfortPromptFor({ ...longDrive, now: STALE_DRIVE_MS + 1, voice: true }),
+    ).toBeNull();
+  });
+
+  it("시계가 뒤로 가서 출발 시각이 미래여도 묻지 않는다", () => {
+    expect(
+      comfortPromptFor({ ...longDrive, startedAt: LONG_DRIVE_MS * 3 }),
     ).toBeNull();
   });
 

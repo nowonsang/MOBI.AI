@@ -9,7 +9,9 @@ import { useGear } from "@/shared/pleos/use-gear";
 import { usePleosEvent } from "@/shared/pleos/use-pleos-event";
 
 import {
+  useEndDriveSession,
   useRecordSeatAdjustment,
+  useStartDriveSession,
   useVoiceSeatFeedback,
 } from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
@@ -20,53 +22,53 @@ import {
   trackGear,
 } from "../model/bodyfit-drive";
 import {
-  driveEnded,
-  driveStarted,
   feedbackProposed,
   selectActiveDriverId,
-  selectDriveStartedAt,
 } from "../model/bodyfit-session.slice";
+import type { DriveSession } from "../model/bodyfit.types";
 
 /**
  * 화면 없이 주행 흐름을 따라간다.
- * - 주차(P)에서 벗어날 때: 그때의 시트 자세를 운전자가 받아들인 자세로 기록한다 (학습 데이터).
- * - 오래 달린 뒤 목적지 도착 또는 주차(P): 주차 중에 화면으로 착좌감을 묻는다 (D-1).
+ * - 주차(P)에서 벗어날 때: 그때의 시트 자세를 운전자가 받아들인 자세로 기록하고 (학습 데이터),
+ *   누가 언제 출발했는지 기기에 남긴다. 주행 중에는 차량이 앱을 종료하므로 메모리에 두면 사라진다.
+ * - 주차(P)했거나 주차 중에 앱이 다시 켜졌을 때: 남겨 둔 주행이 길었으면 화면으로 착좌감을 묻는다 (D-1).
  *   음성 기능을 쓸 수 있고 동의한 운전자에게는 음성으로 묻고, 조절안이 있으면 확인 화면으로 보낸다.
  */
 export function BodyfitDriveMonitor() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const driverId = useAppSelector(selectActiveDriverId);
-  const driveStartedAt = useAppSelector(selectDriveStartedAt);
   const driver = useQuery({
     ...bodyfitQueries.profile(driverId ?? ""),
     enabled: driverId !== null,
   });
   const record = useRecordSeatAdjustment();
+  const startDrive = useStartDriveSession();
+  const endDrive = useEndDriveSession();
   const ask = useVoiceSeatFeedback();
   // 현재 기어를 먼저 읽어 둔다. 알림만 기다리면 앱을 켠 뒤 첫 P → D 전환을 기준 없이 받아 출발 기록을 놓친다.
   const gear = useGear();
   const lastGear = useRef<Gear | null>(null);
-  const askedThisDrive = useRef(false);
+  // 도착과 주차 알림이 거의 함께 와도 남겨 둔 주행은 한 번만 꺼낸다.
+  const endingDrive = useRef(false);
+  // 추후 고도화: 마이크를 여는 질문은 음성 기능에 동의한 운전자에게만 한다.
+  const voiceReady = canUseVoice && driver.data?.voiceConsent === true;
 
-  const askComfort = ({ parked }: { parked: boolean }) => {
-    if (!driverId || ask.isPending) return;
+  const askComfort = (session: DriveSession, parked: boolean) => {
     const prompt = comfortPromptFor({
-      startedAt: driveStartedAt,
+      startedAt: session.startedAt,
       now: Date.now(),
       parked,
-      alreadyAsked: askedThisDrive.current,
-      // 추후 고도화: 마이크를 여는 질문은 음성 기능에 동의한 운전자에게만 한다.
-      voice: canUseVoice && driver.data?.voiceConsent === true,
+      // 앱이 다시 켜진 뒤에는 운전자를 고르기 전이라 동의 여부를 모른다. 그때는 화면으로 묻는다.
+      voice: voiceReady && session.profileId === driverId && !ask.isPending,
     });
     if (!prompt) return;
-    askedThisDrive.current = true;
 
-    // D-1 주 경로: 화면으로 묻는다. 주차(P) 중에만 띄운다 (S-5). 달리는 중에 도착했다면 주차할 때 다시 온다.
+    // D-1 주 경로: 화면으로 묻는다. 주차(P) 중에만 띄운다 (S-5).
     if (prompt === "screen") {
       router.navigate({
         pathname: "/bodyfit/[profileId]/feedback",
-        params: { profileId: driverId },
+        params: { profileId: session.profileId },
       });
       return;
     }
@@ -85,11 +87,24 @@ export function BodyfitDriveMonitor() {
           );
           router.navigate({
             pathname: "/bodyfit/[profileId]",
-            params: { profileId: driverId },
+            params: { profileId: session.profileId },
           });
         },
       },
     );
+  };
+
+  const finishDrive = ({ parked }: { parked: boolean }) => {
+    if (endingDrive.current) return;
+    endingDrive.current = true;
+    endDrive.mutate(undefined, {
+      onSuccess: (session) => {
+        if (session) askComfort(session, parked);
+      },
+      onSettled: () => {
+        endingDrive.current = false;
+      },
+    });
   };
 
   const onGear = useEffectEvent((next: Gear) => {
@@ -97,12 +112,13 @@ export function BodyfitDriveMonitor() {
     lastGear.current = tracked.gear;
 
     if (tracked.event === "started") {
-      askedThisDrive.current = false;
-      dispatch(driveStarted(Date.now()));
+      // 운전자를 고르지 않았으면 누구의 주행인지 몰라 남기지 않는다.
+      if (!driverId) return;
+      // 차량이 곧 앱을 종료할 수 있다. 시트를 읽느라 시간이 걸리는 자세 기록보다 출발 시각을 먼저 남긴다.
+      startDrive.mutate({ profileId: driverId, startedAt: Date.now() });
       if (driver.data) record.mutate({ profile: driver.data, source: "drive-start" });
     } else if (tracked.event === "parked") {
-      askComfort({ parked: true });
-      dispatch(driveEnded());
+      finishDrive({ parked: true });
     }
   });
 
@@ -110,9 +126,11 @@ export function BodyfitDriveMonitor() {
     if (gear !== null) onGear(gear);
   }, [gear]);
 
-  usePleosEvent("onDestinationArrived", () =>
-    askComfort({ parked: lastGear.current === "park" }),
-  );
+  usePleosEvent("onDestinationArrived", () => {
+    const parked = lastGear.current === "park";
+    // 달리는 중에는 화면으로 묻지 않는다 (S-5). 주차할 때 끝낸다. 음성으로 물을 수 있을 때만 지금 묻는다.
+    if (parked || voiceReady) finishDrive({ parked });
+  });
 
   return null;
 }

@@ -12,6 +12,7 @@ import {
 import type {
   BodyProfile,
   BodyProfileInput,
+  DriveSession,
   SeatAdjustmentSource,
   SeatNudge,
   SeatRatios,
@@ -19,8 +20,11 @@ import type {
 import { bodyfitKeys } from "./bodyfit.queries";
 import {
   createBodyProfile,
+  createDriveSession,
   createSeatAdjustment,
   deleteBodyProfile,
+  deleteDriveSession,
+  findDriveSession,
 } from "./bodyfit.storage";
 import { askByVoice } from "./bodyfit.voice";
 
@@ -111,6 +115,30 @@ export function useRecordSeatAdjustment() {
       queryClient.invalidateQueries({
         queryKey: bodyfitKeys.adjustments(profile.id),
       }),
+  });
+}
+
+/**
+ * 주행을 시작할 때 누가 언제 출발했는지 기기에 남긴다.
+ * 기어가 P 에서 벗어나면 차량이 앱을 종료할 수 있어, 메모리에만 두면 주행 후 질문(D-1)을 할 수 없다.
+ */
+export function useStartDriveSession() {
+  return useMutation({
+    mutationFn: (session: DriveSession) => createDriveSession(session),
+  });
+}
+
+/**
+ * 남겨 둔 주행을 꺼내고 지운다. 주행이 끝났거나 착좌감을 물을 때 부른다.
+ * 꺼내는 것과 지우는 것을 한 번에 해서 같은 주행으로 두 번 묻지 않는다.
+ */
+export function useEndDriveSession() {
+  return useMutation({
+    mutationFn: async (): Promise<DriveSession | null> => {
+      const session = await findDriveSession();
+      if (session) await deleteDriveSession();
+      return session;
+    },
   });
 }
 

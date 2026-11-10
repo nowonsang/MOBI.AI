@@ -2,22 +2,26 @@ import { z } from "zod";
 
 import {
   getEncryptedItem,
+  removeEncryptedItem,
   setEncryptedItem,
 } from "@/shared/storage/encrypted-storage";
 
 import {
   bodyProfileSchema,
+  driveSessionSchema,
   seatAdjustmentSchema,
 } from "../model/bodyfit.schema";
 import type {
   BodyProfile,
   BodyProfileInput,
+  DriveSession,
   SeatAdjustment,
 } from "../model/bodyfit.types";
 
 // 체형 정보는 민감한 개인정보라 기기 안(SQLite)에만 암호화해 저장하고 서버로 보내지 않는다.
 const PROFILES_KEY = "bodyfit:profiles";
 const ADJUSTMENTS_KEY = "bodyfit:adjustments";
+const DRIVE_SESSION_KEY = "bodyfit:drive-session";
 // 학습에는 최근 기록만 쓰므로 운전자별로 이 개수만 남긴다.
 const MAX_ADJUSTMENTS_PER_PROFILE = 50;
 
@@ -64,11 +68,12 @@ export async function createBodyProfile(
   return profile;
 }
 
-/** 프로필과 그 운전자의 자세 기록을 함께 지운다. */
+/** 프로필과 그 운전자의 자세 기록, 진행 중이던 주행을 함께 지운다. */
 export async function deleteBodyProfile(id: string): Promise<void> {
-  const [profiles, adjustments] = await Promise.all([
+  const [profiles, adjustments, session] = await Promise.all([
     findBodyProfiles(),
     readList(ADJUSTMENTS_KEY, adjustmentsSchema),
+    findDriveSession(),
   ]);
   await writeList(
     PROFILES_KEY,
@@ -78,6 +83,28 @@ export async function deleteBodyProfile(id: string): Promise<void> {
     ADJUSTMENTS_KEY,
     adjustments.filter((record) => record.profileId !== id),
   );
+  if (session?.profileId === id) await deleteDriveSession();
+}
+
+/** 진행 중인 주행. 없거나 형식이 다르면 null. */
+export async function findDriveSession(): Promise<DriveSession | null> {
+  const raw = await getEncryptedItem(DRIVE_SESSION_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = driveSessionSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 주행은 한 번에 하나다. 끝나지 않은 주행이 남아 있으면 새 주행으로 바꾼다. */
+export async function createDriveSession(session: DriveSession): Promise<void> {
+  await setEncryptedItem(DRIVE_SESSION_KEY, JSON.stringify(session));
+}
+
+export async function deleteDriveSession(): Promise<void> {
+  await removeEncryptedItem(DRIVE_SESSION_KEY);
 }
 
 export async function findSeatAdjustments(

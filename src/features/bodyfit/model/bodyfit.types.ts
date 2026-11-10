@@ -40,6 +40,15 @@ export type SeatAdjustment = {
   source: SeatAdjustmentSource;
 };
 
+/**
+ * 진행 중인 주행: 누가 언제 출발했는지. 주행 후 질문(D-1)의 기준이다.
+ * 기어가 P 에서 벗어나면 차량이 앱을 종료할 수 있어 메모리가 아니라 기기에 남긴다.
+ */
+export type DriveSession = {
+  profileId: string;
+  startedAt: number;
+};
+
 /** increase/decrease 의 뜻은 SeatRatios 의 축 방향을 따른다. */
 export type SeatNudge = {
   axis: SeatAxis;
