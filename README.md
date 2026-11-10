@@ -212,8 +212,9 @@ app → core → features → shared → native(modules/*)
 
 - `npm test`: `model` 의 순수 로직(추천·학습·비율 변환·음성 규칙 해석) 단위 테스트.
 - `npm run android:build:debug`: Kotlin 컴파일과 Pleos SDK 의존성 해석까지 확인한다 (`verify` 는 arm64-v8a 만 빌드).
-- 차량 동작(시트 이동·멈춤·기어 전환·음성)은 Pleos Connect 에뮬레이터에서 수동 확인하고 PR 에 적는다.
+- 차량 동작(시트 이동·멈춤·기어 전환·음성)은 Pleos Connect 에뮬레이터에서 수동 확인하고 결과를 커밋 메시지에 적는다.
 - **push 전에는 `npm run verify` 가 통과해야 한다.** pre-push 훅이 자동으로 실행한다.
+- **PR 은 만들지 않는다.** 브랜치에서 작업하고 `verify` 를 통과하면 `master` 에 fast-forward 로 바로 머지·push 한 뒤, 그 브랜치를 원격·로컬에서 바로 지운다. `master` 와 머지 전 브랜치는 지우지 않는다 (`testing` 스킬 1-1).
 
 ## 의존성 보안 메모
 

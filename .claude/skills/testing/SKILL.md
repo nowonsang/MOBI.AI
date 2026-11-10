@@ -15,6 +15,18 @@ description: MOBI.AI 자동화 테스트(Jest 단위 테스트 + Android 빌드 
 
 `.githooks/pre-push` 가 같은 검사를 자동으로 돌린다 (활성화는 `project-setup` 스킬 5단계).
 
+### 1-1. 브랜치 머지와 정리 (AI 필수)
+
+PR 은 만들지 않는다. 브랜치에서 작업하고, 검사를 통과하면 `master` 에 바로 머지한 뒤 그 브랜치를 지운다.
+
+1. `master` 에서 바로 작업하지 않고 브랜치를 만든다 (`git switch -c <브랜치>`).
+2. 작업이 끝나면 `npm run verify` 가 전부 통과하는지 확인한다.
+3. `master` 를 최신으로 받고(`git fetch origin`) 브랜치를 그 위로 올린다: `git rebase origin/master`. 충돌을 고쳤다면 `verify` 를 다시 돌린다.
+4. fast-forward 로 머지하고 push 한다: `git switch master && git pull --ff-only && git merge --ff-only <브랜치> && git push origin master`
+   - `master` 가 다른 폴더(worktree)에 체크아웃돼 있어 전환할 수 없으면 브랜치에서 `git push origin <브랜치>:master` 로 올린 뒤, 그 폴더에서 `git pull --ff-only` 한다.
+5. 머지 직후 브랜치를 지운다: `git branch -d <브랜치>`, 원격에 올린 적이 있으면 `git push origin --delete <브랜치>`, 그리고 `git fetch --prune`. 그 브랜치용 worktree 가 있으면 `git worktree remove <경로>`.
+6. `master` 와 아직 머지되지 않은 브랜치(다른 사람이 작업 중인 브랜치 포함)는 지우지 않는다.
+
 ## 2. 실행 방법
 
 | 명령 | 대상 | 용도 |
@@ -43,7 +55,7 @@ description: MOBI.AI 자동화 테스트(Jest 단위 테스트 + Android 빌드 
 
 ## 4. 차량 동작 확인 (수동)
 
-자동 테스트로 확인할 수 없는 차량 동작은 Pleos Connect 에뮬레이터에서 직접 확인하고 결과를 PR 에 적는다.
+자동 테스트로 확인할 수 없는 차량 동작은 Pleos Connect 에뮬레이터에서 직접 확인하고 결과를 커밋 메시지에 적는다.
 
 1. 에뮬레이터는 **콜드 부트**로 켠다 (퀵 부트면 VHAL 이 동작하지 않는다).
 2. 기어 P 에서 "추천 자세로 맞추기" → 시트가 움직이고 멈추는지, 움직이는 중 "멈추기"가 동작하는지

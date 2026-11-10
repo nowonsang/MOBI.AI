@@ -35,6 +35,7 @@ Non-negotiable core rules:
 - Pleos permissions may only be used within the scope approved by the Pleos App Market. Add one only with a comment explaining its use, and tell the user.
 - Supabase (Free plan, hackathon) is shared with another live service. The app does **not** connect to it (keys in an app are extractable; `@supabase/*` imports are ESLint errors). If a database becomes necessary, agree on a backend design with the user first. All MOBI.AI database objects live in the `mobi_ai` schema; never modify `public`, `auth`, `storage`, extensions, or project settings. Schema changes are new files in `supabase/migrations/` that must pass `npm run check:migrations`; the user runs them in the SQL Editor (never `supabase db push`). Verify connectivity only with `npm run check:supabase`.
 - Before every `git push`, run `npm run verify` (lint, typecheck, Jest unit tests, Android build) and push only if everything passes. Add tests for new or changed `model` logic (`testing` skill).
+- Branch flow: no pull requests. Work on a branch, run `npm run verify`, then fast-forward merge it into `master` and push `master`. Right after the merge, delete the branch locally and on origin (`testing` skill, section 1-1). Never delete `master` or a branch that is not merged yet.
 - Done means `npm run lint`, `npm run typecheck`, `npm test` (and `npm run android:build:debug` for native/config/dependency changes) all pass. Update `README.md` when structure or rules change.
 - If a structure outside these rules seems necessary, ask the user first instead of improvising.
 
