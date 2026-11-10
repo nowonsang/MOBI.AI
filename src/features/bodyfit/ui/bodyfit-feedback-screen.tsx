@@ -56,7 +56,7 @@ export function BodyfitFeedbackScreen({ profileId }: { profileId: string }) {
 
   if (profile.isPending) {
     return (
-      <Screen title={COMFORT_SCREEN_QUESTION} width="narrow">
+      <Screen title={COMFORT_SCREEN_QUESTION}>
         <View style={styles.skeleton} accessibilityLabel="불러오는 중" />
       </Screen>
     );
@@ -109,7 +109,6 @@ export function BodyfitFeedbackScreen({ profileId }: { profileId: string }) {
             : "다음에도 지금 자세에 가깝게 추천해 드려요"
         }
         width="narrow"
-       
         footer={
           answered === "adjusted" ? (
             <>
@@ -155,8 +154,6 @@ export function BodyfitFeedbackScreen({ profileId }: { profileId: string }) {
     <Screen
       title={COMFORT_SCREEN_QUESTION}
       description={`${driver.name}님, 바꾸고 싶은 곳을 고르면 다음 추천에 반영해요`}
-      width="narrow"
-     
       footer={
         <>
           <Button
