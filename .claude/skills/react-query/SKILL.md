@@ -43,7 +43,7 @@ export const bodyfitQueries = {
 
 - 훅 이름은 `use<동사><대상>` (`useMoveSeat`, `useCreateBodyProfile`). `mutationFn` 은 `api/` 의 함수를 호출한다. 컴포넌트에서 저장소·SDK 를 직접 호출하지 않는다.
 - `onSettled` 에서 영향을 받는 key 를 `invalidateQueries` 한다 (성공·실패 모두).
-- 즉시 반응이 필요한 저장(0.4초 규칙)은 낙관적 업데이트: `onMutate` 에서 `cancelQueries` → 이전 값 저장 → `setQueryData` → `onError` 에서 롤백 → `onSettled` 에서 무효화.
+- 즉시 반응이 필요한 저장(0.25초 규칙, `ui-design` 스킬)은 낙관적 업데이트: `onMutate` 에서 `cancelQueries` → 이전 값 저장 → `setQueryData` → `onError` 에서 롤백 → `onSettled` 에서 무효화.
 - **차량을 움직이는 뮤테이션은 낙관적 업데이트를 하지 않는다.** 실제 위치는 차량에서 다시 읽는다.
 - 화면별 후처리(문구 표시, 이동)는 `mutate(variables, { onSuccess })` 의 호출 쪽 콜백에 둔다. 훅 정의 쪽 콜백에는 캐시 처리만 둔다.
 
