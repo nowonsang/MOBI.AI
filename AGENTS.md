@@ -4,7 +4,8 @@ MOBI.AI runs on the in-vehicle display of Hyundai's **Pleos Connect** (Android A
 
 - Expo ships breaking changes every SDK release. Before writing code that touches an Expo/React Native API, read the major version of `expo` in `package.json` and check the matching docs: `https://docs.expo.dev/versions/v<major>.0.0/` (index: https://docs.expo.dev/llms.txt).
 - Add dependencies with `npx expo install <package>` (resolves SDK-compatible versions), not plain `npm install`.
-- Expo Go cannot run this app (it has a custom native module). Use a development build: `npm run android:emulator` (emulator) or `npm run android:device` (physical device). All Android scripts live in `scripts/android/` and are documented in `ANDROID_SETUP.md`.
+- Expo Go cannot run this app (it has a custom native module). Use a development build: `npm run android:emulator` or `npm run android:device` (physical device, only when the user asks).
+- The run target is the **Pleos Connect emulator**, not a generic Android emulator (phone, tablet, or stock Automotive AVDs lack the Pleos SDK services). `npm run android:emulator` checks that it is installed, cold-boots it, then builds and installs onto it; if it is missing the script stops with install steps. Never fall back to another AVD — guide the user through the install instead (`project-setup` skill, sections 2 and 6). All Android scripts live in `scripts/android/` and are documented in `ANDROID_SETUP.md`.
 - Pleos Connect SDK (Vehicle, NaviHelper, SpeechToText, TextToSpeech; the LLM SDK was discontinued on 2026-10-19) is wrapped by the local Expo module `modules/pleos-connect` (Kotlin). Its docs are incomplete; trust the AAR signatures (`javap`) and `@RequiresPermission` annotations over memory or docs.
 
 ## Team rules (shared by every contributor and every AI session)
@@ -13,7 +14,7 @@ Detailed rules live in project skills under `.claude/skills/`. Load them before 
 
 | Skill | Load when |
 | --- | --- |
-| `project-setup` | First-time setup after cloning, Pleos emulator setup, `.env.local` setup, onboarding a teammate, or when a build fails on a fresh machine |
+| `project-setup` | First-time setup after cloning, installing or launching the Pleos Connect emulator, running/building the app on it, `.env.local` setup, onboarding a teammate, or when a build fails on a fresh machine |
 | `project-architecture` | Before adding, changing, moving, or reviewing any code (including the Kotlin native module) |
 | `add-service` | Creating a new service (domain module) |
 | `secure-coding` | Touching vehicle control, Pleos permissions/credentials, env vars, personal data storage, voice input, external requests, or dependencies |

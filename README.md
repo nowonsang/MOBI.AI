@@ -11,18 +11,18 @@ Expo SDK 58 (React Native 0.88, prebuild) + TanStack Query v5 + Redux Toolkit v2
 
 1. 준비물: Node 22.13+ 또는 24.3+, JDK 17, Android Studio(`ANDROID_HOME`), Pleos Playground 계정(My Project). Android Studio 가 없으면 **[ANDROID_SETUP.md](ANDROID_SETUP.md)** 부터.
 2. `npm install`
-3. Android Studio 에 **Pleos Connect 에뮬레이터**(Automotive, API 34, Pleos Connect v2.1.0, **콜드 부트**)를 만든다.
+3. `npm run android:doctor` 로 **Pleos Connect 에뮬레이터**가 설치돼 있는지 확인한다. 없으면 출력된 안내대로 Android Studio 에 설치한다 (SDK Update Sites 추가 → 시스템 이미지 API 34 → Automotive, Pleos Connect v2.1.0, **콜드 부트**). 일반 Android 에뮬레이터로는 대신할 수 없다.
 4. 루트에 `.env.local` 을 **직접** 만들고 `PLEOS_CLIENT_ID`, `PLEOS_CLIENT_SECRET` 을 넣는다 (없으면 음성 인식·안내는 온디바이스 모드).
 5. `npm run secure:env` — `.env*` 파일 권한을 본인 전용(600)으로 바꾼다 (내용은 읽지 않음).
 6. 커밋·push 전 자동 검사 켜기: `chmod +x .githooks/pre-commit .githooks/pre-push && git config core.hooksPath .githooks`
-7. `npm run android:doctor` 로 환경 점검 → `npm run android:emulator` (에뮬레이터) 또는 `npm run android:device` (내 기기)
+7. `npm run android:doctor` 가 "결과: 통과" 인지 확인 → `npm run android:emulator` (Pleos Connect 에뮬레이터를 켜고 빌드·설치·실행)
 
 ## 실행
 
 ```bash
-npm run android:doctor          # Node·JDK·SDK·에뮬레이터 점검
-npm run android:devices         # 연결된 기기 시리얼·AVD 목록
-npm run android:emulator        # 에뮬레이터(시뮬레이터) 빌드·설치·실행 (-- --avd <이름>, -- --variant release)
+npm run android:doctor          # Node·JDK·SDK·Pleos Connect 에뮬레이터 점검 (없으면 설치 안내)
+npm run android:devices         # 연결된 기기 시리얼·AVD 목록 (Pleos Connect AVD 표시)
+npm run android:emulator        # Pleos Connect 에뮬레이터를 켜고 빌드·설치·실행 (-- --avd <이름>, -- --variant release)
 npm run android:device          # 내 기기 빌드·설치·실행 (-- --device <시리얼>)
 npm start              # JS 만 바꿨을 때 개발 서버만 (Fast Refresh)
 npm run android:prebuild        # android/ 생성·동기화
@@ -102,7 +102,7 @@ JS 에서 쓰는 API (`@/shared/pleos/pleos` 의 `pleos()` 로만 접근):
 
 | 스킬 | 언제 |
 | --- | --- |
-| `project-setup` | 처음 clone, 에뮬레이터·`.env.local` 설정, 빌드 실패 |
+| `project-setup` | 처음 clone, Pleos Connect 에뮬레이터 설치·실행(앱을 빌드해서 띄우기), `.env.local` 설정, 빌드 실패 |
 | `project-architecture` | 코드를 추가·수정·이동·리뷰하기 전 (네이티브 모듈 포함) |
 | `add-service` | 새 서비스(도메인) 추가 |
 | `secure-coding` | 차량 제어, Pleos 권한·등록 정보, 비밀 값, 개인정보, 음성 입력, 의존성 |

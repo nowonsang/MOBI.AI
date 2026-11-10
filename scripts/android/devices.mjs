@@ -2,7 +2,7 @@
 // 연결된 기기와 만들어 둔 에뮬레이터(AVD) 목록: `npm run android:devices`
 // 여기 나온 시리얼을 android:device 의 --device 에, AVD 이름을 android:emulator 의 --avd 에 넘긴다.
 
-import { listAvds, listDevices, printDevices, requireSdk } from "./lib.mjs";
+import { isPleosAvd, listAvds, listDevices, printDevices, requireSdk } from "./lib.mjs";
 
 requireSdk();
 
@@ -17,4 +17,8 @@ if (devices.some((device) => device.state === "unauthorized")) {
 
 const avds = listAvds();
 console.log("\n에뮬레이터(AVD)");
-console.log(avds.length === 0 ? "  (없음)" : avds.map((name) => `  ${name}`).join("\n"));
+console.log(
+  avds.length === 0
+    ? "  (없음)"
+    : avds.map((name) => `  ${name}${isPleosAvd(name) ? "  ← Pleos Connect (android:emulator 대상)" : ""}`).join("\n"),
+);

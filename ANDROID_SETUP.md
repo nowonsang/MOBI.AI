@@ -1,7 +1,7 @@
 # Android 개발 환경 설치 매뉴얼
 
-Android Studio 가 없는 컴퓨터에서 MOBI.AI 를 에뮬레이터·실기기로 실행하기까지의 절차다.
-끝나면 `npm run android:doctor` 가 "결과: 통과" 를 출력해야 한다.
+Android Studio 가 없는 컴퓨터에서 MOBI.AI 를 **Pleos Connect 에뮬레이터**로 실행하기까지의 절차다.
+끝나면 `npm run android:doctor` 가 "결과: 통과" 를 출력해야 한다 (Pleos Connect 에뮬레이터가 없으면 실패로 나오고 설치 순서를 알려 준다).
 
 | 항목 | 기준 |
 | --- | --- |
@@ -77,15 +77,11 @@ export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator
 
 > 스크립트(`scripts/android/*`)는 `ANDROID_HOME` 이 없어도 위 기본 경로를 찾지만, Gradle·Expo CLI 를 직접 쓸 때를 위해 설정해 둔다.
 
-## 5. 에뮬레이터 만들기
+## 5. Pleos Connect 에뮬레이터 설치
 
-### 5-1. 일반 폰 에뮬레이터 (화면 확인용)
+이 앱은 일반 Android 에뮬레이터가 아니라 **Pleos Connect 에뮬레이터**에서 실행한다. 일반 폰·태블릿·Automotive 에뮬레이터에는 Pleos SDK 서비스가 없어 차량 기능이 동작하지 않는다.
 
-Android Studio → More Actions(또는 View → Tool Windows) → **Device Manager** → **+** → Create Virtual Device → Phone(예: Medium Phone) → 시스템 이미지 API 36 → Finish.
-
-이 에뮬레이터에서는 차량 기능이 없어 앱이 "차량에 연결되어 있지 않아요" 를 보여 준다. 화면 배치·입력 확인용이다.
-
-### 5-2. Pleos Connect 에뮬레이터 (차량 기능용)
+설치돼 있는지는 `npm run android:doctor` 로 확인한다. `PASS Pleos Connect 에뮬레이터: <이름>` 이 나오면 이 장은 건너뛴다. 시스템 이미지만 있고 에뮬레이터(AVD)가 없다고 나오면 3번부터 한다.
 
 1. Settings → Languages & Frameworks → Android SDK → **SDK Update Sites** → **+** 로 사이트 추가
    - macOS(Apple Silicon): `https://nexus-playground.pleos.ai/repository/raw-releases/connect-avd/2.x/crp-arm64-sys-img.xml`
@@ -105,7 +101,11 @@ Pleos 앱 테스트 가이드는 디스플레이 종류(예: 12.9인치 세로, 
 - 가로·세로 모두 하단 버튼 줄이 화면 안에 보인다. 창을 1:1 로 나눈 세로 창에서도 확인한다.
 - 방향을 바꿔도 입력하던 값과 보고 있던 화면이 유지된다.
 
-> 이름에 `Pleos` 나 `Automotive` 가 들어간 AVD 를 `npm run android:emulator` 가 먼저 고른다.
+> `npm run android:emulator` 는 Pleos Connect 시스템 이미지로 만든 AVD 만 고른다 (이름이 아니라 AVD 가 쓰는 시스템 이미지로 판단한다). 없으면 다른 AVD 로 넘어가지 않고 이 장의 설치 순서를 안내하고 끝난다.
+
+#### (선택) 일반 폰 에뮬레이터
+
+차량이 아닌 기기에서 "차량에 연결되어 있지 않아요" 안내가 나오는지 확인할 때만 쓴다 (`testing` 스킬 4장 7번). Device Manager → **+** → Phone(예: Medium Phone) → 시스템 이미지 API 36 → Finish 로 만들고, `npm run android:emulator -- --avd <이름>` 처럼 이름을 직접 넘겨야 실행된다.
 
 ## 6. 실기기 연결 (선택)
 
@@ -132,13 +132,13 @@ npm run android:doctor  # "결과: 통과" 확인
 
 | 명령 | 하는 일 | 옵션 |
 | --- | --- | --- |
-| `npm run android:doctor` | Node·JDK·SDK·adb·에뮬레이터·AVD 점검 | — |
-| `npm run android:devices` | 연결된 기기(시리얼)와 AVD 목록 | — |
+| `npm run android:doctor` | Node·JDK·SDK·adb·Pleos Connect 에뮬레이터 점검. 없으면 실패로 표시하고 설치 순서 안내 | — |
+| `npm run android:devices` | 연결된 기기(시리얼)와 AVD 목록 (Pleos Connect AVD 표시) | — |
 | `npm run android:prebuild` | `android/` 생성·동기화 (`expo prebuild`) | — |
 | `npm run android:prebuild:clean` | `android/` 를 지우고 처음부터 다시 생성 | — |
 | `npm run android:build:debug` | 디버그 APK 빌드 (설치·실행 안 함) | `-- --arch arm64-v8a` |
 | `npm run android:build:release` | 릴리스 APK 빌드 (디버그 키 서명, 제출용 아님) | `-- --arch arm64-v8a` |
-| `npm run android:emulator` | 에뮬레이터(시뮬레이터)에서 빌드·설치·실행. 꺼져 있으면 콜드 부트로 켬 | `-- --avd <이름>`, `-- --variant release` |
+| `npm run android:emulator` | Pleos Connect 에뮬레이터를 (꺼져 있으면 콜드 부트로) 켜고 빌드·설치·실행. 설치돼 있지 않으면 설치 안내 후 중단 | `-- --avd <이름>`, `-- --variant release` |
 | `npm run android:device` | 내 기기(실기기)에서 빌드·설치·실행 | `-- --device <시리얼>`, `-- --variant release` |
 | `npm start` | 개발 서버만 (앱이 이미 설치돼 있고 JS 만 바꿨을 때) | — |
 
@@ -162,6 +162,7 @@ npm run android:build:release
 | `Unsupported class file major version` / JDK 오류 | `java --version` 이 17 인지, `JAVA_HOME` 확인 |
 | 라이선스 미동의로 빌드 중단 | 2장의 `sdkmanager --licenses` |
 | `Could not resolve ai.pleos.playground:...` | `nexus-playground.pleos.ai` 접속 가능한지(사내망·VPN) 확인 |
+| `Pleos Connect 에뮬레이터가 설치돼 있지 않아요` | 5장을 따라 설치한 뒤 `npm run android:doctor` 로 확인. 일반 Android 에뮬레이터로 대신하지 않는다 |
 | 에뮬레이터가 5분 안에 부팅되지 않음 | Device Manager 에서 직접 켜 보고, GPU·RAM 확인. 켜진 상태에서 다시 실행하면 그 에뮬레이터를 쓴다 |
 | 실기기가 `unauthorized` | 기기 화면의 USB 디버깅 허용, 안 뜨면 개발자 옵션 → USB 디버깅 권한 취소 후 재연결 |
 | 빌드는 됐는데 앱이 빈 화면·빨간 화면 | 개발 서버가 떠 있는지 확인 (`npm start`), 에뮬레이터는 같은 컴퓨터의 8081 포트에 접속한다 |

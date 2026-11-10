@@ -2,7 +2,7 @@
 // macOS·Windows·Linux 에서 같은 명령으로 동작하도록 Node 로 작성한다. 사용법은 ANDROID_SETUP.md.
 
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -81,6 +81,70 @@ export function listAvds() {
     .map((line) => line.trim())
     // 에뮬레이터가 경고 줄(INFO 등)을 섞어 출력하는 경우가 있다.
     .filter((line) => line && !line.includes(" "));
+}
+
+// AVD 설정 폴더. Android Studio 기본값은 ~/.android/avd.
+const avdHome =
+  process.env.ANDROID_AVD_HOME ||
+  path.join(process.env.ANDROID_USER_HOME || path.join(os.homedir(), ".android"), "avd");
+
+function iniValue(file, key) {
+  try {
+    const line = readFileSync(file, "utf8")
+      .split(/\r?\n/)
+      .find((row) => row.split("=")[0].trim() === key);
+    return line ? line.slice(line.indexOf("=") + 1).trim() : "";
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Pleos Connect 시스템 이미지로 만든 AVD 인지.
+ * 일반 Android·Android Automotive AVD 에는 Pleos SDK 서비스가 없어 차량 기능이 동작하지 않으므로 구분한다.
+ * AVD 이름은 사람이 바꿀 수 있어 AVD 가 가리키는 시스템 이미지 경로로 판단하고, 설정을 못 읽을 때만 이름을 본다.
+ */
+export function isPleosAvd(name) {
+  const avdDir = iniValue(path.join(avdHome, `${name}.ini`), "path");
+  const image = avdDir ? iniValue(path.join(avdDir, "config.ini"), "image.sysdir.1") : "";
+  return /pleos/i.test(image || name);
+}
+
+export const listPleosAvds = () => listAvds().filter(isPleosAvd);
+
+/** 설치된 Pleos Connect 시스템 이미지 (예: android-34/pleos_car_emulator) */
+export function listPleosSystemImages() {
+  const root = path.join(sdkRoot, "system-images");
+  if (!existsSync(root)) return [];
+  return readdirSync(root, { withFileTypes: true })
+    .filter((api) => api.isDirectory())
+    .flatMap((api) =>
+      readdirSync(path.join(root, api.name))
+        .filter((tag) => /pleos/i.test(tag))
+        .map((tag) => `${api.name}/${tag}`),
+    );
+}
+
+/**
+ * Pleos Connect 에뮬레이터가 준비되지 않았을 때의 설치 안내. 준비됐으면 null.
+ * 시스템 이미지부터 없는지, AVD 만 안 만들었는지에 따라 남은 단계만 알려 준다.
+ */
+export function pleosInstallGuide() {
+  if (listPleosAvds().length > 0) return null;
+  if (listPleosSystemImages().length > 0) {
+    return [
+      "Pleos Connect 시스템 이미지는 설치돼 있는데, 에뮬레이터(AVD)를 아직 만들지 않았어요.",
+      "  Android Studio > Device Manager > + > Automotive > Pleos Connect v2.1.0 (API 34, RAM 4GB, Default boot: Cold)",
+      "  자세한 순서: ANDROID_SETUP.md 5장 3~4번. 만든 뒤 `npm run android:doctor` 로 확인해 주세요.",
+    ].join("\n");
+  }
+  return [
+    "Pleos Connect 에뮬레이터가 설치돼 있지 않아요. (일반 Android 에뮬레이터로는 대신할 수 없어요)",
+    "  1) Android Studio > Settings > Android SDK > SDK Update Sites 에 Pleos 시스템 이미지 사이트 추가",
+    "  2) SDK Platforms > Show Package Details > API 34 아래 Pleos Connect 시스템 이미지 설치",
+    "  3) Device Manager > + > Automotive > Pleos Connect v2.1.0 (API 34, RAM 4GB, Default boot: Cold)",
+    "  자세한 순서·사이트 주소: ANDROID_SETUP.md 5장. 설치한 뒤 `npm run android:doctor` 로 확인해 주세요.",
+  ].join("\n");
 }
 
 /** 실행 중인 에뮬레이터의 AVD 이름 */

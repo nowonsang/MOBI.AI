@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Android 개발 환경 점검: `npm run android:doctor`
-// Node·JDK·Android SDK·adb·에뮬레이터·AVD 가 준비됐는지 확인한다. 아무것도 설치·변경하지 않는다.
+// Node·JDK·Android SDK·adb·Pleos Connect 에뮬레이터가 준비됐는지 확인한다. 아무것도 설치·변경하지 않는다.
 
 import { existsSync } from "node:fs";
 
-import { adbPath, capture, emulatorPath, listAvds, sdkRoot } from "./lib.mjs";
+import { adbPath, capture, emulatorPath, listPleosAvds, pleosInstallGuide, sdkRoot } from "./lib.mjs";
 
 let failures = 0;
 const pass = (message) => console.log(`PASS ${message}`);
@@ -44,15 +44,10 @@ else fail("adb 가 없어요 — SDK Manager > SDK Tools 에서 Android SDK Plat
 
 if (existsSync(emulatorPath)) {
   pass("Android Emulator");
-  const avds = listAvds();
-  if (avds.length === 0) {
-    warn("만든 에뮬레이터(AVD)가 없어요 — Device Manager 에서 만들어 주세요 (ANDROID_SETUP.md 5장)");
-  } else {
-    pass(`AVD: ${avds.join(", ")}`);
-    if (!avds.some((name) => /pleos|automotive/i.test(name))) {
-      warn("Pleos Connect 에뮬레이터가 없어요 — 차량 기능(시트·기어·음성)은 Pleos 에뮬레이터에서만 동작해요");
-    }
-  }
+  // 이 앱의 실행 대상은 Pleos Connect 에뮬레이터다. 일반 Android AVD 만 있으면 준비되지 않은 것으로 본다.
+  const guide = pleosInstallGuide();
+  if (guide) fail(guide);
+  else pass(`Pleos Connect 에뮬레이터: ${listPleosAvds().join(", ")}`);
 } else {
   fail("Android Emulator 가 없어요 — SDK Manager > SDK Tools 에서 Android Emulator 를 설치해 주세요");
 }

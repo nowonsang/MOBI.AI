@@ -34,7 +34,7 @@ PR 은 만들지 않는다. 브랜치에서 작업하고, 검사를 통과하면
 | `npm test` | `src/**/*.test.ts` (jest-expo) | 순수 로직 단위 테스트 |
 | `npx jest src/features/bodyfit/model/bodyfit-feedback.test.ts` | 특정 파일만 | 디버깅 |
 | `npm run android:build:debug` | prebuild + `./gradlew assembleDebug` | 네이티브 모듈·설정·SDK 의존성 확인 (처음은 수 분) |
-| `npm run android:emulator` | 에뮬레이터를 켜고 빌드·설치·실행 (`-- --avd <이름>`) | 직접 확인 |
+| `npm run android:emulator` | Pleos Connect 에뮬레이터를 켜고 빌드·설치·실행 (없으면 설치 안내 후 중단, `project-setup` 스킬 2·6장) | 직접 확인 |
 | `npm run android:device` | 내 기기에 빌드·설치·실행 (`-- --device <시리얼>`) | 직접 확인 |
 | `npm run verify` | 위 전부 | push 전 필수 |
 
@@ -63,7 +63,7 @@ PR 은 만들지 않는다. 브랜치에서 작업하고, 검사를 통과하면
 4. "말로 알려 주기" → 음성 인식 → 조절안 확인 → 조절
 5. 주행 규제 켜기·끄기: `adb shell cmd hmg_car_service --service drivingstate driving_regulation on` (끄기는 `off`). 기어·착석 등은 Virtual Console(`adb forward tcp:8088 tcp:8088` → http://127.0.0.1:8088/)에서 바꾼다.
 6. **폼 팩터 테스트**: 에뮬레이터를 별도 창으로 실행(Running Devices 창·Headless 금지) → Host Display Bridge(`https://nexus-playground.pleos.ai/repository/raw-releases/host-display-bridge/1.0.0/host-display-bridge.zip`, Go 1.22+, `go run . --avd "<AVD 이름>"`) → 에뮬레이터의 FormFactorConsole 에서 Display preset·Orientation(Portrait/Landscape) 선택 → 가상 디스플레이 생성 → 잘림·겹침, 글자·아이콘 크기, 가로·세로 배치, 터치·화면 전환 확인. 12.9인치 Portrait, 14.6인치 Landscape 는 반드시 본다.
-7. 차량이 아닌 기기(일반 Android 에뮬레이터)에서는 "차량에 연결되어 있지 않아요" 안내가 나오고 앱이 죽지 않는지
+7. 차량이 아닌 기기(일반 Android 에뮬레이터)에서는 "차량에 연결되어 있지 않아요" 안내가 나오고 앱이 죽지 않는지. 이 항목만 `npm run android:emulator -- --avd <일반 AVD 이름>` 으로 AVD 를 직접 골라 실행한다 (`--avd` 가 없으면 항상 Pleos Connect 에뮬레이터에 올라간다).
 
 ## 5. 실패했을 때
 
