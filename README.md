@@ -216,6 +216,7 @@ app → core → features → shared → native(modules/*)
 - 차량 동작(시트 이동·멈춤·기어 전환·음성)은 Pleos Connect 에뮬레이터에서 수동 확인하고 결과를 커밋 메시지에 적는다.
 - **push 전에는 `npm run verify` 가 통과해야 한다.** pre-push 훅이 자동으로 실행한다.
 - **PR 은 만들지 않는다.** 브랜치에서 작업하고 `verify` 를 통과하면 `master` 에 fast-forward 로 바로 머지·push 한 뒤, 그 브랜치를 원격·로컬에서 바로 지운다. `master` 와 머지 전 브랜치는 지우지 않는다 (`testing` 스킬 1-1).
+- **동시 작업은 세션마다 별도 worktree.** 한 폴더는 한 세션만 쓴다. 여러 세션이 함께 작업하면 각자 저장소 밖 `../MOBI.AI-worktrees/<브랜치>` 에 `git worktree add` 로 폴더를 만들어 작업하고, 머지 직후 지운다. 에뮬레이터 실행(`android:emulator`)은 한 번에 한 세션만 (`testing` 스킬 1-2).
 
 ## 의존성 보안 메모
 

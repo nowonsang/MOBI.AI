@@ -27,6 +27,26 @@ PR 은 만들지 않는다. 브랜치에서 작업하고, 검사를 통과하면
 5. 머지 직후 브랜치를 지운다: `git branch -d <브랜치>`, 원격에 올린 적이 있으면 `git push origin --delete <브랜치>`, 그리고 `git fetch --prune`. 그 브랜치용 worktree 가 있으면 `git worktree remove <경로>`.
 6. `master` 와 아직 머지되지 않은 브랜치(다른 사람이 작업 중인 브랜치 포함)는 지우지 않는다.
 
+### 1-2. 여러 세션이 동시에 작업할 때 (AI 필수)
+
+**한 폴더(체크아웃)는 한 세션만 쓴다.** 두 세션이 같은 폴더에서 브랜치를 바꾸거나 커밋하면 서로의 HEAD·스테이징을 건드린다 (2026-11-11 실제로 한 세션의 `git switch` 가 다른 세션의 작업 브랜치에서 HEAD 를 빼 버렸다).
+
+1. 작업을 시작할 때와 커밋·브랜치 전환 직전에 확인한다. 내가 만들지 않은 변경·스테이징이 `git status` 에 있거나, 내가 하지 않은 브랜치 전환이 `git reflog -5` 에 있으면 다른 세션이 이 폴더를 쓰는 중이다. 사용자가 세션을 여러 개 띄워 작업 중이라고 한 경우도 같다.
+2. 그러면 세션마다 **별도 worktree** 에서 작업한다. 위치는 저장소 밖 형제 폴더 `../MOBI.AI-worktrees/<브랜치>` 다. 저장소 안(`.claude/worktrees/` 등)에 두면 lint·tsc·Jest·Metro 가 복사본까지 읽는다.
+
+   ```bash
+   git fetch origin
+   git worktree add ../MOBI.AI-worktrees/<브랜치> -b <브랜치> origin/master
+   cd ../MOBI.AI-worktrees/<브랜치> && npm install
+   ```
+
+   Claude Code 세션은 그 폴더에서 새로 시작하거나 `EnterWorktree`(path) 로 들어간다.
+3. worktree 에는 `.env.local` 이 없다. 필요하면 **사용자가 직접** 복사하고 `npm run secure:env` 를 실행한다 (AI 는 복사하지 않는다). 없으면 음성 인식·안내는 온디바이스 모드로 동작한다.
+4. `android/` 는 worktree 마다 따로 생긴다 (첫 빌드는 수 분). 에뮬레이터와 개발 서버 포트(8081)는 하나를 같이 쓰므로 `npm run android:emulator` 는 **한 번에 한 세션만** 실행한다. 다른 폴더의 개발 서버가 8081 을 쓰고 있으면 앱이 그 폴더의 JS 를 불러오므로, 실행 전에 `lsof -nP -iTCP:8081 -sTCP:LISTEN` 로 어느 폴더의 서버인지 확인한다.
+5. 다른 세션이 쓰는 폴더에서는 `git switch`·`git commit`·`git stash`·`git reset`·`git checkout -- <파일>` 을 하지 않는다. 그 폴더의 파일도 고치지 않는다.
+6. 머지는 1-1 과 같다. worktree 에서는 `master` 로 전환할 수 없으므로 1-1 4번의 방법대로 `git push origin <브랜치>:master` 로 올린다. 원래 폴더의 `master` 는 그 폴더를 쓰는 세션이 없을 때 `git pull --ff-only` 로 맞춘다.
+7. 머지 직후 worktree 와 브랜치를 지운다: `git worktree remove ../MOBI.AI-worktrees/<브랜치>` → 1-1 5번.
+
 ## 2. 실행 방법
 
 | 명령 | 대상 | 용도 |
