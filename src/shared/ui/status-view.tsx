@@ -2,7 +2,7 @@ import { StyleSheet, View } from "react-native";
 
 import { AppText } from "./app-text";
 import { Button } from "./button";
-import { colors, radius, spacing } from "./theme";
+import { colors, radius, shadows, spacing } from "./theme";
 import { useCompact } from "./use-compact";
 
 type StatusViewProps = {
@@ -39,8 +39,9 @@ export function StatusView({ title, description, action }: StatusViewProps) {
 const styles = StyleSheet.create({
   box: {
     gap: spacing.sm,
-    borderRadius: radius.control,
-    backgroundColor: colors.sandLight,
+    borderRadius: radius.card,
+    backgroundColor: colors.surface,
+    ...shadows.card,
   },
   action: { marginTop: spacing.sm, alignItems: "flex-start" },
   actionStretch: { alignItems: "stretch" },

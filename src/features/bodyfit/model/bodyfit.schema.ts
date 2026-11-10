@@ -47,5 +47,5 @@ export const seatAdjustmentSchema = z.object({
   at: z.number(),
   baseline: seatRatiosSchema,
   final: seatRatiosSchema,
-  source: z.enum(["drive-start", "voice", "saved"]),
+  source: z.enum(["drive-start", "voice", "saved", "touch"]),
 });

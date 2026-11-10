@@ -68,9 +68,9 @@ const styles = StyleSheet.create({
   secondary: {
     backgroundColor: colors.surface,
     borderWidth: 2,
-    // 버튼 경계는 정보다. 구분선용 line(대비 1.3:1) 대신 4.5:1 이상인 색을 쓴다.
-    borderColor: colors.inkTertiary,
+    // 마이현대 앱처럼 옅은 테두리를 쓴다. 버튼임은 글자와 흰 면으로 알린다.
+    borderColor: colors.lineStrong,
   },
-  secondaryPressed: { backgroundColor: colors.sandLight },
+  secondaryPressed: { backgroundColor: colors.surfaceMuted },
   inactive: { opacity: 0.4 },
 });

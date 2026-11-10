@@ -115,7 +115,7 @@
 
 - 저장소: 기기 안 `expo-sqlite/kv-store`. 읽을 때 zod로 검증한다. 서버·Supabase에 보내지 않는다.
 - 운전자 프로필: 이름, 키, 몸무게, 앉은키, 생성 시각
-- 자세 기록: 프로필 ID, 시각, baseline, final, 출처(drive-start / saved / voice, 터치 피드백용 출처 추가 예정)
+- 자세 기록: 프로필 ID, 시각, baseline, final, 출처(drive-start / saved / touch / voice)
 
 ## 범위 밖 (MVP)
 

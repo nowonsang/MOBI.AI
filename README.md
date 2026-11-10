@@ -138,12 +138,12 @@ src/
 ├── features/bodyfit/         참고 구현 서비스
 │   ├── model/                타입·zod 스키마·추천·학습·음성 해석·세션 슬라이스 (+ *.test.ts)
 │   ├── api/                  기기 저장소, 캐시 계약, 뮤테이션, 음성 묶음
-│   └── ui/                   화면(*-screen.tsx), 시트 막대, 음성 피드백, 주행 감시
+│   └── ui/                   화면(*-screen.tsx: 운전자 목록·등록·맞춤 자세·가이드 조절·주행 후 피드백), 운전석 그림·축 막대, 음성 피드백, 주행 감시
 └── shared/
     ├── pleos/                차량 SDK 접근 창구 (pleos.ts, pleos.types.ts, use-gear, use-ux-restrictions, use-pleos-event)
     ├── storage/              기기 저장 값 암호화 (encrypted-storage.ts)
     ├── config/               빌드 종류별 기능 (app-variant.ts: contest/market)
-    └── ui/                   디자인 토큰(theme.ts)과 공용 컴포넌트
+    └── ui/                   디자인 토큰(theme.ts)과 공용 컴포넌트(Screen, Columns, Card, InfoRow, IconBadge, Chip, Button, TextField, StatusView)
 scripts/                      개발 도구 (비밀 검사, env 권한, 마이그레이션 검사, Supabase 점검)
 scripts/android/              Android 스크립트 (점검·기기 목록·prebuild·빌드·에뮬레이터·실기기 실행, 공용 lib.mjs)
 ANDROID_SETUP.md              Android Studio 설치부터 실행까지 매뉴얼

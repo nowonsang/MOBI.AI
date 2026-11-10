@@ -67,7 +67,8 @@ export default ({ config }: ConfigContext): ExpoConfig =>
       // Pleos 앱 보안 가이드: 자동 백업 비활성화 권장 (체형 정보가 기기 밖으로 나가지 않게).
       allowBackup: false,
       adaptiveIcon: {
-        backgroundColor: "#E6F4FE",
+        // theme.ts 의 colors.primary. 아이콘 배경 이미지와 같은 색이다.
+        backgroundColor: "#1570EF",
         foregroundImage: "./assets/images/android-icon-foreground.png",
         backgroundImage: "./assets/images/android-icon-background.png",
         monochromeImage: "./assets/images/android-icon-monochrome.png",

@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.md,
     borderRadius: radius.control,
-    backgroundColor: colors.sandLight,
+    backgroundColor: colors.surface,
   },
   row: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
   label: { minWidth: 140 },

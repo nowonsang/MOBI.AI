@@ -70,7 +70,8 @@ export function BodyfitSeatAxes({ recommended, current }: BodyfitSeatAxesProps) 
   );
 }
 
-const MARKER_WIDTH = 12;
+const TRACK_HEIGHT = 8;
+const DOT = 28;
 
 const styles = StyleSheet.create({
   list: { gap: spacing.lg },
@@ -83,24 +84,23 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   track: {
-    height: 16,
+    height: TRACK_HEIGHT,
     marginVertical: spacing.sm,
-    borderRadius: radius.control,
-    backgroundColor: colors.line,
+    // 점이 양 끝에서 잘리지 않게 점 반지름만큼 안쪽에 둔다
+    marginHorizontal: DOT / 2,
+    borderRadius: radius.pill,
+    backgroundColor: colors.fill,
   },
   marker: {
     position: "absolute",
-    top: -8,
-    width: MARKER_WIDTH,
-    height: 32,
-    marginLeft: -MARKER_WIDTH / 2,
-    borderRadius: radius.control,
+    top: (TRACK_HEIGHT - DOT) / 2,
+    width: DOT,
+    height: DOT,
+    marginLeft: -DOT / 2,
+    borderRadius: radius.pill,
   },
-  current: {
-    backgroundColor: colors.surface,
-    borderWidth: 3,
-    borderColor: colors.inkTertiary,
-  },
+  // 지금 = 회색 점, 추천 = 파란 점. 색만으로 구분하지 않도록 위에 "지금 → 추천" 숫자를 함께 쓴다.
+  current: { backgroundColor: colors.inkDisabled },
   recommended: { backgroundColor: colors.primary },
   ends: { flexDirection: "row", justifyContent: "space-between" },
 });

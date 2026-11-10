@@ -4,11 +4,16 @@ import { pleos } from "@/shared/pleos/pleos";
 
 import { interpretByRules } from "../model/bodyfit-feedback";
 import { recommendBaseline } from "../model/bodyfit-recommend";
-import { toSeatRatios, toSeatTargets } from "../model/bodyfit-seat";
+import {
+  applyNudges,
+  toSeatRatios,
+  toSeatTargets,
+} from "../model/bodyfit-seat";
 import type {
   BodyProfile,
   BodyProfileInput,
   SeatAdjustmentSource,
+  SeatNudge,
   SeatRatios,
 } from "../model/bodyfit.types";
 import { bodyfitKeys } from "./bodyfit.queries";
@@ -77,23 +82,28 @@ export function useStopSeat() {
   });
 }
 
-/** 지금 운전석 자세를 이 운전자의 학습 기록으로 남긴다. */
+/**
+ * 지금 운전석 자세를 이 운전자의 학습 기록으로 남긴다.
+ * nudges(터치 피드백)가 있으면 시트를 움직이지 않고 "지금 자세 + 고른 방향"을 받아들인 자세로 기록한다.
+ */
 export function useRecordSeatAdjustment() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       profile,
       source,
+      nudges = [],
     }: {
       profile: BodyProfile;
       source: SeatAdjustmentSource;
+      nudges?: readonly SeatNudge[];
     }) => {
       const state = await pleos().getDriverSeatState();
       await createSeatAdjustment({
         profileId: profile.id,
         at: Date.now(),
         baseline: recommendBaseline(profile),
-        final: toSeatRatios(state),
+        final: applyNudges(toSeatRatios(state), nudges),
         source,
       });
     },

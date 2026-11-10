@@ -8,6 +8,10 @@ import { useGear } from "@/shared/pleos/use-gear";
 import { useUxRestrictions } from "@/shared/pleos/use-ux-restrictions";
 import { AppText } from "@/shared/ui/app-text";
 import { Button } from "@/shared/ui/button";
+import { Card } from "@/shared/ui/card";
+import { Columns } from "@/shared/ui/columns";
+import { IconBadge } from "@/shared/ui/icon-badge";
+import { InfoRow } from "@/shared/ui/info-row";
 import { Screen } from "@/shared/ui/screen";
 import { StatusView } from "@/shared/ui/status-view";
 import { colors, radius, spacing } from "@/shared/ui/theme";
@@ -22,6 +26,7 @@ import { recommendSeat } from "../model/bodyfit-recommend";
 import { toSeatRatios } from "../model/bodyfit-seat";
 import type { SeatAxis, SeatRatios } from "../model/bodyfit.types";
 import { describeBodyfitError } from "./bodyfit-error-copy";
+import { BodyfitSeatImage } from "./bodyfit-seat-image";
 
 const AXIS_COPY: Record<
   SeatAxis,
@@ -48,7 +53,7 @@ const AXIS_COPY: Record<
 const percent = (ratio: number) => Math.round(ratio * 100);
 
 function describeAxis({ axis, status, direction, far }: AxisGuide): string {
-  if (status === "ok" || direction === null) return "딱 좋아요 ✓";
+  if (status === "ok" || direction === null) return "딱 좋아요";
   const action = AXIS_COPY[axis][direction];
   if (status === "overshot") return `지나쳤어요. 조금 ${action}`;
   return far ? `더 ${action}` : `조금 더 ${action}`;
@@ -88,7 +93,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
 
   if (profile.isPending || adjustments.isPending) {
     return (
-      <Screen title="안내를 준비하고 있어요" width="narrow">
+      <Screen title="안내를 준비하고 있어요">
         <View style={styles.skeleton} accessibilityLabel="불러오는 중" />
       </Screen>
     );
@@ -96,7 +101,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
 
   if (profile.isError || adjustments.isError || !profile.data) {
     return (
-      <Screen title="운전자 정보를 찾지 못했어요" width="narrow">
+      <Screen title="운전자 정보를 찾지 못했어요">
         <StatusView
           title="운전자 정보가 없어요"
           description="목록에서 운전자를 다시 골라 주세요"
@@ -174,54 +179,78 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
     }
 
     const focus = guide.axes.find((axis) => axis.axis === guide.focus);
+    const matched = guide.axes.filter((axis) => axis.status === "ok").length;
     return (
-      <>
-        <View
-          style={[styles.focus, done && styles.focusDone]}
-          accessibilityLiveRegion="polite"
-        >
-          <AppText variant="secondary" tone="secondary">
-            {focus ? `지금 맞출 곳 · ${AXIS_COPY[focus.axis].label}` : "완료"}
-          </AppText>
-          <AppText variant="heading">
-            {focus ? describeAxis(focus) : "추천 자세에 다 맞췄어요 ✓"}
-          </AppText>
-          {done ? (
-            <AppText variant="secondary" tone="secondary">
-              이 자세를 기억해 두면 다음 추천이 더 정확해져요
-            </AppText>
-          ) : null}
-        </View>
-
-        <View style={styles.list}>
-          {guide.axes.map((axis) => {
-            const active = axis.axis === guide.focus;
-            return (
-              <View
-                key={axis.axis}
-                style={[styles.row, active && styles.rowActive]}
-                accessible
-                accessibilityLabel={`${AXIS_COPY[axis.axis].label}, ${describeAxis(axis)}, 지금 ${percent(axis.current)}퍼센트, 목표 ${percent(axis.target)}퍼센트`}
-              >
-                <View style={styles.rowHeading}>
-                  <AppText variant="bodyStrong">
-                    {AXIS_COPY[axis.axis].label}
-                  </AppText>
-                  <AppText
-                    variant="secondary"
-                    tone={axis.status === "ok" ? "default" : "secondary"}
-                  >
-                    {describeAxis(axis)}
-                  </AppText>
-                </View>
-                <AppText variant="caption" tone="tertiary">
-                  지금 {percent(axis.current)}% · 목표 {percent(axis.target)}%
+      <Columns
+        left={
+          <>
+            {/* 지금 할 일 하나만 크게 보여 준다 (이 화면의 강조는 여기 한 곳). */}
+            <View
+              style={[styles.focus, done && styles.focusDone]}
+              accessibilityLiveRegion="polite"
+            >
+              <AppText variant="secondary" tone="inverse">
+                {focus
+                  ? `지금 맞출 곳 · ${AXIS_COPY[focus.axis].label}`
+                  : "완료"}
+              </AppText>
+              <AppText variant="display" tone="inverse">
+                {focus ? describeAxis(focus) : "추천 자세에 다 맞췄어요 ✓"}
+              </AppText>
+              <View style={styles.progress}>
+                <AppText
+                  variant="caption"
+                  style={done ? styles.progressDone : styles.progressText}
+                >
+                  {matched}/{guide.axes.length} 맞춤
                 </AppText>
               </View>
-            );
-          })}
-        </View>
-      </>
+              {done ? (
+                <AppText variant="secondary" tone="inverse">
+                  이 자세를 기억해 두면 다음 추천이 더 정확해져요
+                </AppText>
+              ) : null}
+            </View>
+            <Card>
+              <BodyfitSeatImage />
+            </Card>
+          </>
+        }
+        right={
+          <Card title="축별 안내">
+            <View style={styles.list}>
+              {guide.axes.map((axis, index) => {
+                const active = axis.axis === guide.focus;
+                return (
+                  <View
+                    key={axis.axis}
+                    style={[styles.step, active && styles.stepActive]}
+                  >
+                    <InfoRow
+                      icon={
+                        <IconBadge
+                          glyph={axis.status === "ok" ? "✓" : `${index + 1}`}
+                          tone={
+                            axis.status === "ok"
+                              ? "success"
+                              : active
+                                ? "primary"
+                                : "muted"
+                          }
+                        />
+                      }
+                      label={AXIS_COPY[axis.axis].label}
+                      value={describeAxis(axis)}
+                      detail={`지금 ${percent(axis.current)}% · 목표 ${percent(axis.target)}%`}
+                      accessibilityLabel={`${AXIS_COPY[axis.axis].label}, ${describeAxis(axis)}, 지금 ${percent(axis.current)}퍼센트, 목표 ${percent(axis.target)}퍼센트`}
+                    />
+                  </View>
+                );
+              })}
+            </View>
+          </Card>
+        }
+      />
     );
   })();
 
@@ -229,7 +258,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
     <Screen
       title="시트 버튼으로 맞춰 주세요"
       description="운전석 옆 시트 버튼을 움직이면 화면이 바로 알려 드려요"
-      width="narrow"
+     
       footer={footer}
     >
       {body}
@@ -252,32 +281,31 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
 const styles = StyleSheet.create({
   skeleton: {
     height: 320,
-    borderRadius: radius.control,
-    backgroundColor: colors.sandLight,
+    borderRadius: radius.card,
+    backgroundColor: colors.surface,
   },
   focus: {
-    gap: spacing.xs,
-    padding: spacing.lg,
-    borderRadius: radius.control,
-    backgroundColor: colors.sandLight,
-    borderLeftWidth: 8,
-    borderLeftColor: colors.primary,
-  },
-  focusDone: { borderLeftColor: colors.success },
-  list: { gap: spacing.sm },
-  row: {
-    gap: spacing.xs,
-    padding: spacing.md,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: colors.line,
-  },
-  rowActive: { borderColor: colors.primary, borderWidth: 2 },
-  rowHeading: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "baseline",
-    flexWrap: "wrap",
     gap: spacing.sm,
+    padding: spacing.lg,
+    borderRadius: radius.card,
+    backgroundColor: colors.primary,
   },
+  focusDone: { backgroundColor: colors.success },
+  progress: {
+    alignSelf: "flex-start",
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+  },
+  progressText: { color: colors.primary, fontWeight: "700" },
+  progressDone: { color: colors.success, fontWeight: "700" },
+  list: { gap: spacing.xs },
+  step: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.control,
+  },
+  // 지금 맞출 축은 옅은 파란 면과 번호 원 색으로 함께 표시한다.
+  stepActive: { backgroundColor: colors.primaryTint },
 });

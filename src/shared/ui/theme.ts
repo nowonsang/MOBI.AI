@@ -1,38 +1,40 @@
 /*
  * MOBI.AI 디자인 토큰. 사용 규칙: .claude/skills/ui-design/SKILL.md
- * 색은 현대자동차 마이현대 소개 페이지 실측값(2026-11-08), 크기는 Android for Cars 설계 지침(차량 디스플레이),
+ * 모양은 마이현대 앱(밝은 파랑 강조, 둥근 흰 카드, 연한 그림자)을 따르고, 크기는 Android for Cars 설계 지침(차량 디스플레이),
  * UX 행동 규칙은 토스 사례 기반. 컴포넌트에는 이 토큰만 쓴다. 이 파일 밖의 임의 색상(#..., rgb())은 ESLint 에러다.
  */
 
 export const colors = {
   /* 브랜드 */
-  primary: "#002C5F", // Hyundai Blue: 주 CTA·활성 상태
-  primaryStrong: "#001B3A", // 주 CTA 눌림 (파생)
-  accent: "#007FA8", // Active Blue: 링크·보조 강조·포커스 (흰 배경 대비 4.5:1)
-  highlight: "#00AAD2", // Sky Blue: 장식·배지 배경 전용, 글자색 금지
-  sand: "#E4DCD3", // 브랜드 영역 배경·구분
-  sandLight: "#F6F3F2", // 섹션·카드 배경
+  primary: "#1570EF", // 밝은 파랑: 주 CTA·선택 상태·요약 카드 (흰 글자 대비 4.6:1)
+  primaryStrong: "#0F5BD0", // 주 CTA 눌림
+  primaryTint: "#E8F1FE", // 옅은 파랑: 아바타·진행 중인 행 배경
+  accent: "#0F5BD0", // 링크·보조 강조·포커스
+  highlight: "#00AAD2", // Sky Blue: 장식 전용, 글자색 금지
 
   /* 글자 */
-  ink: "#000000", // 제목·본문
-  inkSecondary: "#444444", // 보조 본문
-  inkTertiary: "#666666", // 설명·캡션 (최소 대비 기준)
-  inkDisabled: "#999999", // 비활성·placeholder 전용, 본문 금지
+  ink: "#111827", // 제목·본문
+  inkSecondary: "#4B5563", // 보조 본문
+  inkTertiary: "#5F6673", // 설명·캡션 (옅은 바탕 위에서도 4.5:1 이상)
+  inkDisabled: "#9CA3AF", // 비활성·placeholder 전용, 본문 금지
 
   /* 면·선 */
-  surface: "#FFFFFF",
+  surface: "#FFFFFF", // 카드·입력칸
+  surfaceMuted: "#F4F5F7", // 화면 바탕·스켈레톤·눌림
+  fill: "#EEF0F3", // 고르지 않은 칩·개수 표시
   surfaceDark: "#1C1B1B",
-  line: "#E5E5E5",
+  line: "#E5E7EB", // 카드 안 구분선
+  lineStrong: "#D1D5DB", // 보조 버튼·입력칸 테두리
 
-  /* 상태 (현대 페이지에 없음, 프로젝트 정의) */
+  /* 상태 */
   danger: "#D32F2F",
-  success: "#2E7D32",
+  success: "#15803D", // 흰 글자 대비 5.0:1
   warning: "#B26A00",
 } as const;
 
 // 차량 디스플레이 기준 글자 크기(dp). 주요 글자 32 이상, 보조 글자 24 이상 (Android for Cars 지침).
 export const typography = {
-  display: { fontSize: 48, lineHeight: 60, fontWeight: "700" },
+  display: { fontSize: 48, lineHeight: 60, fontWeight: "800" },
   title: { fontSize: 40, lineHeight: 52, fontWeight: "700" },
   heading: { fontSize: 36, lineHeight: 48, fontWeight: "700" },
   body: { fontSize: 32, lineHeight: 44, fontWeight: "400" },
@@ -57,20 +59,31 @@ export const sizes = {
   touchTarget: 76, // 터치 대상 최소 76×76dp (Android for Cars 지침)
   primaryButton: 88, // 주 CTA 높이
   input: 88,
+  // 행 앞 아이콘 원. Pleos 아이콘 그리드(48dp)에 여백을 더한 크기
+  iconBadge: 76,
 } as const;
 
-// 구조 요소(화면·섹션)는 각지게(현대), 조작 요소(버튼·입력·카드)만 살짝 둥글게(토스).
+// 마이현대 앱처럼 카드와 버튼을 크게 둥글린다.
 export const radius = {
-  control: 8,
-  sheet: 20,
+  control: 20, // 버튼·입력칸·선택 타일
+  card: 24, // 카드
+  sheet: 24,
+  pill: 999, // 칩·아이콘 원·개수 표시
+} as const;
+
+// 카드를 바탕에서 살짝 띄우는 연한 그림자. 카드에만 쓴다.
+export const shadows = {
+  card: { boxShadow: "0 4px 16px rgba(17, 24, 39, 0.06)" },
 } as const;
 
 // 가로로 넓은 차량 화면에서 한 줄이 너무 길어지지 않게 본문 폭을 제한한다.
 export const layout = {
   narrow: 880, // 한 화면 한 작업(입력·확인)
-  content: 1280, // 일반 화면
+  content: 1440, // 일반 화면 (2단 구성)
   gutter: 48, // 화면 좌우 여백
   // 이 폭보다 좁은 창(1:1 분할 세로 창, 휴대폰 확인용)은 여백을 줄이고 하단 버튼을 세로로 쌓는다.
   compactWidth: 720,
   gutterCompact: 24,
+  // 이 폭 이상이면 화면을 2단(왼쪽 요약·그림, 오른쪽 목록)으로 나눈다.
+  twoColumnWidth: 1000,
 } as const;

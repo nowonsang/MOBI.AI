@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.lg,
     borderRadius: radius.control,
-    backgroundColor: colors.sandLight,
+    backgroundColor: colors.surface,
   },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
 });
