@@ -1,6 +1,7 @@
 import type { Gear } from "@/shared/pleos/pleos.types";
 
 import {
+  DEMO_LONG_DRIVE_MS,
   LONG_DRIVE_MS,
   STALE_DRIVE_MS,
   comfortPromptFor,
@@ -112,6 +113,16 @@ describe("comfortPromptFor", () => {
 
   it("주차 전에는 화면으로 묻지 않는다", () => {
     expect(comfortPromptFor({ ...longDrive, parked: false })).toBeNull();
+  });
+
+  it("시연 빌드 기준(1분)을 넘기면 60분이 안 돼도 묻는다", () => {
+    const demo = { ...longDrive, longDriveMs: DEMO_LONG_DRIVE_MS };
+    expect(comfortPromptFor({ ...demo, now: DEMO_LONG_DRIVE_MS })).toBe(
+      "screen",
+    );
+    expect(
+      comfortPromptFor({ ...demo, now: DEMO_LONG_DRIVE_MS - 1 }),
+    ).toBeNull();
   });
 
   it("짧게 달렸거나 출발 시각을 모르면 묻지 않는다", () => {

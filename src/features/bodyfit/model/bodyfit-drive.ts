@@ -3,6 +3,9 @@ import type { Gear } from "@/shared/pleos/pleos.types";
 // 이 시간 이상 주행한 뒤 주차(P)하거나 목적지에 도착하면 착좌감을 묻는다.
 export const LONG_DRIVE_MS = 60 * 60 * 1000;
 
+// 시연(contest) 빌드의 기준. 영상·2차 PT 에서 한 시간을 기다릴 수 없어 1분으로 줄인다 (2026-11-11 결정).
+export const DEMO_LONG_DRIVE_MS = 60 * 1000;
+
 export const COMFORT_QUESTION =
   "오늘 운전 자세는 편하셨나요? 불편한 곳이 있으면 말씀해 주세요";
 
@@ -13,8 +16,12 @@ export const COMFORT_SCREEN_QUESTION = "오늘 운전 자세는 편하셨나요?
 // 다음에 앱을 켤 때 묻는데, 한참 지난 뒤에 "오늘 자세"를 묻지 않기 위해서다.
 export const STALE_DRIVE_MS = 12 * 60 * 60 * 1000;
 
-export function isLongDrive(startedAt: number | null, now: number): boolean {
-  return startedAt !== null && now - startedAt >= LONG_DRIVE_MS;
+export function isLongDrive(
+  startedAt: number | null,
+  now: number,
+  longDriveMs: number = LONG_DRIVE_MS,
+): boolean {
+  return startedAt !== null && now - startedAt >= longDriveMs;
 }
 
 /** started: 주차(P)에서 벗어남 (출발 자세 기록 C-3), parked: 주차(P) 중임을 알게 됨 (주행 후 질문 D-1) */
@@ -50,14 +57,17 @@ export function comfortPromptFor({
   now,
   parked,
   voice,
+  longDriveMs = LONG_DRIVE_MS,
 }: {
   startedAt: number | null;
   now: number;
   parked: boolean;
   /** 음성 기능을 쓸 수 있고 운전자가 동의했는지 */
   voice: boolean;
+  /** 이 시간 이상 달렸을 때만 묻는다. 시연 빌드는 DEMO_LONG_DRIVE_MS */
+  longDriveMs?: number;
 }): ComfortPrompt | null {
-  if (!isLongDrive(startedAt, now)) return null;
+  if (!isLongDrive(startedAt, now, longDriveMs)) return null;
   if (startedAt !== null && now - startedAt > STALE_DRIVE_MS) return null;
   if (voice) return "voice";
   return parked ? "screen" : null;

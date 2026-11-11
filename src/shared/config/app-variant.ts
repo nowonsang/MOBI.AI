@@ -9,3 +9,6 @@ export const canControlSeat = variant !== "market";
 
 /** 음성 인식·음성 안내 (STT_SERVICE·TTS_SERVICE, Pleos "준비 중") */
 export const canUseVoice = variant !== "market";
+
+/** 시연용 빌드 (contest: 영상·GitHub APK·2차 PT). 실사용 기준을 그대로 쓰면 시연할 수 없는 값만 줄인다. */
+export const isDemoBuild = variant !== "market";

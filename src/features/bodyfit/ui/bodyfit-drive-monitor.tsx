@@ -3,7 +3,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useEffectEvent, useRef } from "react";
 
 import { useAppDispatch, useAppSelector } from "@/core/store/hooks";
-import { canUseVoice } from "@/shared/config/app-variant";
+import { canUseVoice, isDemoBuild } from "@/shared/config/app-variant";
 import type { Gear } from "@/shared/pleos/pleos.types";
 import { useGear } from "@/shared/pleos/use-gear";
 import { usePleosEvent } from "@/shared/pleos/use-pleos-event";
@@ -19,6 +19,8 @@ import { speakQuietly } from "../api/bodyfit.voice";
 import {
   COMFORT_QUESTION,
   comfortPromptFor,
+  DEMO_LONG_DRIVE_MS,
+  LONG_DRIVE_MS,
   trackGear,
 } from "../model/bodyfit-drive";
 import {
@@ -61,6 +63,7 @@ export function BodyfitDriveMonitor() {
       parked,
       // 앱이 다시 켜진 뒤에는 운전자를 고르기 전이라 동의 여부를 모른다. 그때는 화면으로 묻는다.
       voice: voiceReady && session.profileId === driverId && !ask.isPending,
+      longDriveMs: isDemoBuild ? DEMO_LONG_DRIVE_MS : LONG_DRIVE_MS,
     });
     if (!prompt) return;
 
@@ -116,7 +119,8 @@ export function BodyfitDriveMonitor() {
       if (!driverId) return;
       // 차량이 곧 앱을 종료할 수 있다. 시트를 읽느라 시간이 걸리는 자세 기록보다 출발 시각을 먼저 남긴다.
       startDrive.mutate({ profileId: driverId, startedAt: Date.now() });
-      if (driver.data) record.mutate({ profile: driver.data, source: "drive-start" });
+      if (driver.data)
+        record.mutate({ profile: driver.data, source: "drive-start" });
     } else if (tracked.event === "parked") {
       finishDrive({ parked: true });
     }
