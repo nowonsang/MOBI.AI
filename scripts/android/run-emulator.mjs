@@ -18,7 +18,7 @@ import {
   capture,
   childEnv,
   emulatorPath,
-  expo,
+  expoRunAndroid,
   fail,
   isPleosAvd,
   listAvds,
@@ -97,4 +97,4 @@ async function resolveEmulator() {
 const serial = await resolveEmulator();
 console.log(`\n대상 에뮬레이터: ${serial} (${avdNameOf(serial)})`);
 prebuildAndroid({ market: values.market });
-expo(["run:android", "--device", serial, "--variant", values.variant]);
+expoRunAndroid(serial, values.variant);

@@ -167,4 +167,5 @@ npm run android:build:release
 | `Pleos Connect 에뮬레이터가 설치돼 있지 않아요` | 5장을 따라 설치한 뒤 `npm run android:doctor` 로 확인. 일반 Android 에뮬레이터로 대신하지 않는다 |
 | 에뮬레이터가 5분 안에 부팅되지 않음 | Device Manager 에서 직접 켜 보고, GPU·RAM 확인. 켜진 상태에서 다시 실행하면 그 에뮬레이터를 쓴다 |
 | 실기기가 `unauthorized` | 기기 화면의 USB 디버깅 허용, 안 뜨면 개발자 옵션 → USB 디버깅 권한 취소 후 재연결 |
+| 설치는 됐는데 앱이 열리지 않음 (`unable to resolve Intent`) | Pleos 에뮬레이터는 운전자가 사용자 10 이다. `npm run android:emulator` 는 현재 사용자에게 설치하지만, `npx expo run:android` 를 직접 쓰면 사용자 0 에게만 설치된다. `adb shell cmd package install-existing --user 10 ai.mobi.app` |
 | 빌드는 됐는데 앱이 빈 화면·빨간 화면 | 개발 서버가 떠 있는지 확인 (`npm start`), 에뮬레이터는 같은 컴퓨터의 8081 포트에 접속한다 |

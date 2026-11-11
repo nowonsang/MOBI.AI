@@ -7,7 +7,7 @@
 
 import { parseArgs } from "node:util";
 
-import { expo, fail, listDevices, prebuildAndroid, printDevices, requireSdk } from "./lib.mjs";
+import { expoRunAndroid, fail, listDevices, prebuildAndroid, printDevices, requireSdk } from "./lib.mjs";
 
 const { values } = parseArgs({
   options: {
@@ -46,4 +46,4 @@ if (values.device) {
 
 console.log(`\n대상 기기: ${target.serial} (${target.model})`);
 prebuildAndroid({ market: values.market });
-expo(["run:android", "--device", target.serial, "--variant", values.variant]);
+expoRunAndroid(target.serial, values.variant);

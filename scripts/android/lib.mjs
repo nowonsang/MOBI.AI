@@ -60,6 +60,26 @@ export function expo(args) {
   run("npx", ["expo", ...args], { cwd: projectRoot });
 }
 
+/** 기기에서 지금 화면을 쓰는 Android 사용자 번호. 읽지 못하면 "0". */
+export function currentUserOf(serial) {
+  const user = capture(adbPath, ["-s", serial, "shell", "am", "get-current-user"]);
+  return /^\d+$/.test(user) ? user : "0";
+}
+
+/**
+ * `expo run:android` 로 빌드·설치·실행한다.
+ * Expo CLI 는 기본으로 사용자 0 에게만 설치하는데(EXPO_ADB_USER), Android Automotive(Pleos Connect)는 운전자가
+ * 다른 사용자(에뮬레이터는 10)라 그대로 두면 설치는 돼도 앱이 열리지 않는다. 기기의 현재 사용자에게 설치한다.
+ */
+export function expoRunAndroid(serial, variant) {
+  const user = currentUserOf(serial);
+  console.log(`\n설치 대상 Android 사용자: ${user}`);
+  run("npx", ["expo", "run:android", "--device", serial, "--variant", variant], {
+    cwd: projectRoot,
+    env: { ...childEnv, EXPO_ADB_USER: user },
+  });
+}
+
 /**
  * 빌드 종류(MOBI_APP_VARIANT: contest | market)를 정하고 android/ 를 app.config.ts 와 맞춘다.
  * `expo run:android` 는 android/ 가 없을 때만 prebuild 하므로, 실행 스크립트도 빌드 전에 반드시 부른다.
