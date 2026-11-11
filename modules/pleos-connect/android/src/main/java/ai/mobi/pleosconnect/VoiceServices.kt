@@ -89,7 +89,7 @@ class VoiceServices(
           }
         }
       } catch (e: TimeoutCancellationException) {
-        throw PleosServiceException("음성이 ${LISTEN_TIMEOUT_MS / 1000}초 안에 인식되지 않았습니다", e)
+        throw NoSpeechException("음성이 ${LISTEN_TIMEOUT_MS / 1000}초 안에 인식되지 않았습니다", e)
       }
     }
 

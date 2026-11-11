@@ -33,6 +33,7 @@ const KNOWN_CODES: readonly PleosErrorCode[] = [
   "ERR_DRIVING_RESTRICTED",
   "ERR_PERMISSION_DENIED",
   "ERR_PLEOS_SERVICE",
+  "ERR_NO_SPEECH",
 ];
 
 export function pleosErrorCode(error: unknown): PleosErrorCode | null {

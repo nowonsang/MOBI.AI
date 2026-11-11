@@ -38,6 +38,11 @@ export function describeBodyfitError(error: unknown): Copy {
         description:
           "'안내 받으며 맞추기'로 시트 버튼을 직접 움직여 맞춰 주세요",
       };
+    case "ERR_NO_SPEECH":
+      return {
+        title: "말씀을 듣지 못했어요",
+        description: "'말로 알려 주기'를 누르고 다시 말씀해 주세요",
+      };
     case "ERR_PLEOS_SERVICE":
       return {
         title: "차량 서비스에 연결하지 못했어요",

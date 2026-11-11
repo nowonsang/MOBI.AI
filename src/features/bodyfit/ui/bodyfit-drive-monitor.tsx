@@ -68,17 +68,23 @@ export function BodyfitDriveMonitor() {
     if (!prompt) return;
 
     // D-1 주 경로: 화면으로 묻는다. 주차(P) 중에만 띄운다 (S-5).
-    if (prompt === "screen") {
+    const askOnScreen = () =>
       router.navigate({
         pathname: "/bodyfit/[profileId]/feedback",
         params: { profileId: session.profileId },
       });
+    if (prompt === "screen") {
+      askOnScreen();
       return;
     }
 
     ask.mutate(
       { question: COMFORT_QUESTION },
       {
+        // 음성으로 답을 받지 못하면(말이 없거나 인식 실패) 질문을 놓치지 않게 화면으로 다시 묻는다.
+        onError: () => {
+          if (parked) askOnScreen();
+        },
         onSuccess: ({ interpretation }) => {
           if (interpretation.nudges.length === 0) {
             void speakQuietly(interpretation.reply);

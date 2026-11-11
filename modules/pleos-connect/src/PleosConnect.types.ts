@@ -25,7 +25,9 @@ export type PleosErrorCode =
   | "ERR_DRIVING_RESTRICTED"
   /** 권한이 없거나 승인되지 않았다 (VehicleException ERROR_SECURITY_PERMISSION) */
   | "ERR_PERMISSION_DENIED"
-  | "ERR_PLEOS_SERVICE";
+  | "ERR_PLEOS_SERVICE"
+  /** 음성 인식 서비스에는 연결됐지만 정해진 시간 안에 말소리를 알아듣지 못했다 */
+  | "ERR_NO_SPEECH";
 
 /**
  * 플랫폼(CarUxRestrictions)이 지금 막고 있는 UX. Pleos 주행 규제 가이드는 이 값을 기준으로 화면을 줄이라고 한다.
@@ -41,7 +43,10 @@ export type PleosConnectEvents = {
   onUxRestrictionsChanged: (event: UxRestrictions) => void;
   onDriverSeatOccupancyChanged: (event: { occupied: boolean }) => void;
   /** 운전석 한 축의 위치가 바뀌었다 (원시 값). 운전자가 시트 버튼을 누를 때도 온다. */
-  onDriverSeatPositionChanged: (event: { axis: SeatAxis; value: number }) => void;
+  onDriverSeatPositionChanged: (event: {
+    axis: SeatAxis;
+    value: number;
+  }) => void;
   onDestinationArrived: (event: Record<string, never>) => void;
   onSpeechPartial: (event: { text: string }) => void;
 };

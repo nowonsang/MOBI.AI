@@ -19,6 +19,10 @@ class SeatMoveFailedException(message: String, cause: Throwable? = null) :
 class PleosServiceException(message: String, cause: Throwable? = null) :
   CodedException("ERR_PLEOS_SERVICE", message, cause)
 
+// 음성 인식 서비스에는 연결됐지만 정해진 시간 안에 말소리를 알아듣지 못했다. 서비스 오류와 안내 문구가 달라 따로 둔다.
+class NoSpeechException(message: String, cause: Throwable? = null) :
+  CodedException("ERR_NO_SPEECH", message, cause)
+
 class DrivingRestrictedException(cause: Throwable?) :
   CodedException("ERR_DRIVING_RESTRICTED", "주행 중 제한으로 차량이 요청을 거부했습니다", cause)
 

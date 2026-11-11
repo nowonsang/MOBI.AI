@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { z } from "zod";
 
@@ -7,7 +7,7 @@ import { canUseVoice } from "@/shared/config/app-variant";
 import { AppText } from "@/shared/ui/app-text";
 import { Button } from "@/shared/ui/button";
 import { Screen } from "@/shared/ui/screen";
-import { TextField } from "@/shared/ui/text-field";
+import { TextField, type TextFieldHandle } from "@/shared/ui/text-field";
 import { spacing } from "@/shared/ui/theme";
 
 import { useCreateBodyProfile } from "../api/bodyfit.mutations";
@@ -29,6 +29,10 @@ export function BodyfitNewDriverScreen() {
   });
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [voiceConsent, setVoiceConsent] = useState(false);
+  // 키보드의 "다음" 키로 다음 칸에 바로 넘어간다 (입력칸을 다시 찾아 누르지 않게).
+  const heightRef = useRef<TextFieldHandle>(null);
+  const weightRef = useRef<TextFieldHandle>(null);
+  const sittingRef = useRef<TextFieldHandle>(null);
 
   const change = (field: Field) => (text: string) =>
     setValues((current) => ({ ...current, [field]: text }));
@@ -92,6 +96,8 @@ export function BodyfitNewDriverScreen() {
           error={errors.name}
           autoComplete="name"
           returnKeyType="next"
+          submitBehavior="submit"
+          onSubmitEditing={() => heightRef.current?.focus()}
         />
         <TextField
           label="키 (cm)"
@@ -99,6 +105,10 @@ export function BodyfitNewDriverScreen() {
           onChangeText={change("heightCm")}
           error={errors.heightCm}
           keyboardType="decimal-pad"
+          ref={heightRef}
+          returnKeyType="next"
+          submitBehavior="submit"
+          onSubmitEditing={() => weightRef.current?.focus()}
         />
         <TextField
           label="몸무게 (kg)"
@@ -106,6 +116,10 @@ export function BodyfitNewDriverScreen() {
           onChangeText={change("weightKg")}
           error={errors.weightKg}
           keyboardType="decimal-pad"
+          ref={weightRef}
+          returnKeyType="next"
+          submitBehavior="submit"
+          onSubmitEditing={() => sittingRef.current?.focus()}
         />
         <TextField
           label="앉은키 (cm, 선택)"
@@ -114,6 +128,8 @@ export function BodyfitNewDriverScreen() {
           onChangeText={change("sittingHeightCm")}
           error={errors.sittingHeightCm}
           keyboardType="decimal-pad"
+          ref={sittingRef}
+          returnKeyType="done"
         />
         <BodyfitConsentNotice
           askVoice={canUseVoice}
