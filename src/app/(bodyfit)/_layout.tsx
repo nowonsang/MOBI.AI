@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 
+import { BodyfitBoardingMonitor } from "@/features/bodyfit/ui/bodyfit-boarding-monitor";
 import { BodyfitDriveMonitor } from "@/features/bodyfit/ui/bodyfit-drive-monitor";
 import { colors } from "@/shared/ui/theme";
 
@@ -7,6 +8,7 @@ import { colors } from "@/shared/ui/theme";
 export default function BodyfitLayout() {
   return (
     <>
+      <BodyfitBoardingMonitor />
       <BodyfitDriveMonitor />
       <Stack
         screenOptions={{

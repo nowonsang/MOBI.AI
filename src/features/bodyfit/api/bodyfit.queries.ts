@@ -18,6 +18,8 @@ export const bodyfitKeys = {
   adjustments: (profileId: string) =>
     [...bodyfitKeys.all, "adjustments", profileId] as const,
   seat: () => [...bodyfitKeys.all, "seat"] as const,
+  /** 시트 이동 뮤테이션. 화면 밖에서도 "움직이는 중"인지 알 수 있게 (useIsMutating) */
+  seatMove: () => [...bodyfitKeys.all, "seat-move"] as const,
 };
 
 export const bodyfitQueries = {

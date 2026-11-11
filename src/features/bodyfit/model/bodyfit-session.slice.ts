@@ -28,6 +28,14 @@ export const bodyfitSessionSlice = createSlice({
     feedbackDismissed(state) {
       state.pendingFeedback = null;
     },
+    /**
+     * 주차 중에 누가 운전석에 앉거나 일어났다. 다른 사람일 수 있으므로 다시 고를 때까지 운전자를 모르는 상태로 둔다
+     * (앞사람 이름으로 출발 자세를 기록하거나 앞사람의 조절안을 보여 주지 않게).
+     */
+    occupantChanged(state) {
+      state.activeDriverId = null;
+      state.pendingFeedback = null;
+    },
   },
   selectors: {
     selectActiveDriverId: (state) => state.activeDriverId,
@@ -35,8 +43,12 @@ export const bodyfitSessionSlice = createSlice({
   },
 });
 
-export const { driverSelected, feedbackProposed, feedbackDismissed } =
-  bodyfitSessionSlice.actions;
+export const {
+  driverSelected,
+  feedbackProposed,
+  feedbackDismissed,
+  occupantChanged,
+} = bodyfitSessionSlice.actions;
 
 export const { selectActiveDriverId, selectPendingFeedback } =
   bodyfitSessionSlice.selectors;

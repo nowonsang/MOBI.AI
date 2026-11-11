@@ -28,7 +28,7 @@ import {
 import { bodyfitQueries } from "../api/bodyfit.queries";
 import { speakQuietly } from "../api/bodyfit.voice";
 import { guideSeat } from "../model/bodyfit-guide";
-import { learnOffsets } from "../model/bodyfit-learning";
+import { explainOffsets, learnOffsets } from "../model/bodyfit-learning";
 import { recommendSeat } from "../model/bodyfit-recommend";
 import { toSeatRatios } from "../model/bodyfit-seat";
 import { driverSelected } from "../model/bodyfit-session.slice";
@@ -112,6 +112,8 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   // 네이티브도 움직이기 전과 도중에 기어 P 를 다시 확인한다 (DriverSeat.kt).
   const parked = gear === "park" && !restrictions.noSetup;
   const learnedCount = adjustments.data.length;
+  // C-4: 기록이 추천을 눈에 띄게 바꿨으면 무엇 때문인지 알려 준다.
+  const reason = explainOffsets(adjustments.data);
   const recentRecords = [...adjustments.data]
     .sort((a, b) => b.at - a.at)
     .slice(0, RECENT_RECORDS);
@@ -175,9 +177,10 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
     <Screen
       title={`${driver.name} 님`}
       description={
-        learnedCount > 0
+        reason ??
+        (learnedCount > 0
           ? `체형과 지금까지의 자세 기록 ${learnedCount}건을 반영했어요`
-          : "체형으로 계산한 첫 추천이에요. 쓰실수록 몸에 맞춰져요"
+          : "체형으로 계산한 첫 추천이에요. 쓰실수록 몸에 맞춰져요")
       }
       footer={
         <>

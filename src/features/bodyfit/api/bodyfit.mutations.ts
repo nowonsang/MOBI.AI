@@ -55,6 +55,7 @@ export function useDeleteBodyProfile() {
 export function useMoveSeat() {
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey: bodyfitKeys.seatMove(),
     mutationFn: async (ratios: SeatRatios) => {
       const vehicle = pleos();
       const targets = toSeatTargets(
