@@ -7,7 +7,7 @@ Android Studio 가 없는 컴퓨터에서 MOBI.AI 를 **Pleos Connect 에뮬레�
 | --- | --- |
 | 운영체제 | macOS 13+ (Apple Silicon 권장), Windows 10/11 64bit, Linux 64bit |
 | 메모리 | 16GB 이상 권장 (Pleos 에뮬레이터 RAM 4GB 사용) |
-| 디스크 | 여유 30GB 이상 (SDK·시스템 이미지·Gradle 캐시) |
+| 디스크 | 여유 40GB 이상 (Pleos 에뮬레이터 시스템 이미지 약 20GB, 설치 중 최대 약 25GB + SDK·Gradle 캐시) |
 | GPU (Pleos 에뮬레이터) | 최소 RTX 3060 Laptop 6GB / RX 6600M 8GB 급, 권장 RTX 4060 Laptop 8GB 급 |
 
 ## 1. Android Studio 설치
@@ -87,6 +87,7 @@ export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator
    - macOS(Apple Silicon): `https://nexus-playground.pleos.ai/repository/raw-releases/connect-avd/2.x/crp-arm64-sys-img.xml`
    - Windows/Linux: `https://nexus-playground.pleos.ai/repository/raw-releases/connect-avd/2.x/crp-sys-img.xml`
 2. **SDK Platforms** 탭 → Show Package Details → API 34 아래 **Pleos Connect** 시스템 이미지 설치
+   - 용량: 내려받기 4.7GB(arm64)·4.1GB(x86_64), 설치 후 약 20GB (`system.img` 만 18GB). 설치 중에는 압축 파일까지 약 25GB 가 필요하다.
 3. Device Manager → **+** → Form Factor **Automotive** → 기기 **Pleos Connect v2.1.0** → 이미지 API 34 (Pleos Connect v2.1.0 APIs)
 4. Advanced Settings → RAM **4GB**, Startup → Default boot **Cold** (퀵 부트면 차량 값(VHAL)이 동작하지 않는다)
 5. 기본 언어는 한국어. 영어는 차량 설정 → 일반 설정 → 언어/Language. CRN 입력은 필요 없다 (Emulator 2.1.0 부터).
