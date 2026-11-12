@@ -28,6 +28,11 @@ export function interpretByRules(utterance: string): FeedbackInterpretation {
   const amount: SeatNudge["amount"] = /(많이|훨씬|확)/.test(text)
     ? "medium"
     : "small";
+  // 헤드레스트·안전벨트·좌판 길이는 말로 바꾸지 않는다. "헤드레스트 올려줘" 의 "올려" 가 시트 높이로 읽혀
+  // 다른 곳이 움직이지 않게, 이 말이 나오면 조절안을 만들지 않는다.
+  if (UNSUPPORTED_PART_PATTERN.test(text)) {
+    return { nudges: [], reply: UNSUPPORTED_PART_REPLY };
+  }
   // "등받이를 뒤로" 의 "뒤로" 가 시트 앞뒤 이동으로 읽히지 않게 등받이 언급은 따로 해석한다.
   const rules = /등받이/.test(text) ? BACKREST_RULES : SEAT_RULES;
   const nudges = dedupeByAxis(
@@ -43,6 +48,11 @@ export function interpretByRules(utterance: string): FeedbackInterpretation {
     reply: SATISFIED_PATTERN.test(text) ? SATISFIED_REPLY : UNCLEAR_REPLY,
   };
 }
+
+const UNSUPPORTED_PART_PATTERN =
+  /(헤드 ?레스트|머리 ?받침|목 ?받침|벨트|좌판 ?(길이|깊이))/;
+const UNSUPPORTED_PART_REPLY =
+  "헤드레스트와 안전벨트, 좌판 길이는 말로 바꾸지 않아요. 화면 안내를 보며 맞춰 주세요";
 
 const SATISFIED_PATTERN = /(괜찮|좋았|좋아|편했|편해|편안|없어|없었)/;
 const SATISFIED_REPLY = "알겠어요. 다음에도 지금 자세로 맞출게요";
