@@ -1,6 +1,6 @@
-import type { SeatAxis } from "@/shared/pleos/pleos.types";
+import type { FanDirection, SeatAxis } from "@/shared/pleos/pleos.types";
 
-export type { SeatAxis };
+export type { FanDirection, SeatAxis };
 
 export type BodyProfile = {
   id: string;
@@ -75,11 +75,16 @@ export type FeedbackInterpretation = {
   reply: string;
 };
 
-/** 운전석 온도 취향 (시트 열선·핸들 열선은 차량 단계 값, 공조 설정 온도는 섭씨). 차량이 지원하는 항목만 있다. */
+/** 운전석 온도 취향 (열선·통풍·풍량은 차량 단계 값, 공조 설정 온도는 섭씨). 차량이 지원하는 항목만 있다. */
 export type ComfortSettings = {
   seatHeat?: number;
+  /** 시트 통풍 단계 (0 = 꺼짐) */
+  seatVent?: number;
   steeringHeat?: number;
   cabinTarget?: number;
+  /** 풍량·바람 방향은 운전자가 직접 맞춘 날만 남긴다 (자동 공조·공조 꺼짐은 차가 정한 값이라 뺀다) */
+  fanSpeed?: number;
+  fanDirection?: FanDirection;
 };
 
 /** 출발할 때의 온도 취향 기록. cabinTemp(탈 때 실내 온도)가 비슷한 기록끼리 묶어 다음 추천에 쓴다. */

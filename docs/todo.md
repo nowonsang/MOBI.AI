@@ -76,6 +76,7 @@
   - 음성에 동의한 운전자는 주행 후 질문을 음성으로만 해서, 답을 못 받으면 질문이 사라지던 것 → 주차 중이면 화면 질문으로 넘기게 고침
 - [~] **가이드 조절 시연 모드** — 가이드 조절 화면의 "시연 모드로 보기": 추천 자세에서 어긋난 모의 위치에서 시작해, 화면 버튼(앞으로/뒤로, 올리기/내리기 …)이 시트 버튼 대신 움직인다. 같은 안내 로직(`guideSeat`)으로 "더 → 조금 더 → 지나쳤어요 → 딱 좋아요 ✓"가 나온다. 모의 값은 학습 기록에 남기지 않고, market 빌드에는 없다 (`canUseDemoMode`). 기어를 읽을 수 있으면 P단에서만 동작. 팀 결정(화면 녹화 + 자막)을 보완하는 선택지. 에뮬레이터 확인 필요 (11/12) — Android
 - [~] **온도 취향 (E-1~E-3, "내 운전석 통째로")** — 출발할 때 시트 열선·핸들 열선·공조 온도와 실내 온도를 기록하고, 맞춤 자세 화면 "내 운전석 온도" 카드에서 비슷한 날의 설정을 추천·적용. 권한 `CAR_CLIMATE`·`CONTROL_CAR_CLIMATE` 추가(개발 문서 공개, market 빌드는 CONTROL 제외). Kotlin 은 Vehicle SDK 2.3.2 AAR 로 컴파일 확인, Android 빌드·에뮬레이터(Virtual Console 열선·온도 값 변경 가능 여부) 확인 필요 (11/12) — Android
+- [~] **온도 취향 확대: 통풍·풍량·바람 방향 (E-1~E-3)** — 시트 통풍을 열선과 따로 기록(Vehicle SDK 2.3.2 에서 별개 값 `HVAC_SEAT_VENTILATION`, AAR 확인)하고 풍량·바람 방향도 기록·추천·적용. 자동 공조이거나 공조가 꺼져 있으면 풍량·바람 방향은 기록하지도 바꾸지도 않음. 카드는 넓은 화면에서 두 칸씩 놓고 바뀔 항목에만 지금 값을 붙임. 새 권한 없음 (`@RequiresPermission` 확인: 통풍은 `CAR_SEATS`·`CONTROL_CAR_SEATS`, 풍량·바람 방향·자동·전원은 `CAR_CLIMATE`·`CONTROL_CAR_CLIMATE`). lint·typecheck·Jest 통과, Android 빌드(Kotlin 컴파일)는 아직 돌리지 않음. 에뮬레이터 확인 필요: 통풍·풍량·바람 방향 값이 읽히고 Virtual Console 에서 바뀌는지, 자동 공조·공조 꺼짐일 때 값이 어떻게 오는지, 맞추기 동작, 카드 두 칸 배치와 기호(∽ ≈ ↘) 표시 (11/12) — Android
 - [ ] contest 빌드로 에뮬레이터에서 시나리오 1~6 통과
 - [ ] contest 빌드 APK (시연·GitHub용, `npm run android:build:release`) + market 빌드 APK (앱 마켓 제출 대비, `npm run android:build:market`)
 

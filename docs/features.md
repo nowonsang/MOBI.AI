@@ -106,9 +106,9 @@
 
 | ID | 우선 | 기능 | 설명 |
 | --- | --- | --- | --- |
-| E-1 | P0 | 온도 취향 기록 | 출발할 때(P 해제) 시트 열선·통풍, 핸들 열선, 운전석 공조 설정 온도와 탈 때 실내 온도를 기록 (`getHvacSeatTemperature`, `getHvacSteeringWheelHeatState`, `getHvacTemperature`, `getHvacTemperatureCurrent`) |
-| E-2 | P0 | 온도 취향 추천 | 지금 실내 온도와 ±5℃ 안이었던 최근 기록 5건의 가운데 값. 비슷한 날이 없으면 최근 기록 기준 |
-| E-3 | P0 | 평소 온도로 맞추기 | 맞춤 자세 화면의 "내 운전석 온도" 카드. 주차(P) 중 운전자가 누르면 다른 항목만 바꾼다 (`setHvacSeatTemperature`, `setHvacSteeringWheelHeat`, `setHvacTemperature`). 네이티브에서도 기어 P 확인 |
+| E-1 | P0 | 온도 취향 기록 | 출발할 때(P 해제) 시트 열선·통풍, 핸들 열선, 운전석 공조 설정 온도, 풍량, 바람 방향과 탈 때 실내 온도를 기록 (`getHvacSeatTemperature`, `getHvacSeatVentilationState`, `getHvacSteeringWheelHeatState`, `getHvacTemperature`, `getHvacFanSpeed`, `getHvacFanDirection`, `getHvacTemperatureCurrent`). 통풍은 열선과 별개 값이다. 풍량·바람 방향은 운전자가 직접 맞춘 날만 남긴다: 자동 공조(`getHvacAutoState`)이거나 공조가 꺼져 있으면(`getHvacPowerState`) 차가 정한 값이라 뺀다 |
+| E-2 | P0 | 온도 취향 추천 | 지금 실내 온도와 ±5℃ 안이었던 최근 기록 5건의 가운데 값. 바람 방향은 가장 자주 고른 방향. 열선과 통풍이 함께 추천되면 최근에 켠 쪽만 남긴다. 비슷한 날이 없으면 최근 기록 기준 |
+| E-3 | P0 | 평소 온도로 맞추기 | 맞춤 자세 화면의 "내 운전석 온도" 카드. 주차(P) 중 운전자가 누르면 다른 항목만 바꾼다 (`setHvacSeatTemperature`, `setHvacSeatVentilation`, `setHvacSteeringWheelHeat`, `setHvacTemperature`, `setHvacFanSpeed`, `setHvacFanDirection`). 자동 공조 중이거나 공조가 꺼져 있으면 풍량·바람 방향은 그대로 둔다 (자동을 풀거나 공조를 켜지 않는다). 바람 방향은 "얼굴 / 발 / 앞유리"로 보여 주고, 바뀔 항목에만 지금 값을 붙인다. 네이티브에서도 기어 P 확인 |
 
 ## MVP 시연 시나리오 (Pleos 에뮬레이터)
 

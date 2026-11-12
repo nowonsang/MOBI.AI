@@ -3,7 +3,10 @@ import { z } from "zod";
 import {
   CABIN_TARGET_RANGE,
   CABIN_TEMP_RANGE,
+  FAN_DIRECTIONS,
+  FAN_SPEED_RANGE,
   HEAT_LEVEL_RANGE,
+  VENT_LEVEL_RANGE,
 } from "./bodyfit-comfort";
 import { DEFAULT_DRIVE_CONTEXT, DRIVE_CONTEXTS } from "./bodyfit-drive-context";
 
@@ -74,14 +77,28 @@ const heatLevel = z
   .min(HEAT_LEVEL_RANGE.min)
   .max(HEAT_LEVEL_RANGE.max);
 
+// 통풍·풍량·바람 방향은 나중에 더한 항목이다. 모두 선택 값이라 이 항목이 없는 예전 기록도 그대로 읽힌다.
 export const comfortSettingsSchema = z.object({
   seatHeat: heatLevel.optional(),
+  seatVent: z
+    .number()
+    .int()
+    .min(VENT_LEVEL_RANGE.min)
+    .max(VENT_LEVEL_RANGE.max)
+    .optional(),
   steeringHeat: heatLevel.optional(),
   cabinTarget: z
     .number()
     .min(CABIN_TARGET_RANGE.min)
     .max(CABIN_TARGET_RANGE.max)
     .optional(),
+  fanSpeed: z
+    .number()
+    .int()
+    .min(FAN_SPEED_RANGE.min)
+    .max(FAN_SPEED_RANGE.max)
+    .optional(),
+  fanDirection: z.enum(FAN_DIRECTIONS).optional(),
 });
 
 export const comfortRecordSchema = z.object({
