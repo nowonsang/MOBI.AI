@@ -50,6 +50,16 @@ const AXIS_COPY: Record<
     increase: "올리는 중",
     decrease: "내리는 중",
   },
+  lumbar: {
+    label: "허리 지지대",
+    increase: "내미는 중",
+    decrease: "넣는 중",
+  },
+  headrestAngle: {
+    label: "헤드레스트 각도",
+    increase: "앞으로 세우는 중",
+    decrease: "뒤로 젖히는 중",
+  },
 };
 
 const percent = (ratio: number) => Math.round(ratio * 100);

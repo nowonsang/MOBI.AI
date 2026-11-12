@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
 import { DEFAULT_DRIVE_CONTEXT } from "./bodyfit-drive-context";
+import type { VoiceComfortPlan } from "./bodyfit-voice-comfort";
 import type { DriveContext, FeedbackInterpretation } from "./bodyfit.types";
 
 // 지금 앱을 쓰는 동안의 UI 상태. 저장된 프로필·기록·진행 중인 주행은 기기 저장소가 담당하므로 여기 두지 않는다.
@@ -11,12 +12,15 @@ type BodyfitSessionState = {
   driveContext: DriveContext;
   /** 운전자 확인을 기다리는 음성 피드백 조절안 */
   pendingFeedback: FeedbackInterpretation | null;
+  /** 운전자 확인을 기다리는 음성 온도 조절안 (E-4). 시트 조절안과 함께 두지 않는다 */
+  pendingComfort: VoiceComfortPlan | null;
 };
 
 const initialState: BodyfitSessionState = {
   activeDriverId: null,
   driveContext: DEFAULT_DRIVE_CONTEXT,
   pendingFeedback: null,
+  pendingComfort: null,
 };
 
 export const bodyfitSessionSlice = createSlice({
@@ -36,9 +40,17 @@ export const bodyfitSessionSlice = createSlice({
     },
     feedbackProposed(state, action: PayloadAction<FeedbackInterpretation>) {
       state.pendingFeedback = action.payload;
+      state.pendingComfort = null;
     },
     feedbackDismissed(state) {
       state.pendingFeedback = null;
+    },
+    comfortProposed(state, action: PayloadAction<VoiceComfortPlan>) {
+      state.pendingComfort = action.payload;
+      state.pendingFeedback = null;
+    },
+    comfortDismissed(state) {
+      state.pendingComfort = null;
     },
     /**
      * 주차 중에 누가 운전석에 앉거나 일어났다. 다른 사람일 수 있으므로 다시 고를 때까지 운전자를 모르는 상태로 둔다
@@ -48,12 +60,14 @@ export const bodyfitSessionSlice = createSlice({
       state.activeDriverId = null;
       state.driveContext = DEFAULT_DRIVE_CONTEXT;
       state.pendingFeedback = null;
+      state.pendingComfort = null;
     },
   },
   selectors: {
     selectActiveDriverId: (state) => state.activeDriverId,
     selectDriveContext: (state) => state.driveContext,
     selectPendingFeedback: (state) => state.pendingFeedback,
+    selectPendingComfort: (state) => state.pendingComfort,
   },
 });
 
@@ -62,6 +76,8 @@ export const {
   driveContextSelected,
   feedbackProposed,
   feedbackDismissed,
+  comfortProposed,
+  comfortDismissed,
   occupantChanged,
 } = bodyfitSessionSlice.actions;
 
@@ -69,4 +85,5 @@ export const {
   selectActiveDriverId,
   selectDriveContext,
   selectPendingFeedback,
+  selectPendingComfort,
 } = bodyfitSessionSlice.selectors;

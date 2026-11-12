@@ -10,6 +10,11 @@ const UNAPPROVED_PERMISSIONS = [
   "pleos.car.permission.CONTROL_CAR_CLIMATE",
   "pleos.car.permission.STT_SERVICE",
   "pleos.car.permission.TTS_SERVICE",
+  // 무드등·사이드미러 열선 (2026-11-12 추가). 앱 마켓과 협의한 적이 없는 권한이라 읽기 권한도 함께 뺀다.
+  // CAR_LIGHTS 는 무드등 값을 바꾸는 메서드의 권한이기도 하다 (@RequiresPermission).
+  "pleos.car.permission.CAR_LIGHTS",
+  "pleos.car.permission.CAR_MIRRORS",
+  "pleos.car.permission.CONTROL_CAR_MIRRORS",
 ];
 
 /** @type {import("expo/config-plugins").ConfigPlugin<{ variant?: "contest" | "market" } | void>} */

@@ -15,14 +15,17 @@ import { useApplyComfort } from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
 import { speakQuietly } from "../api/bodyfit.voice";
 import {
+  AMBIENT_KEYS,
   comfortChanges,
+  hasAmbient,
   isFanManual,
   recommendComfort,
 } from "../model/bodyfit-comfort";
 import type { ComfortSettings, FanDirection } from "../model/bodyfit.types";
 import { describeComfortError } from "./bodyfit-error-copy";
 
-type ComfortKey = keyof ComfortSettings;
+// 무드등 세 항목(켜짐·밝기·색)은 타일 하나로 묶어 따로 그린다.
+type ComfortKey = Exclude<keyof ComfortSettings, (typeof AMBIENT_KEYS)[number]>;
 
 // 단계 값: 양수 = 단계, 0 = 꺼짐. 시트·핸들 열선은 음수면 냉각이다 (차량 규약). 단계가 하나뿐이면 "켬".
 const describeLevel = (value: number, max: number | undefined) =>
@@ -50,6 +53,7 @@ const ROWS: { key: ComfortKey; label: string }[] = [
   { key: "seatHeat", label: "시트 열선" },
   { key: "seatVent", label: "시트 통풍" },
   { key: "steeringHeat", label: "핸들 열선" },
+  { key: "mirrorHeat", label: "사이드미러 열선" },
   { key: "cabinTarget", label: "실내 온도" },
   { key: "fanSpeed", label: "풍량" },
   { key: "fanDirection", label: "바람 방향" },
@@ -75,8 +79,51 @@ const describe = (
           key === "fanDirection" ? undefined : state?.[key]?.max,
         );
 
+// 무드등 밝기: 단계가 적은 차는 "3단", 0~100 처럼 촘촘한 차는 범위 안의 비율로 읽어 준다.
+const describeBrightness = (
+  value: number,
+  range: { min: number; max: number } | undefined,
+) =>
+  !range || range.max <= 10 || range.max <= range.min
+    ? `밝기 ${value}단`
+    : `밝기 ${Math.round(((value - range.min) / (range.max - range.min)) * 100)}%`;
+
+/** 무드등 타일 글자. 색 값은 차종마다 뜻이 달라 색 이름 대신 "평소 색"으로 부른다. */
+function describeAmbient(
+  wanted: ComfortSettings,
+  changes: ComfortSettings,
+  state: DriverComfortState | undefined,
+): { value: string; detail?: string } {
+  if (wanted.ambientOn === false)
+    return {
+      value: "꺼짐",
+      detail: changes.ambientOn === false ? "지금 켜짐" : undefined,
+    };
+  const range = state?.ambientBrightness;
+  const value = [
+    wanted.ambientOn ? "켬" : null,
+    wanted.ambientBrightness !== undefined
+      ? describeBrightness(wanted.ambientBrightness, range)
+      : null,
+    wanted.ambientColor !== undefined ? "평소 색" : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const detail = [
+    changes.ambientOn ? "지금 꺼짐" : null,
+    changes.ambientBrightness !== undefined && range
+      ? `지금 ${describeBrightness(range.value, range)}`
+      : null,
+    changes.ambientColor !== undefined ? "지금 다른 색" : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return { value, detail: detail || undefined };
+}
+
 /**
  * 운전석 온도 취향: 출발할 때의 열선·통풍·공조 설정을 기억해 두었다가, 탈 때 실내 온도가 비슷한 날의 설정으로 맞춘다.
+ * 무드등은 온도와 무관해 최근 기록으로 고르고, 카드 안에서 따로 묶어 보여 준다.
  * 맞추기는 주차(P) 중 화면에서 운전자가 누를 때만 한다.
  */
 export function BodyfitComfortCard({
@@ -106,7 +153,15 @@ export function BodyfitComfortCard({
     recommendation && state
       ? comfortChanges(state, recommendation.settings)
       : {};
-  const changeCount = Object.keys(changes).length;
+  // 무드등은 켜짐·밝기·색이 함께 바뀌어도 한 곳으로 센다 (타일 하나).
+  const ambientChanging = hasAmbient(changes);
+  const changeCount =
+    ROWS.filter(({ key }) => changes[key] !== undefined).length +
+    (ambientChanging ? 1 : 0);
+  const ambient =
+    recommendation && hasAmbient(recommendation.settings)
+      ? describeAmbient(recommendation.settings, changes, state)
+      : null;
 
   // 풍량·바람 방향은 자동 공조이거나 공조가 꺼져 있으면 건드리지 않는다. 그 이유를 행과 카드 아래에 알린다.
   const fanHeld = state && !isFanManual(state) ? state.fanMode : undefined;
@@ -127,8 +182,8 @@ export function BodyfitComfortCard({
   const applyComfort = () =>
     apply.mutate(changes, {
       onSuccess: () => {
-        setNotice("평소 온도로 맞췄어요");
-        void speakQuietly("평소 좋아하시는 온도로 맞췄어요");
+        setNotice("평소 설정으로 맞췄어요");
+        void speakQuietly("평소 좋아하시는 설정으로 맞췄어요");
       },
     });
 
@@ -150,7 +205,7 @@ export function BodyfitComfortCard({
         : "평소와 같아요";
 
   return (
-    <Card title="내 운전석 온도" count={count}>
+    <Card title="내 운전석 온도·무드등" count={count}>
       {records.isPending ? (
         <View style={styles.grid} accessibilityLabel="불러오는 중">
           {ROWS.map(({ key }) => (
@@ -159,8 +214,8 @@ export function BodyfitComfortCard({
         </View>
       ) : !recommendation ? (
         <AppText variant="secondary" tone="secondary">
-          아직 기록이 없어요. 출발할 때의 열선·통풍·온도·바람부터 자동으로
-          기억해요
+          아직 기록이 없어요. 출발할 때의 열선·통풍·온도·바람·무드등부터
+          자동으로 기억해요
         </AppText>
       ) : (
         <View style={styles.rows}>
@@ -212,6 +267,33 @@ export function BodyfitComfortCard({
                 : "공조가 꺼져 있어 풍량과 바람 방향은 그대로 둬요"}
             </AppText>
           ) : null}
+          {ambient ? (
+            <>
+              <AppText variant="caption" tone="tertiary">
+                무드등은 온도와 상관없이 최근 출발 기록으로 골랐어요
+              </AppText>
+              <View style={styles.grid}>
+                <View
+                  style={[styles.tile, ambientChanging && styles.tileChanging]}
+                  accessible
+                  accessibilityLabel={["무드등", ambient.value, ambient.detail]
+                    .filter(Boolean)
+                    .join(", ")}
+                >
+                  <AppText
+                    variant="caption"
+                    tone={ambientChanging ? "default" : "tertiary"}
+                  >
+                    무드등
+                  </AppText>
+                  <AppText variant="bodyStrong">{ambient.value}</AppText>
+                  {ambient.detail ? (
+                    <AppText variant="caption">{ambient.detail}</AppText>
+                  ) : null}
+                </View>
+              </View>
+            </>
+          ) : null}
         </View>
       )}
 
@@ -223,17 +305,17 @@ export function BodyfitComfortCard({
             tone="secondary"
             accessibilityLiveRegion="polite"
           >
-            ✓ 지금 설정이 평소 온도와 같아요
+            ✓ 지금 설정이 평소와 같아요
           </AppText>
         ) : (
           <View style={styles.action}>
             <Button
-              label="평소 온도로 맞추기"
+              label="평소 설정으로 맞추기"
               variant="secondary"
               onPress={applyComfort}
               disabled={!parked}
               loading={apply.isPending}
-              accessibilityHint="열선과 통풍, 실내 온도, 바람을 평소 설정으로 바꿔요"
+              accessibilityHint="열선과 통풍, 실내 온도, 바람, 무드등을 평소 설정으로 바꿔요"
             />
             {!parked ? (
               <AppText variant="caption" tone="tertiary">

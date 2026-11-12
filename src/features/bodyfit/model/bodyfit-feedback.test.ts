@@ -52,3 +52,20 @@ describe("describeNudges", () => {
     ).toBe("시트를 조금 앞으로 옮겨 보고, 등받이를 세워 볼게요");
   });
 });
+
+describe("허리 지지대는 말로 바꾸지 않는다", () => {
+  it.each(["허리 지지대 좀 올려줘", "허리받침을 앞으로 해 줘", "럼버 서포트 높여 줘"])(
+    "허리 지지대 이야기는 시트 조절로 읽지 않는다 (%s)",
+    (utterance) => {
+      const result = interpretByRules(utterance);
+      expect(result.nudges).toEqual([]);
+      expect(result.reply).toContain("허리 지지대");
+    },
+  );
+
+  it("허리가 불편하다는 말은 지지대 이야기가 아니라 그대로 해석한다", () => {
+    expect(interpretByRules("허리가 아파서 등받이를 세워 줘").nudges).toEqual([
+      { axis: "backrest", direction: "increase", amount: "small" },
+    ]);
+  });
+});

@@ -18,7 +18,7 @@ export type AutoAdjustOutcome = "done" | "stopped" | "failed";
 export type AutoAdjustRun = {
   /** 시연 모드: 실제 시트는 움직이지 않고 모의 위치만 움직인다 */
   demo: boolean;
-  /** 움직일 축과 순서 (앞뒤 → 높이 → 등받이 → 기울기). 차량에서 시트 상태를 읽기 전에는 비어 있다 */
+  /** 움직일 축과 순서 (SEAT_AXES 순서: 앞뒤 → 높이 → 등받이 → … → 허리 지지대 → 헤드레스트 각도). 차량에서 시트 상태를 읽기 전에는 비어 있다 */
   steps: AutoAdjustStep[];
   /** 끝난 축의 수. steps[completed] 가 지금 움직이는 축이다 */
   completed: number;

@@ -6,6 +6,8 @@ type Directions = { increase: string; decrease: string };
 type AxisCopy = {
   /** 축 이름. 어느 화면에서나 같은 말로 부른다 */
   label: string;
+  /** 축 앞에 두는 아이콘 원의 기호 (뜻은 옆의 축 이름이 전한다) */
+  glyph: string;
   /** 막대 양 끝: 비율 0 쪽과 1 쪽 */
   min: string;
   max: string;
@@ -19,6 +21,7 @@ type AxisCopy = {
 export const AXIS_COPY: Record<SeatAxis, AxisCopy> = {
   foreAft: {
     label: "앞뒤 위치",
+    glyph: "↔",
     min: "뒤",
     max: "앞",
     guide: { increase: "앞으로 당겨 주세요", decrease: "뒤로 밀어 주세요" },
@@ -26,6 +29,7 @@ export const AXIS_COPY: Record<SeatAxis, AxisCopy> = {
   },
   height: {
     label: "높이",
+    glyph: "↕",
     min: "낮게",
     max: "높게",
     guide: { increase: "올려 주세요", decrease: "내려 주세요" },
@@ -33,6 +37,7 @@ export const AXIS_COPY: Record<SeatAxis, AxisCopy> = {
   },
   backrest: {
     label: "등받이",
+    glyph: "∠",
     min: "눕힘",
     max: "세움",
     guide: { increase: "세워 주세요", decrease: "눕혀 주세요" },
@@ -40,6 +45,7 @@ export const AXIS_COPY: Record<SeatAxis, AxisCopy> = {
   },
   tilt: {
     label: "좌판 기울기",
+    glyph: "⊿",
     min: "내림",
     max: "올림",
     guide: { increase: "앞쪽을 올려 주세요", decrease: "앞쪽을 내려 주세요" },
@@ -47,6 +53,7 @@ export const AXIS_COPY: Record<SeatAxis, AxisCopy> = {
   },
   depth: {
     label: "좌판 길이",
+    glyph: "⇔",
     min: "짧게",
     max: "길게",
     guide: { increase: "늘려 주세요", decrease: "줄여 주세요" },
@@ -54,6 +61,7 @@ export const AXIS_COPY: Record<SeatAxis, AxisCopy> = {
   },
   headrestHeight: {
     label: "헤드레스트 높이",
+    glyph: "⇡",
     min: "낮게",
     max: "높게",
     guide: { increase: "올려 주세요", decrease: "내려 주세요" },
@@ -61,14 +69,41 @@ export const AXIS_COPY: Record<SeatAxis, AxisCopy> = {
   },
   beltHeight: {
     label: "안전벨트 높이",
+    glyph: "⇡",
     min: "낮게",
     max: "높게",
     guide: { increase: "올려 주세요", decrease: "내려 주세요" },
     press: { increase: "올리기", decrease: "내리기" },
+  },
+  lumbar: {
+    label: "허리 지지대",
+    glyph: "⇔",
+    min: "넣음",
+    max: "내밈",
+    guide: { increase: "내밀어 주세요", decrease: "넣어 주세요" },
+    press: { increase: "내밀기", decrease: "넣기" },
+  },
+  headrestAngle: {
+    label: "헤드레스트 각도",
+    glyph: "∠",
+    min: "뒤로",
+    max: "앞으로",
+    guide: { increase: "앞으로 세워 주세요", decrease: "뒤로 젖혀 주세요" },
+    press: { increase: "앞으로", decrease: "뒤로" },
   },
 };
 
 export const AXIS_GROUP_LABEL: Record<SeatAxisGroupId, string> = {
   posture: "자세",
   headBelt: "머리·벨트",
+  remembered: "기억한 위치",
 };
+
+/** 아직 추천하지 못하는 축(기록이 덜 쌓인 허리 지지대·헤드레스트 각도)을 알려 주는 한 줄. 없으면 null */
+export function describeAxesToRemember(
+  axes: readonly SeatAxis[],
+): string | null {
+  if (axes.length === 0) return null;
+  const names = axes.map((axis) => AXIS_COPY[axis].label).join("·");
+  return `${names}는 편하게 맞춰 두면 기억했다가 다음부터 맞춰 드려요`;
+}

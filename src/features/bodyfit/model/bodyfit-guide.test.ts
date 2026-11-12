@@ -107,3 +107,28 @@ describe("guideSeat", () => {
     expect(guideSeat({}, { foreAft: 0.5 }).done).toBe(false);
   });
 });
+
+describe("guideSeat: 허리 지지대·헤드레스트 각도", () => {
+  const posture = { foreAft: 0.5, height: 0.4, backrest: 0.6, tilt: 0.5 };
+
+  it("기억한 값이 없으면(목표가 없으면) 차량이 위치를 알려 줘도 안내하지 않는다", () => {
+    const guide = guideSeat({ ...posture, lumbar: 0.1 }, posture);
+    expect(guide.axes.map((axis) => axis.axis)).not.toContain("lumbar");
+    expect(guide.done).toBe(true);
+  });
+
+  it("기억한 값이 있으면 다른 축을 다 맞춘 뒤 마지막에 안내한다", () => {
+    const target = { ...posture, lumbar: 0.6, headrestAngle: 0.5 };
+    const guide = guideSeat(
+      { ...posture, foreAft: 0.2, lumbar: 0.3, headrestAngle: 0.5 },
+      target,
+    );
+    expect(guide.focus).toBe("foreAft");
+    const settled = guideSeat(
+      { ...posture, lumbar: 0.3, headrestAngle: 0.5 },
+      target,
+    );
+    expect(settled.focus).toBe("lumbar");
+    expect(settled.done).toBe(false);
+  });
+});

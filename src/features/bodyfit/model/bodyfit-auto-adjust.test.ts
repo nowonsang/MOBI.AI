@@ -328,3 +328,21 @@ describe("autoAdjustReducer: 시연 모드", () => {
     ).toBe(started);
   });
 });
+
+describe("planAutoAdjust: 허리 지지대·헤드레스트 각도", () => {
+  it("기억한 값이 없는 축은 움직일 축에 넣지 않는다", () => {
+    const steps = planAutoAdjust({ foreAft: 0.2, lumbar: 0.1 }, target);
+    expect(steps.map((step) => step.axis)).not.toContain("lumbar");
+  });
+
+  it("기억한 값이 있으면 다른 축 뒤에 움직인다", () => {
+    const steps = planAutoAdjust(
+      { foreAft: 0.2, lumbar: 0.1, headrestAngle: 0.9 },
+      { ...target, lumbar: 0.6, headrestAngle: 0.4 },
+    );
+    expect(steps.slice(-2)).toEqual([
+      { axis: "lumbar", start: 0.1, target: 0.6 },
+      { axis: "headrestAngle", start: 0.9, target: 0.4 },
+    ]);
+  });
+});

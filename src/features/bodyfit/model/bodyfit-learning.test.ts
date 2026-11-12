@@ -5,6 +5,8 @@ import {
   explainOffsets,
   learningBasis,
   learnOffsets,
+  learnRemembered,
+  REMEMBER_MIN_RECORDS,
 } from "./bodyfit-learning";
 import type { DriveContext, SeatAdjustment } from "./bodyfit.types";
 
@@ -125,6 +127,103 @@ describe("learnOffsets: 상황별 자세 (C-5)", () => {
     ];
     const offset = learnOffsets(history, "long").backrest!;
     expect(Math.abs(offset)).toBeLessThanOrEqual(0.3);
+  });
+});
+
+describe("learnRemembered: 기본 추천이 없는 축 (허리 지지대·헤드레스트 각도)", () => {
+  const kept = (
+    at: number,
+    final: SeatAdjustment["final"],
+    context: DriveContext = "usual",
+  ): SeatAdjustment => ({
+    profileId: "p1",
+    at,
+    baseline: { backrest: 0.6 },
+    final: { backrest: 0.6, ...final },
+    source: "drive-start",
+    context,
+  });
+
+  it("기록이 없으면 아무것도 추천하지 않는다", () => {
+    expect(learnRemembered([], "usual")).toEqual({});
+  });
+
+  it("그 축이 없는 예전 기록만 있으면 추천하지 않는다", () => {
+    const history = [
+      record(1, 0.6, 0.7),
+      record(2, 0.6, 0.7),
+      record(3, 0.6, 0.7),
+    ];
+    expect(learnRemembered(history, "usual")).toEqual({});
+  });
+
+  it("기록이 한 번뿐이면 아직 추천하지 않는다 (앞사람이 맞춰 둔 위치일 수 있다)", () => {
+    expect(REMEMBER_MIN_RECORDS).toBe(2);
+    expect(learnRemembered([kept(1, { lumbar: 0.7 })], "usual")).toEqual({});
+  });
+
+  it("기록이 쌓이면 운전자가 두던 위치를 추천한다", () => {
+    const history = [kept(1, { lumbar: 0.7 }), kept(2, { lumbar: 0.7 })];
+    expect(learnRemembered(history, "usual").lumbar).toBeCloseTo(0.7);
+  });
+
+  it("축마다 따로 센다: 기록이 모자란 축은 빼고 쌓인 축만 추천한다", () => {
+    const history = [
+      kept(1, { lumbar: 0.4 }),
+      kept(2, { lumbar: 0.4, headrestAngle: 0.8 }),
+    ];
+    const remembered = learnRemembered(history, "usual");
+    expect(remembered.lumbar).toBeCloseTo(0.4);
+    expect(remembered.headrestAngle).toBeUndefined();
+  });
+
+  it("최근 기록일수록 크게 반영한다", () => {
+    const history = [kept(1, { lumbar: 0.2 }), kept(2, { lumbar: 0.8 })];
+    const lumbar = learnRemembered(history, "usual").lumbar!;
+    expect(lumbar).toBeGreaterThan(0.5);
+    expect(lumbar).toBeLessThan(0.8);
+  });
+
+  it("0~1 범위를 벗어나지 않고 체형 추천 축은 돌려주지 않는다", () => {
+    const history = [
+      kept(1, { lumbar: 1, headrestAngle: 0 }),
+      kept(2, { lumbar: 1, headrestAngle: 0 }),
+    ];
+    expect(learnRemembered(history, "usual")).toEqual({
+      lumbar: 1,
+      headrestAngle: 0,
+    });
+  });
+
+  it("고른 상황의 기록이 충분하면 그 상황에서 두던 위치만 추천한다", () => {
+    const history = [
+      kept(1, { lumbar: 0.2 }),
+      kept(2, { lumbar: 0.2 }),
+      ...Array.from({ length: CONTEXT_FULL_RECORDS }, (_, index) =>
+        kept(10 + index, { lumbar: 0.8 }, "long"),
+      ),
+    ];
+    expect(learnRemembered(history, "long").lumbar).toBeCloseTo(0.8);
+  });
+
+  it("고른 상황의 기록이 적으면 전체 기록과 섞고, 없으면 전체 기록을 쓴다", () => {
+    const history = [
+      kept(1, { lumbar: 0.2 }),
+      kept(2, { lumbar: 0.2 }),
+      kept(3, { lumbar: 0.8 }, "long"),
+    ];
+    const overall = learnRemembered(history, "city").lumbar!;
+    const mixed = learnRemembered(history, "long").lumbar!;
+    expect(mixed).toBeGreaterThan(overall);
+    expect(mixed).toBeLessThan(0.8);
+  });
+
+  it("허리 지지대 기록은 체형 추천 축의 보정값에 섞이지 않는다", () => {
+    const history = [kept(1, { lumbar: 0.9 }), kept(2, { lumbar: 0.9 })];
+    const offsets = learnOffsets(history, "usual");
+    expect(offsets.lumbar).toBeUndefined();
+    expect(offsets.backrest).toBeCloseTo(0);
+    expect(explainOffsets(history, "usual")).toBeNull();
   });
 });
 
