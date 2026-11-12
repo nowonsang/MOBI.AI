@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 
 import { canControlComfort } from "@/shared/config/app-variant";
 import type { DriverComfortState } from "@/shared/pleos/pleos.types";
@@ -62,8 +62,20 @@ const ROWS: { key: ComfortKey; label: string }[] = [
 const isFanRow = (key: ComfortKey) =>
   key === "fanSpeed" || key === "fanDirection";
 
-// 타일 최소 폭. 오른쪽 단(60%) 카드에서는 한 줄에 세 칸, 좁은 창에서는 한두 칸씩 놓인다.
-const TILE_MIN_WIDTH = 220;
+// 타일 최소 폭. 카드 폭을 재기 전(첫 그리기)에만 쓴다.
+const TILE_MIN_WIDTH = 200;
+// 카드 안쪽 폭이 이만큼이면 한 줄에 세 칸, 그보다 좁으면 두 칸, 아주 좁으면 한 칸.
+const THREE_COLUMN_WIDTH = 640;
+const TWO_COLUMN_WIDTH = 400;
+
+type Tile = {
+  id: string;
+  label: string;
+  value: string;
+  detail?: string;
+  changing: boolean;
+  accessibilityLabel: string;
+};
 
 const describe = (
   key: ComfortKey,
@@ -123,8 +135,9 @@ function describeAmbient(
 
 /**
  * 운전석 온도 취향: 출발할 때의 열선·통풍·공조 설정을 기억해 두었다가, 탈 때 실내 온도가 비슷한 날의 설정으로 맞춘다.
- * 무드등은 온도와 무관해 최근 기록으로 고르고, 카드 안에서 따로 묶어 보여 준다.
+ * 무드등은 온도와 무관해 최근 기록으로 고르고, 타일 하나로 묶어 보여 준다.
  * 맞추기는 주차(P) 중 화면에서 운전자가 누를 때만 한다.
+ * 한 화면에 들어오게 달라지는 곳만 먼저 보여 주고, 그대로인 곳은 한 줄로 접는다.
  */
 export function BodyfitComfortCard({
   profileId,
@@ -143,6 +156,9 @@ export function BodyfitComfortCard({
   });
   const apply = useApplyComfort();
   const [notice, setNotice] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  // 타일을 같은 폭으로 나누려고 카드 안쪽 폭을 잰다 (넓으면 3칸, 좁으면 2칸).
+  const [gridWidth, setGridWidth] = useState(0);
 
   const state = comfort.data;
   const cabinNow = state?.cabinCurrent ?? null;
@@ -163,21 +179,11 @@ export function BodyfitComfortCard({
       ? describeAmbient(recommendation.settings, changes, state)
       : null;
 
-  // 풍량·바람 방향은 자동 공조이거나 공조가 꺼져 있으면 건드리지 않는다. 그 이유를 행과 카드 아래에 알린다.
+  // 풍량·바람 방향은 자동 공조이거나 공조가 꺼져 있으면 건드리지 않는다. 그 이유를 타일과 카드 아래에 알린다.
   const fanHeld = state && !isFanManual(state) ? state.fanMode : undefined;
   const recommendsFan =
     recommendation?.settings.fanSpeed !== undefined ||
     recommendation?.settings.fanDirection !== undefined;
-
-  // 지금 값은 바뀔 항목에만 붙인다: 여섯 줄을 다 읽지 않아도 무엇이 달라지는지 보이게 한다.
-  const detailFor = (key: ComfortKey): string | undefined => {
-    if (!state) return undefined;
-    if (isFanRow(key) && fanHeld && state[key])
-      return fanHeld === "auto" ? "지금 자동" : "지금 꺼짐";
-    if (changes[key] === undefined) return undefined;
-    const now = state[key]?.value;
-    return now === undefined ? undefined : `지금 ${describe(key, now, state)}`;
-  };
 
   const applyComfort = () =>
     apply.mutate(changes, {
@@ -187,13 +193,77 @@ export function BodyfitComfortCard({
       },
     });
 
-  const basis = !recommendation
-    ? null
-    : `${
-        recommendation.similarCabin && cabinNow !== null
-          ? `지금 실내 ${describeTemp(Math.round(cabinNow))}와 비슷한 날의 설정이에요`
-          : "최근 출발 기록으로 골랐어요"
-      } · 기록 ${recommendation.basedOn}건`;
+  const tiles: Tile[] = [];
+  if (recommendation) {
+    for (const { key, label } of ROWS) {
+      const wanted = recommendation.settings[key];
+      if (wanted === undefined) continue;
+      const to = describe(key, wanted, state);
+      const changing = changes[key] !== undefined;
+      const now = state?.[key]?.value;
+      if (state && isFanRow(key) && fanHeld && state[key]) {
+        const detail = fanHeld === "auto" ? "지금 자동" : "지금 꺼짐";
+        tiles.push({
+          id: key,
+          label,
+          value: to,
+          detail,
+          changing,
+          accessibilityLabel: `${label}, ${to}, ${detail}`,
+        });
+      } else if (changing && now !== undefined) {
+        // 바뀔 곳은 옅은 파랑 타일 + "지금 값 → 바뀔 값" 글자로 함께 알린다 (색만으로 구분하지 않는다).
+        const from = describe(key, now, state);
+        tiles.push({
+          id: key,
+          label,
+          value: `${from} → ${to}`,
+          changing,
+          accessibilityLabel: `${label}, 지금 ${from}, 맞추면 ${to}`,
+        });
+      } else {
+        tiles.push({
+          id: key,
+          label,
+          value: to,
+          changing,
+          accessibilityLabel: `${label}, ${to}`,
+        });
+      }
+    }
+    if (ambient)
+      tiles.push({
+        id: "ambient",
+        label: "무드등",
+        value: ambient.value,
+        detail: ambient.detail,
+        changing: ambientChanging,
+        accessibilityLabel: ["무드등", ambient.value, ambient.detail]
+          .filter(Boolean)
+          .join(", "),
+      });
+  }
+  // 지금 값을 모르면(차량 미연결) 비교할 수 없으니 접지 않고 평소 설정을 그대로 보여 준다.
+  const changed = state ? tiles.filter((tile) => tile.changing) : tiles;
+  const same = state ? tiles.filter((tile) => !tile.changing) : [];
+  const showNotes = expanded || same.length === 0;
+
+  // 고른 근거와 건드리지 않는 이유. 접힌 동안에는 숨겨 카드 높이를 줄인다.
+  const notes = !recommendation
+    ? []
+    : [
+        `${
+          recommendation.similarCabin && cabinNow !== null
+            ? `지금 실내 ${describeTemp(Math.round(cabinNow))}와 비슷한 날의 설정이에요`
+            : "최근 출발 기록으로 골랐어요"
+        } · 기록 ${recommendation.basedOn}건`,
+        fanHeld && recommendsFan
+          ? fanHeld === "auto"
+            ? "자동 공조 중이라 풍량과 바람 방향은 그대로 둬요"
+            : "공조가 꺼져 있어 풍량과 바람 방향은 그대로 둬요"
+          : null,
+        ambient ? "무드등은 온도와 상관없이 최근 출발 기록으로 골랐어요" : null,
+      ].filter((note): note is string => note !== null);
 
   // 제목 옆에는 기록 수 대신 "몇 곳이 달라지는지"를 보여 준다: 맞추기를 누를지 한눈에 고르게 한다.
   const count = !recommendation
@@ -204,158 +274,164 @@ export function BodyfitComfortCard({
         ? `${changeCount}곳이 달라요`
         : "평소와 같아요";
 
+  const columns =
+    gridWidth >= THREE_COLUMN_WIDTH ? 3 : gridWidth >= TWO_COLUMN_WIDTH ? 2 : 1;
+  const tileSize =
+    gridWidth > 0
+      ? {
+          width: Math.floor((gridWidth - spacing.sm * (columns - 1)) / columns),
+        }
+      : styles.tileUnmeasured;
+
+  const renderTile = (tile: Tile) => (
+    <View
+      key={tile.id}
+      style={[styles.tile, tileSize, tile.changing && styles.tileChanging]}
+      accessible
+      accessibilityLabel={tile.accessibilityLabel}
+    >
+      <AppText variant="caption" tone={tile.changing ? "default" : "tertiary"}>
+        {tile.label}
+      </AppText>
+      <AppText variant="bodyStrong">{tile.value}</AppText>
+      {tile.detail ? (
+        <AppText
+          variant="caption"
+          tone={tile.changing ? "default" : "tertiary"}
+        >
+          {tile.detail}
+        </AppText>
+      ) : null}
+    </View>
+  );
+
   return (
     <Card title="내 운전석 온도·무드등" count={count}>
-      {records.isPending ? (
-        <View style={styles.grid} accessibilityLabel="불러오는 중">
-          {ROWS.map(({ key }) => (
-            <View key={key} style={[styles.tile, styles.skeleton]} />
-          ))}
-        </View>
-      ) : !recommendation ? (
-        <AppText variant="secondary" tone="secondary">
-          아직 기록이 없어요. 출발할 때의 열선·통풍·온도·바람·무드등부터
-          자동으로 기억해요
-        </AppText>
-      ) : (
-        <View style={styles.rows}>
-          {basis ? (
-            <AppText variant="caption" tone="tertiary">
-              {basis}
-            </AppText>
-          ) : null}
-          <View style={styles.grid}>
-            {ROWS.map(({ key, label }) => {
-              const wanted = recommendation.settings[key];
-              if (wanted === undefined) return null;
-              const value = describe(key, wanted, state);
-              const detail = detailFor(key);
-              // 바뀔 항목은 옅은 파랑 타일 + "지금 …" 글자로 함께 알린다 (색만으로 구분하지 않는다).
-              const changing = changes[key] !== undefined;
-              return (
-                <View
-                  key={key}
-                  style={[styles.tile, changing && styles.tileChanging]}
-                  accessible
-                  accessibilityLabel={[label, value, detail]
-                    .filter(Boolean)
-                    .join(", ")}
-                >
-                  <AppText
-                    variant="caption"
-                    tone={changing ? "default" : "tertiary"}
-                  >
-                    {label}
-                  </AppText>
-                  <AppText variant="bodyStrong">{value}</AppText>
-                  {detail ? (
-                    <AppText
-                      variant="caption"
-                      tone={changing ? "default" : "tertiary"}
-                    >
-                      {detail}
-                    </AppText>
-                  ) : null}
-                </View>
-              );
-            })}
+      <View
+        style={styles.body}
+        onLayout={(event) => setGridWidth(event.nativeEvent.layout.width)}
+      >
+        {records.isPending ? (
+          <View style={styles.grid} accessibilityLabel="불러오는 중">
+            {ROWS.slice(0, 3).map(({ key }) => (
+              <View
+                key={key}
+                style={[styles.tile, tileSize, styles.skeleton]}
+              />
+            ))}
           </View>
-          {fanHeld && recommendsFan ? (
-            <AppText variant="caption" tone="tertiary">
-              {fanHeld === "auto"
-                ? "자동 공조 중이라 풍량과 바람 방향은 그대로 둬요"
-                : "공조가 꺼져 있어 풍량과 바람 방향은 그대로 둬요"}
-            </AppText>
-          ) : null}
-          {ambient ? (
-            <>
-              <AppText variant="caption" tone="tertiary">
-                무드등은 온도와 상관없이 최근 출발 기록으로 골랐어요
-              </AppText>
-              <View style={styles.grid}>
-                <View
-                  style={[styles.tile, ambientChanging && styles.tileChanging]}
-                  accessible
-                  accessibilityLabel={["무드등", ambient.value, ambient.detail]
-                    .filter(Boolean)
-                    .join(", ")}
-                >
-                  <AppText
-                    variant="caption"
-                    tone={ambientChanging ? "default" : "tertiary"}
-                  >
-                    무드등
+        ) : !recommendation ? (
+          <AppText variant="secondary" tone="secondary">
+            아직 기록이 없어요. 출발할 때의 열선·통풍·온도·바람·무드등부터
+            자동으로 기억해요
+          </AppText>
+        ) : (
+          <>
+            {changed.length > 0 ? (
+              <View style={styles.grid}>{changed.map(renderTile)}</View>
+            ) : null}
+            {same.length > 0 ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ expanded }}
+                accessibilityLabel={`그대로인 곳 ${same.length}곳 ${expanded ? "접기" : "보기"}`}
+                onPress={() => setExpanded((open) => !open)}
+                style={({ pressed }) => [
+                  styles.fold,
+                  pressed && styles.foldPressed,
+                ]}
+              >
+                <AppText variant="secondary" tone="secondary">
+                  그대로인 곳 {same.length}곳 {expanded ? "접기" : "보기"}
+                </AppText>
+                <AppText variant="secondary" tone="tertiary">
+                  {expanded ? "▴" : "▾"}
+                </AppText>
+              </Pressable>
+            ) : null}
+            {expanded && same.length > 0 ? (
+              <View style={styles.grid}>{same.map(renderTile)}</View>
+            ) : null}
+            {showNotes
+              ? notes.map((note) => (
+                  <AppText key={note} variant="caption" tone="tertiary">
+                    {note}
                   </AppText>
-                  <AppText variant="bodyStrong">{ambient.value}</AppText>
-                  {ambient.detail ? (
-                    <AppText variant="caption">{ambient.detail}</AppText>
-                  ) : null}
-                </View>
-              </View>
-            </>
-          ) : null}
-        </View>
-      )}
+                ))
+              : null}
+          </>
+        )}
 
-      {/* 바꿀 것이 없으면 누를 수 없는 버튼 대신 상태 한 줄만 둔다. */}
-      {canControlComfort && recommendation && vehicleConnected && state ? (
-        changeCount === 0 ? (
+        {/* 바꿀 것이 없으면 누를 수 없는 버튼 대신 상태 한 줄만 둔다. */}
+        {canControlComfort && recommendation && vehicleConnected && state ? (
+          changeCount === 0 ? (
+            <AppText
+              variant="secondary"
+              tone="secondary"
+              accessibilityLiveRegion="polite"
+            >
+              ✓ 지금 설정이 평소와 같아요
+            </AppText>
+          ) : (
+            <>
+              <Button
+                label="평소 설정으로 맞추기"
+                variant="secondary"
+                onPress={applyComfort}
+                disabled={!parked}
+                loading={apply.isPending}
+                accessibilityHint="열선과 통풍, 실내 온도, 바람, 무드등을 평소 설정으로 바꿔요"
+              />
+              {!parked ? (
+                <AppText variant="caption" tone="tertiary">
+                  주차(P) 중에만 바꿔요
+                </AppText>
+              ) : null}
+            </>
+          )
+        ) : null}
+
+        {notice ? (
           <AppText
             variant="secondary"
             tone="secondary"
             accessibilityLiveRegion="polite"
           >
-            ✓ 지금 설정이 평소와 같아요
+            {notice}
           </AppText>
-        ) : (
-          <View style={styles.action}>
-            <Button
-              label="평소 설정으로 맞추기"
-              variant="secondary"
-              onPress={applyComfort}
-              disabled={!parked}
-              loading={apply.isPending}
-              accessibilityHint="열선과 통풍, 실내 온도, 바람, 무드등을 평소 설정으로 바꿔요"
-            />
-            {!parked ? (
-              <AppText variant="caption" tone="tertiary">
-                주차(P) 중에만 바꿔요
-              </AppText>
-            ) : null}
-          </View>
-        )
-      ) : null}
-
-      {notice ? (
-        <AppText
-          variant="secondary"
-          tone="secondary"
-          accessibilityLiveRegion="polite"
-        >
-          {notice}
-        </AppText>
-      ) : null}
-      {apply.error ? (
-        <StatusView {...describeComfortError(apply.error)} />
-      ) : null}
+        ) : null}
+        {apply.error ? (
+          <StatusView {...describeComfortError(apply.error)} />
+        ) : null}
+      </View>
     </Card>
   );
 }
 
 const useStyles = themedStyles((colors) => ({
-  rows: { gap: spacing.sm },
+  // 카드 기본 간격(24)보다 촘촘하게 묶어 한 화면에 들어오게 한다.
+  body: { gap: spacing.sm },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   tile: {
-    flexBasis: TILE_MIN_WIDTH,
-    flexGrow: 1,
     minHeight: sizes.touchTarget,
     padding: spacing.sm,
-    gap: spacing.xs,
     borderRadius: radius.control,
     backgroundColor: colors.surfaceMuted,
   },
+  tileUnmeasured: { flexBasis: TILE_MIN_WIDTH, flexGrow: 1 },
   tileChanging: { backgroundColor: colors.primaryTint },
-  // 실제 타일과 같은 크기의 빈 블록 (스켈레톤)
-  skeleton: { minHeight: sizes.touchTarget + spacing.xl },
-  action: { gap: spacing.xs, marginTop: spacing.sm },
+  // 실제 타일(이름 + 값 두 줄)과 같은 크기의 빈 블록 (스켈레톤)
+  skeleton: { minHeight: sizes.touchTarget + spacing.lg },
+  // 그대로인 곳을 펴고 접는 줄. 터치 대상 76dp.
+  fold: {
+    minHeight: sizes.touchTarget,
+    paddingHorizontal: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    borderRadius: radius.control,
+    backgroundColor: colors.surfaceMuted,
+  },
+  foldPressed: { backgroundColor: colors.fill },
 }));
