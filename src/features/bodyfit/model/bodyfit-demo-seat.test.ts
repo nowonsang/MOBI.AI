@@ -1,4 +1,10 @@
-import { DEMO_STEP, pressDemoSeat, startDemoSeat } from "./bodyfit-demo-seat";
+import {
+  DEMO_MOVE_STEP,
+  DEMO_STEP,
+  driveDemoSeat,
+  pressDemoSeat,
+  startDemoSeat,
+} from "./bodyfit-demo-seat";
 import { guideSeat } from "./bodyfit-guide";
 
 const target = { foreAft: 0.5, height: 0.4, backrest: 0.6, tilt: 0.5 };
@@ -52,5 +58,32 @@ describe("pressDemoSeat", () => {
       seat = pressDemoSeat(seat, focus.axis, focus.direction);
     }
     expect(guideSeat(seat, target, start).done).toBe(true);
+  });
+});
+
+describe("driveDemoSeat", () => {
+  it("목표 쪽으로 한 간격만큼 움직이고 다른 축은 그대로 둔다", () => {
+    const seat = { foreAft: 0.3, backrest: 0.7 };
+    expect(driveDemoSeat(seat, "foreAft", 0.5)).toEqual({
+      foreAft: 0.3 + DEMO_MOVE_STEP,
+      backrest: 0.7,
+    });
+    expect(driveDemoSeat(seat, "backrest", 0.5).backrest).toBeCloseTo(
+      0.7 - DEMO_MOVE_STEP,
+    );
+  });
+
+  it("목표를 지나치지 않고 목표에서 멈춘다", () => {
+    expect(driveDemoSeat({ height: 0.395 }, "height", 0.4).height).toBe(0.4);
+    expect(driveDemoSeat({ height: 0.4 }, "height", 0.4).height).toBe(0.4);
+  });
+
+  it("목표가 범위 밖이면 범위 끝까지만 간다", () => {
+    expect(driveDemoSeat({ tilt: 0.995 }, "tilt", 1.4).tilt).toBe(1);
+  });
+
+  it("값이 없는 축은 무시한다", () => {
+    const seat = { foreAft: 0.3 };
+    expect(driveDemoSeat(seat, "height", 0.5)).toBe(seat);
   });
 });

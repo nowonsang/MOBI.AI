@@ -11,7 +11,7 @@ import { useUxRestrictions } from "@/shared/pleos/use-ux-restrictions";
 import { AppText } from "@/shared/ui/app-text";
 import { Button } from "@/shared/ui/button";
 import { Card, SummaryCard } from "@/shared/ui/card";
-import { ChipGroup } from "@/shared/ui/chip";
+import { ChipGroup, ToggleChip } from "@/shared/ui/chip";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { Columns } from "@/shared/ui/columns";
 import { IconBadge } from "@/shared/ui/icon-badge";
@@ -20,11 +20,8 @@ import { Screen } from "@/shared/ui/screen";
 import { StatusView } from "@/shared/ui/status-view";
 import { colors, radius, spacing } from "@/shared/ui/theme";
 
-import {
-  useDeleteBodyProfile,
-  useMoveSeat,
-  useStopSeat,
-} from "../api/bodyfit.mutations";
+import { useAutoAdjust } from "../api/bodyfit.auto-adjust";
+import { useDeleteBodyProfile, useStopSeat } from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
 import { speakQuietly } from "../api/bodyfit.voice";
 import { guideSeat } from "../model/bodyfit-guide";
@@ -34,6 +31,7 @@ import { toSeatRatios } from "../model/bodyfit-seat";
 import { driverSelected } from "../model/bodyfit-session.slice";
 import type { SeatAdjustmentSource } from "../model/bodyfit.types";
 import { BodyfitComfortCard } from "./bodyfit-comfort-card";
+import { BodyfitAutoAdjustProgress } from "./bodyfit-auto-adjust-progress";
 import { describeBodyfitError } from "./bodyfit-error-copy";
 import { BodyfitSeatAxes } from "./bodyfit-seat-axes";
 import { BodyfitSeatImage } from "./bodyfit-seat-image";
@@ -42,6 +40,13 @@ import { BodyfitVoiceFeedback } from "./bodyfit-voice-feedback";
 const MOVE_CONFIRM = {
   title: "시트를 움직일게요",
   description: "시트 주변에 물건이나 사람이 끼지 않았는지 확인해 주세요",
+};
+
+// 시연 모드도 같은 확인 창을 거친다. 실제 시트는 움직이지 않는다는 것을 먼저 알린다.
+const DEMO_MOVE_CONFIRM = {
+  title: "시연 모드로 움직일게요",
+  description:
+    "화면에서만 움직이고 실제 시트는 그대로예요. 기록에도 남지 않아요",
 };
 
 const SOURCE_COPY: Record<
@@ -74,10 +79,11 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   });
   const gear = useGear();
   const restrictions = useUxRestrictions();
-  const move = useMoveSeat();
+  const auto = useAutoAdjust({
+    parked: gear === "park" && !restrictions.noSetup,
+  });
   const stop = useStopSeat();
   const remove = useDeleteBodyProfile();
-  const [notice, setNotice] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<"move" | "delete" | null>(null);
 
   // 이 화면을 연 운전자를 이번 주행의 운전자로 본다 (주행 시작 자세·주행 후 질문에 쓴다).
@@ -122,8 +128,11 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
     .slice(0, RECENT_RECORDS);
   const drivers = profiles.data ?? [];
 
+  // 시연 모드로 움직인 뒤에는 모의 위치를 "지금" 자세로 보여 준다 (기록·음성 조절은 차량 값만 쓴다).
+  const shown = auto.demoSeat ?? current;
+
   // B-3 변경 미리보기를 한 줄로: 지금 자세에서 몇 곳을 움직여야 하는지.
-  const guide = current ? guideSeat(current, recommended) : null;
+  const guide = shown ? guideSeat(shown, recommended) : null;
   const toAdjust = guide
     ? guide.axes.filter((axis) => axis.status !== "ok").length
     : 0;
@@ -138,17 +147,10 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   // 운전자가 확인 창에서 "맞추기"를 누른 뒤에만 움직인다 (secure-coding 1장).
   const applyRecommendation = () => {
     setConfirming(null);
-    move.mutate(recommended, {
-      onSuccess: () => {
-        setNotice("추천 자세로 맞췄어요");
-        void speakQuietly(
-          "추천 자세로 맞췄어요. 불편한 곳이 있으면 말로 알려 주세요",
-        );
-      },
-    });
+    auto.start(recommended, shown);
   };
 
-  // 주 경로: 운전자가 시트 버튼으로 맞추고 화면이 안내한다 (시트 제어 SDK 가 Coming Soon 이라도 동작한다).
+  // B-5 가이드 조절: 운전자가 시트 버튼으로 맞추고 화면이 안내한다. 시트 제어 권한이 없는 market 빌드의 주 경로다.
   const openGuide = () =>
     router.push({
       pathname: "/bodyfit/[profileId]/guide",
@@ -169,7 +171,7 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
     });
   };
 
-  const error = move.error ?? seat.error;
+  const error = seat.error;
   const status = !vehicleConnected
     ? { label: "차량에 연결되어 있지 않아요", style: styles.statusIdle }
     : parked
@@ -178,6 +180,25 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
           label: "주행 중에는 시트를 맞추지 않아요",
           style: styles.statusBlocked,
         };
+
+  // B-4·B-7: 자동 조절이 움직이는 동안과 끝난 직후에는 진행 화면만 보여 준다 (누를 수 있는 것은 멈추기뿐).
+  if (auto.run) {
+    return (
+      <BodyfitAutoAdjustProgress
+        run={auto.run}
+        demoSeat={auto.demoSeat}
+        onStop={auto.stop}
+        onDone={() =>
+          void speakQuietly(
+            "추천 자세로 맞췄어요. 불편한 곳이 있으면 말로 알려 주세요",
+          )
+        }
+        onClose={auto.dismiss}
+      />
+    );
+  }
+
+  const moveConfirm = auto.demo ? DEMO_MOVE_CONFIRM : MOVE_CONFIRM;
 
   return (
     <Screen
@@ -190,42 +211,40 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
       }
       footer={
         <>
-          {!canControlSeat ? null : move.isPending ? (
-            <Button
-              label="멈추기"
-              variant="secondary"
-              onPress={() => stop.mutate()}
-            />
+          <Button
+            label="주행 후 피드백"
+            variant="secondary"
+            onPress={openFeedback}
+            disabled={auto.seatMoving}
+            accessibilityHint="오늘 자세가 어땠는지 알려 주시면 다음 추천에 반영해요"
+          />
+          <Button
+            label="안내 받으며 맞추기"
+            // 자동 조절을 쓰는 빌드(contest)에서는 보조 버튼으로 내린다.
+            variant={canControlSeat ? "secondary" : "primary"}
+            onPress={openGuide}
+            disabled={!vehicleConnected || auto.seatMoving}
+            accessibilityHint="시트 버튼을 움직이면 화면이 축별로 알려 드려요"
+          />
+          {!canControlSeat ? null : auto.seatMoving ? (
+            // 음성 조절처럼 자동 조절 밖에서 시작한 이동도 여기서 멈출 수 있다.
+            <Button label="멈추기" onPress={() => stop.mutate()} />
           ) : (
-            // 확장 경로 (B-4): 시트 제어 권한이 열리면 쓰는 자동 조절.
+            // B-4 자동 조절: 시트 제어를 쓰는 빌드(contest)의 주 버튼. 확인 창을 거친 뒤에만 움직인다.
             <Button
               label="자동으로 맞추기"
-              variant="secondary"
               onPress={() => setConfirming("move")}
               disabled={!vehicleConnected || !parked}
               accessibilityHint="기어가 P 일 때만 시트가 움직여요"
             />
           )}
-          <Button
-            label="주행 후 피드백"
-            variant="secondary"
-            onPress={openFeedback}
-            disabled={move.isPending}
-            accessibilityHint="오늘 자세가 어땠는지 알려 주시면 다음 추천에 반영해요"
-          />
-          <Button
-            label="안내 받으며 맞추기"
-            onPress={openGuide}
-            disabled={!vehicleConnected || move.isPending}
-            accessibilityHint="시트 버튼을 움직이면 화면이 축별로 알려 드려요"
-          />
         </>
       }
     >
       <ConfirmDialog
         visible={confirming === "move"}
-        title={MOVE_CONFIRM.title}
-        description={MOVE_CONFIRM.description}
+        title={moveConfirm.title}
+        description={moveConfirm.description}
         confirmLabel="맞추기"
         onConfirm={applyRecommendation}
         onCancel={() => setConfirming(null)}
@@ -288,13 +307,32 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                   Pleos Connect 에뮬레이터나 차량에서 열면 시트를 맞출 수 있어요
                 </AppText>
               ) : null}
+              {auto.canDemo && canControlSeat && vehicleConnected ? (
+                // 자동 조절 시연 모드: 에뮬레이터는 시트 위치가 바뀌지 않아 모의 위치로 흐름을 보여 준다.
+                <View style={styles.demo}>
+                  <ToggleChip
+                    label="시연 모드"
+                    checked={auto.demo}
+                    onPress={auto.toggleDemo}
+                  />
+                  {auto.demo ? (
+                    <AppText
+                      variant="caption"
+                      tone="tertiary"
+                      style={styles.center}
+                    >
+                      자동 조절이 화면에서만 움직여요. 기록에 남지 않아요
+                    </AppText>
+                  ) : null}
+                </View>
+              ) : null}
             </Card>
           </>
         }
         right={
           <>
             <Card title="축별 추천">
-              <BodyfitSeatAxes recommended={recommended} current={current} />
+              <BodyfitSeatAxes recommended={recommended} current={shown} />
             </Card>
 
             <BodyfitComfortCard
@@ -303,15 +341,6 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
               parked={parked}
             />
 
-            {notice ? (
-              <AppText
-                variant="secondary"
-                tone="secondary"
-                accessibilityLiveRegion="polite"
-              >
-                {notice}
-              </AppText>
-            ) : null}
             {error ? <StatusView {...describeBodyfitError(error)} /> : null}
 
             {vehicleConnected && canUseVoice && driver.voiceConsent ? (
@@ -383,5 +412,6 @@ const styles = StyleSheet.create({
   statusIdle: { borderColor: colors.fill, backgroundColor: colors.fill },
   center: { textAlign: "center" },
   records: { gap: spacing.xs },
+  demo: { alignItems: "center", gap: spacing.xs },
   manage: { alignItems: "flex-start" },
 });

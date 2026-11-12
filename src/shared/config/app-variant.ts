@@ -4,7 +4,7 @@ import Constants from "expo-constants";
 // 그 권한이 필요한 기능은 화면에서도 숨긴다.
 const variant: unknown = Constants.expoConfig?.extra?.appVariant;
 
-/** 시트 자동 조절 (CONTROL_CAR_SEATS, Pleos "준비 중") */
+/** 시트 자동 조절 (CONTROL_CAR_SEATS). 공모전 출품작(contest)에는 넣고, 콘솔이 "준비 중"이라 앱 마켓 빌드에서는 뺀다 */
 export const canControlSeat = variant !== "market";
 
 /** 음성 인식·음성 안내 (STT_SERVICE·TTS_SERVICE, Pleos "준비 중") */
@@ -16,5 +16,5 @@ export const isDemoBuild = variant !== "market";
 /** 열선·공조 맞추기 (CONTROL_CAR_CLIMATE·CONTROL_CAR_SEATS, Pleos "준비 중"). 읽기·기록은 어느 빌드에서나 한다. */
 export const canControlComfort = variant !== "market";
 
-/** 가이드 조절 시연 모드 (모의 시트 위치). 공모전 시연용이라 앱 마켓 빌드에는 넣지 않는다. */
+/** 가이드 조절·자동 조절 시연 모드 (모의 시트 위치). 공모전 시연용이라 앱 마켓 빌드에는 넣지 않는다. */
 export const canUseDemoMode = variant !== "market";

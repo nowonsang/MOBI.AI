@@ -2,6 +2,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { pleos } from "@/shared/pleos/pleos";
 
+import {
+  planAutoAdjust,
+  type AutoAdjustStep,
+} from "../model/bodyfit-auto-adjust";
 import { toComfortRecord } from "../model/bodyfit-comfort";
 import { interpretByRules } from "../model/bodyfit-feedback";
 import { recommendBaseline } from "../model/bodyfit-recommend";
@@ -57,22 +61,39 @@ export function useDeleteBodyProfile() {
   });
 }
 
+/** 시트 이동의 진행 보고와 중단 확인 (자동 조절 진행 화면용). 음성 조절처럼 필요 없으면 넘기지 않는다. */
+export type SeatMoveControl = {
+  /** 움직일 축이 정해졌을 때(completed 0)와 축 하나가 끝날 때마다 불린다 */
+  onProgress?: (steps: AutoAdjustStep[], completed: number) => void;
+  /** 참이면 다음 축을 시작하지 않는다. 축 사이에서 멈추기를 눌러도 다음 축이 움직이지 않게 한다 */
+  isStopped?: () => boolean;
+};
+
 /** 목표 자세(비율)로 운전석을 움직인다. 네이티브 쪽에서 축마다 기어 P 를 다시 확인한다. */
-export function useMoveSeat() {
+export function useMoveSeat({ onProgress, isStopped }: SeatMoveControl = {}) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: bodyfitKeys.seatMove(),
     mutationFn: async (ratios: SeatRatios) => {
       const vehicle = pleos();
-      const targets = toSeatTargets(ratios, await vehicle.getDriverSeatState());
+      const state = await vehicle.getDriverSeatState();
+      const targets = toSeatTargets(ratios, state);
       if (targets.length === 0) {
         throw Object.assign(new Error("움직일 수 있는 시트 축이 없습니다"), {
           code: "ERR_SEAT_UNSUPPORTED",
         });
       }
+      const steps = planAutoAdjust(
+        toSeatRatios(state),
+        ratios,
+        targets.map(({ axis }) => axis),
+      );
+      onProgress?.(steps, 0);
       // 한 번에 한 축씩 움직인다 (동시에 움직이면 전류 제한으로 멈추는 차량이 있다).
-      for (const { axis, target } of targets) {
+      for (const [index, { axis, target }] of targets.entries()) {
+        if (isStopped?.()) return;
         await vehicle.moveDriverSeatAxis(axis, target);
+        onProgress?.(steps, index + 1);
       }
     },
     onSettled: () =>

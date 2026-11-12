@@ -80,7 +80,7 @@ JS 에서 쓰는 API (`@/shared/pleos/pleos` 의 `pleos()` 로만 접근):
 
 - **프로젝트**: [developers.pleos.ai](https://developers.pleos.ai) → Workspace → My Project → 프로젝트 생성 (프로젝트 이름, 개발사명, 카테고리, 설명). 카테고리는 기획 단계에서 정한다 (후보: Lifestyle).
 - **키**: 프로젝트 ID(Key) = 앱 심사 제출 때 "SDK 추가 권한"에 입력. SDK 클라이언트 ID·시크릿 = 서버 연결 SDK(STT·TTS)용 → `.env.local`.
-- **SDK 사용 상태 (2026-11 기준)**: Vehicle State·NaviHelper 는 신청 없이 사용. **Vehicle Control(시트 이동)·SpeechToText·TextToSpeech 는 "준비 중"** 이라 아직 신청할 수 없다 → 에뮬레이터 개발은 가능하지만 배포 전 사용 승인을 다시 확인한다.
+- **SDK 사용 상태 (2026-11 기준)**: Vehicle State·NaviHelper 는 신청 없이 사용. **Vehicle Control(시트 이동)·SpeechToText·TextToSpeech 는 "준비 중"** 이라 아직 신청할 수 없다 → 에뮬레이터 개발은 가능하지만 배포 전 사용 승인을 다시 확인한다. 공모전 출품작에는 쓸 수 있다 (11/12 운영사무국 최종 답변: 개발 문서에 공개된 SDK 는 출품작에 넣고 에뮬레이터로 시연 가능).
 - **종료된 것**: LLM SDK, CRN(Emulator 2.1.0 부터 주입 불필요), 블루투스 동글 연동 (2026-10-19).
 - **앱에 넣은 Pleos 필수 설정**: `com.hmg.rotary.ROTARY_SUPPORTED=false` (CCP 미지원 앱, `app.plugin.js`), `allowBackup=false` (보안 가이드), `versionCode` (심사·배포마다 올림, `app.config.ts`), minSdk 28 (서명 키 로테이션·리니지).
 - **빌드 종류 (`MOBI_APP_VARIANT`)**: `contest`(기본, 공모전 시연: 시트 자동 조절·음성 포함) / `market`(앱 마켓 심사: 승인 전 권한 `CONTROL_CAR_SEATS`·`CONTROL_CAR_CLIMATE`·`STT_SERVICE`·`TTS_SERVICE` 를 매니페스트에서 `tools:node="remove"` 로 빼고, 화면에서도 자동 조절·온도 맞추기·음성을 숨긴다). Pleos 심사는 "승인되지 않은 퍼미션을 선언하거나 해당 API 를 호출"하면 통과할 수 없다. 권한이 승인되면 `app.plugin.js` 의 `UNAPPROVED_PERMISSIONS` 와 `src/shared/config/app-variant.ts` 에서 뺀다.
@@ -91,7 +91,7 @@ JS 에서 쓰는 API (`@/shared/pleos/pleos` 의 `pleos()` 로만 접근):
 
 1. **운전자 등록**: 이름·키·몸무게(+ 선택: 앉은키). 체형 정보는 기기 안에만 저장한다.
 2. **체형 기반 추천**: 키가 클수록 뒤로, 상체가 길수록 낮게, 체중이 많이 실리면 조금 높게 (`model/bodyfit-recommend.ts`). 차종마다 원시 값 단위가 달라 모든 값은 축 범위 안의 비율(0~1)로 다룬다.
-3. **주차 중 자동 조절**: 확인 대화상자 → 축마다 순서대로 이동. 움직이는 동안 "멈추기".
+3. **주차 중 자동 조절** (contest 빌드의 주 버튼): 확인 대화상자 → 축마다 순서대로 이동. 진행 화면이 축별 진행을 보여 주고, 움직이는 동안 누를 수 있는 것은 "멈추기"뿐이다 (`model/bodyfit-auto-adjust.ts`). 에뮬레이터는 시트 위치를 알려 주지 않아 "시연 모드"(모의 위치, 기록에 남지 않음)로 같은 흐름을 보여 준다.
 4. **개인 학습**: 주행을 시작하는 순간(P → D)의 자세, "지금 자세 기억하기", 음성 피드백 조절 결과를 기록하고, 체형 추천과의 차이를 최근 기록에 가중치를 두어 평균 내 다음 추천에 더한다 (`model/bodyfit-learning.ts`).
 5. **음성 피드백**: "페달이 멀어", "등받이 조금 눕혀" → 방향이 분명한 표현을 규칙으로 조절안으로 바꾸고, **운전자가 확인해야** 움직인다. (Pleos LLM SDK 는 제공 종료. 자유로운 문장 이해가 필요하면 Gleo Interface 연동을 검토한다)
 6. **장거리 주행 후 질문**: 1시간 이상 주행 후 주차하거나 목적지에 도착하면 "운전 자세는 편하셨나요?"를 음성으로 묻는다.
@@ -137,8 +137,8 @@ src/
 ├── core/                     Providers, Redux store
 ├── features/bodyfit/         참고 구현 서비스
 │   ├── model/                타입·zod 스키마·추천·학습·음성 해석·세션 슬라이스 (+ *.test.ts)
-│   ├── api/                  기기 저장소, 캐시 계약, 뮤테이션, 음성 묶음
-│   └── ui/                   화면(*-screen.tsx: 운전자 목록·등록·맞춤 자세·가이드 조절·주행 후 피드백), 운전석 그림·축 막대, 음성 피드백, 주행 감시
+│   ├── api/                  기기 저장소, 캐시 계약, 뮤테이션, 음성 묶음, 자동 조절 흐름
+│   └── ui/                   화면(*-screen.tsx: 운전자 목록·등록·맞춤 자세·가이드 조절·주행 후 피드백), 자동 조절 진행, 운전석 그림·축 막대, 음성 피드백, 주행 감시
 └── shared/
     ├── pleos/                차량 SDK 접근 창구 (pleos.ts, pleos.types.ts, use-gear, use-ux-restrictions, use-pleos-event)
     ├── storage/              기기 저장 값 암호화 (encrypted-storage.ts)
