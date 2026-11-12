@@ -16,7 +16,7 @@ import { IconBadge } from "@/shared/ui/icon-badge";
 import { InfoRow } from "@/shared/ui/info-row";
 import { Screen } from "@/shared/ui/screen";
 import { StatusView } from "@/shared/ui/status-view";
-import { radius, spacing } from "@/shared/ui/theme";
+import { radius, shadows, sizes, spacing } from "@/shared/ui/theme";
 import { themedStyles } from "@/shared/ui/use-theme";
 
 import { useRecordSeatAdjustment } from "../api/bodyfit.mutations";
@@ -28,7 +28,11 @@ import {
   recommendationForVehicle,
 } from "../model/bodyfit-axis-group";
 import { pressDemoSeat, startDemoSeat } from "../model/bodyfit-demo-seat";
-import { guideSeat, type AxisGuide } from "../model/bodyfit-guide";
+import {
+  GUIDE_TOLERANCE,
+  guideSeat,
+  type AxisGuide,
+} from "../model/bodyfit-guide";
 import { learnOffsets } from "../model/bodyfit-learning";
 import { recommendSeat } from "../model/bodyfit-recommend";
 import { toSeatRatios } from "../model/bodyfit-seat";
@@ -213,7 +217,6 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
     }
 
     const focus = guide.axes.find((axis) => axis.axis === guide.focus);
-    const matched = guide.axes.filter((axis) => axis.status === "ok").length;
     // 축이 많은 차량에서는 "자세 / 머리·벨트" 로 나눠 보여 준다. 번호는 맞추는 순서대로 이어서 매긴다.
     const groups = groupSeatAxes(
       guide.axes.map((axis, index) => ({ ...axis, step: index + 1 })),
@@ -228,22 +231,53 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
               style={[styles.focus, done && styles.focusDone]}
               accessibilityLiveRegion="polite"
             >
-              <AppText variant="secondary" tone="inverse">
-                {focus
-                  ? `지금 맞출 곳 · ${AXIS_COPY[focus.axis].label}`
-                  : "완료"}
-              </AppText>
-              <AppText variant="display" tone="inverse">
-                {focus ? describeAxis(focus) : "추천 자세에 다 맞췄어요 ✓"}
-              </AppText>
-              <View style={styles.progress}>
-                <AppText
-                  variant="caption"
-                  style={done ? styles.progressDone : styles.progressText}
-                >
-                  {matched}/{guide.axes.length} 맞춤
-                </AppText>
+              <View style={styles.focusHead}>
+                <View style={styles.focusText}>
+                  <AppText variant="secondary" tone="inverse">
+                    {focus
+                      ? `지금 맞출 곳 · ${AXIS_COPY[focus.axis].label}`
+                      : "완료"}
+                  </AppText>
+                  <AppText variant="display" tone="inverse">
+                    {focus ? describeAxis(focus) : "추천 자세에 다 맞췄어요"}
+                  </AppText>
+                </View>
+                <View style={styles.focusGlyph} accessible={false}>
+                  <AppText variant="title" tone="inverse">
+                    {focus ? AXIS_COPY[focus.axis].glyph : "✓"}
+                  </AppText>
+                </View>
               </View>
+              {focus ? (
+                // 실시간 막대: 흰 점이 지금 위치, 밝은 띠가 목표 구간(맞춘 것으로 보는 범위).
+                <View style={styles.gauge} accessible={false}>
+                  <View style={styles.gaugeTrack}>
+                    <View
+                      style={[
+                        styles.gaugeZone,
+                        {
+                          left: `${percent(Math.max(0, focus.target - GUIDE_TOLERANCE))}%`,
+                          width: `${percent(GUIDE_TOLERANCE * 2)}%`,
+                        },
+                      ]}
+                    />
+                    <View
+                      style={[
+                        styles.gaugeDot,
+                        { left: `${percent(focus.current)}%` },
+                      ]}
+                    />
+                  </View>
+                  <View style={styles.gaugeLabels}>
+                    <AppText variant="caption" tone="inverse">
+                      {`지금 ${percent(focus.current)}%`}
+                    </AppText>
+                    <AppText variant="caption" tone="inverse">
+                      {`목표 ${percent(focus.target)}%`}
+                    </AppText>
+                  </View>
+                </View>
+              ) : null}
               {focus && demo ? (
                 <View style={styles.press}>
                   {(["decrease", "increase"] as const).map((direction) => (
@@ -266,7 +300,9 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
               ) : null}
             </View>
             <Card>
-              <BodyfitSeatImage />
+              <View style={styles.stage}>
+                <BodyfitSeatImage height={280} />
+              </View>
             </Card>
           </>
         }
@@ -306,6 +342,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
                           }
                           label={AXIS_COPY[axis.axis].label}
                           value={describeAxis(axis)}
+                          valueTone={active ? "accent" : "default"}
                           detail={`지금 ${percent(axis.current)}% · 목표 ${percent(axis.target)}%`}
                           accessibilityLabel={`${AXIS_COPY[axis.axis].label}, ${describeAxis(axis)}, 지금 ${percent(axis.current)}퍼센트, 목표 ${percent(axis.target)}퍼센트`}
                         />
@@ -321,9 +358,26 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
     );
   })();
 
+  // 몇 곳을 맞췄는지는 제목 오른쪽에 둔다. 파란 안내 카드는 "지금 할 일" 하나만 보여 준다.
+  const progress =
+    guide && guide.axes.length > 0 ? (
+      <View style={styles.progress} accessibilityLiveRegion="polite">
+        <AppText
+          variant="secondary"
+          style={done ? styles.progressDone : styles.progressText}
+        >
+          {`${guide.axes.filter((axis) => axis.status === "ok").length}/${guide.axes.length}`}
+        </AppText>
+        <AppText variant="secondary" style={styles.strong}>
+          맞춤
+        </AppText>
+      </View>
+    ) : undefined;
+
   return (
     <Screen
       title="시트 버튼으로 맞춰 주세요"
+      aside={progress}
       description={
         demo
           ? "시연 모드예요. 화면 버튼이 시트 버튼 대신 움직여요"
@@ -348,6 +402,9 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
   );
 }
 
+const GAUGE_TRACK = 12;
+const GAUGE_DOT = 32;
+
 const useStyles = themedStyles((colors) => ({
   skeleton: {
     height: 320,
@@ -361,13 +418,67 @@ const useStyles = themedStyles((colors) => ({
     backgroundColor: colors.primary,
   },
   focusDone: { backgroundColor: colors.success },
+  focusHead: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.md,
+  },
+  focusText: { flex: 1, gap: spacing.xs },
+  // 지금 맞출 축의 기호. 파란 면 위 흰 원이 너무 밝지 않게 테두리만 둔다.
+  focusGlyph: {
+    width: sizes.primaryButton,
+    height: sizes.primaryButton,
+    borderRadius: radius.pill,
+    borderWidth: 2,
+    borderColor: colors.onPrimary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  gauge: { gap: spacing.xs, paddingTop: spacing.xs },
+  gaugeTrack: {
+    height: GAUGE_TRACK,
+    marginHorizontal: GAUGE_DOT / 2,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primaryStrong,
+  },
+  gaugeZone: {
+    position: "absolute",
+    top: 0,
+    height: GAUGE_TRACK,
+    borderRadius: radius.pill,
+    backgroundColor: colors.onPrimary,
+    opacity: 0.6,
+  },
+  gaugeDot: {
+    position: "absolute",
+    top: (GAUGE_TRACK - GAUGE_DOT) / 2,
+    width: GAUGE_DOT,
+    height: GAUGE_DOT,
+    marginLeft: -GAUGE_DOT / 2,
+    borderRadius: radius.pill,
+    borderWidth: 4,
+    borderColor: colors.primaryStrong,
+    backgroundColor: colors.onPrimary,
+  },
+  gaugeLabels: { flexDirection: "row", justifyContent: "space-between" },
+  stage: {
+    alignItems: "center",
+    paddingVertical: spacing.md,
+    borderRadius: radius.control,
+    backgroundColor: colors.surfaceMuted,
+  },
+  // 제목 오른쪽 "2/4 맞춤"
   progress: {
-    alignSelf: "flex-start",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    minHeight: sizes.touchTarget,
+    paddingHorizontal: spacing.md,
     borderRadius: radius.pill,
     backgroundColor: colors.surface,
+    ...shadows.card,
   },
+  strong: { fontWeight: "700" },
   progressText: { color: colors.primary, fontWeight: "700" },
   progressDone: { color: colors.success, fontWeight: "700" },
   press: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
