@@ -1,5 +1,5 @@
 import { useEffect, useEffectEvent } from "react";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 
 import { AppText } from "@/shared/ui/app-text";
 import { Button } from "@/shared/ui/button";
@@ -8,7 +8,8 @@ import { Columns } from "@/shared/ui/columns";
 import { IconBadge } from "@/shared/ui/icon-badge";
 import { InfoRow } from "@/shared/ui/info-row";
 import { Screen } from "@/shared/ui/screen";
-import { colors, radius, spacing } from "@/shared/ui/theme";
+import { radius, spacing } from "@/shared/ui/theme";
+import { themedStyles } from "@/shared/ui/use-theme";
 
 import { useLiveDriverSeat } from "../api/bodyfit.seat-live";
 import {
@@ -37,6 +38,17 @@ const AXIS_COPY: Record<
     label: "좌판 기울기",
     increase: "앞쪽을 올리는 중",
     decrease: "앞쪽을 내리는 중",
+  },
+  depth: { label: "좌판 길이", increase: "늘리는 중", decrease: "줄이는 중" },
+  headrestHeight: {
+    label: "헤드레스트 높이",
+    increase: "올리는 중",
+    decrease: "내리는 중",
+  },
+  beltHeight: {
+    label: "안전벨트 높이",
+    increase: "올리는 중",
+    decrease: "내리는 중",
   },
 };
 
@@ -125,6 +137,7 @@ export function BodyfitAutoAdjustProgress({
   onDone,
   onClose,
 }: BodyfitAutoAdjustProgressProps) {
+  const styles = useStyles();
   // 실제 이동: 시트가 움직이는 동안 오는 위치 알림으로 "지금" 값을 따라간다.
   const seat = useLiveDriverSeat({ enabled: !run.demo });
   const current = run.demo
@@ -276,7 +289,7 @@ export function BodyfitAutoAdjustProgress({
 const TRACK_HEIGHT = 8;
 const DOT = 28;
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   // 넓은 창에서는 하단 줄을 다 채우고, 좁은 창에서는 Screen 이 폭에 맞춘다.
   action: { flexGrow: 1 },
   // 시연 모드 표시는 색과 글자로 함께 알린다.
@@ -330,4 +343,4 @@ const styles = StyleSheet.create({
   },
   current: { backgroundColor: colors.inkDisabled },
   target: { backgroundColor: colors.primary },
-});
+}));

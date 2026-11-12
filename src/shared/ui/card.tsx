@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, View } from "react-native";
 
 import { AppText } from "./app-text";
-import { colors, radius, shadows, sizes, spacing } from "./theme";
+import { radius, shadows, sizes, spacing } from "./theme";
 import { useCompact } from "./use-compact";
+import { themedStyles } from "./use-theme";
 
 type CardProps = {
   /** 카드 제목 (섹션 제목). 없으면 내용만 담는다 */
@@ -25,6 +26,7 @@ export function Card({
   children,
 }: CardProps) {
   const compact = useCompact();
+  const styles = useStyles();
 
   const heading = title ? (
     <View style={styles.heading}>
@@ -88,6 +90,7 @@ export function SummaryCard({
   onPress,
   accessibilityHint,
 }: SummaryCardProps) {
+  const styles = useStyles();
   const content = (
     <>
       <AppText variant="bodyStrong" tone="inverse">
@@ -134,7 +137,7 @@ export function SummaryCard({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   box: {
     gap: spacing.md,
     borderRadius: radius.card,
@@ -185,4 +188,4 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   summaryValue: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-});
+}));

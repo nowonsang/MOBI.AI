@@ -19,6 +19,24 @@ describe("interpretByRules", () => {
     expect(result.reply).toContain("지금 자세");
   });
 
+  it.each([
+    "헤드레스트 좀 올려줘",
+    "머리 받침이 너무 낮아, 높여 줘",
+    "안전벨트를 내려 줘",
+    "벨트가 목에 걸려, 올려 줘",
+    "좌판 길이를 앞으로 늘려 줘",
+  ])("헤드레스트·안전벨트·좌판 길이 이야기는 시트 조절로 읽지 않는다 (%s)", (utterance) => {
+    const result = interpretByRules(utterance);
+    expect(result.nudges).toEqual([]);
+    expect(result.reply).toContain("화면 안내");
+  });
+
+  it("헤드레스트 이야기가 없으면 '올려 줘'는 그대로 시트 높이다", () => {
+    expect(interpretByRules("시트 좀 올려 줘").nudges).toEqual([
+      { axis: "height", direction: "increase", amount: "small" },
+    ]);
+  });
+
   it("해석할 수 없으면 다시 말해 달라고 한다", () => {
     expect(interpretByRules("음").reply).toContain("말해 주세요");
   });

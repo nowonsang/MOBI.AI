@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 
+import { useAppDispatch, useAppSelector } from "@/core/store/hooks";
 import { isPleosAvailable } from "@/shared/pleos/pleos";
 import { useGear } from "@/shared/pleos/use-gear";
 import { useUxRestrictions } from "@/shared/pleos/use-ux-restrictions";
@@ -13,17 +14,27 @@ import { ToggleChip } from "@/shared/ui/chip";
 import { Columns } from "@/shared/ui/columns";
 import { Screen } from "@/shared/ui/screen";
 import { StatusView } from "@/shared/ui/status-view";
-import { colors, radius, spacing } from "@/shared/ui/theme";
+import { radius, spacing } from "@/shared/ui/theme";
+import { themedStyles } from "@/shared/ui/use-theme";
 
 import { useRecordSeatAdjustment } from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
 import { COMFORT_SCREEN_QUESTION } from "../model/bodyfit-drive";
+import {
+  DEFAULT_DRIVE_CONTEXT,
+  DRIVE_CONTEXT_LABEL,
+} from "../model/bodyfit-drive-context";
+import {
+  driveContextSelected,
+  selectDriveContext,
+} from "../model/bodyfit-session.slice";
 import {
   TOUCH_FEEDBACK_CHOICES,
   nudgesForTouchChoices,
   toggleTouchChoice,
   type TouchFeedbackChoiceId,
 } from "../model/bodyfit-touch-feedback";
+import type { DriveContext } from "../model/bodyfit.types";
 import { describeBodyfitError } from "./bodyfit-error-copy";
 import { BodyfitSeatImage } from "./bodyfit-seat-image";
 
@@ -37,13 +48,39 @@ const CHOICE_GLYPH: Record<TouchFeedbackChoiceId, string> = {
   "height-decrease": "▼",
 };
 
+// 선택지를 축별로 한 줄씩 묶는다 (한 축에는 한 방향만 고를 수 있다: toggleTouchChoice).
+// 줄 안의 순서는 화면 방향과 맞춘다: 뒤로 ← → 앞으로, 낮추기 ▼ ▲ 높이기.
+const CHOICE_ROWS: readonly {
+  label: string;
+  ids: readonly [TouchFeedbackChoiceId, TouchFeedbackChoiceId];
+}[] = [
+  { label: "등받이", ids: ["backrest-increase", "backrest-decrease"] },
+  { label: "앞뒤 위치", ids: ["foreAft-decrease", "foreAft-increase"] },
+  { label: "높이", ids: ["height-decrease", "height-increase"] },
+];
+
+const choiceLabel = (id: TouchFeedbackChoiceId) =>
+  TOUCH_FEEDBACK_CHOICES.find((choice) => choice.id === id)?.label ?? "";
+
 /**
  * D-1 주행 후 질문 + D-2 터치 피드백.
  * 시트를 움직이지 않고 "지금 자세 + 고른 방향"을 기록에 남겨 다음 추천을 보정한다 (시트 제어 권한 없이 동작).
  */
-export function BodyfitFeedbackScreen({ profileId }: { profileId: string }) {
+export function BodyfitFeedbackScreen({
+  profileId,
+  drivenContext,
+}: {
+  profileId: string;
+  /** 주행이 끝나 뜬 질문이면 그 주행을 출발할 때의 상황. 운전자가 직접 열었으면 null */
+  drivenContext: DriveContext | null;
+}) {
+  const styles = useStyles();
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const vehicleConnected = isPleosAvailable();
+  const selectedContext = useAppSelector(selectDriveContext);
+  // 답은 방금 달린 상황의 기록으로 남긴다 (C-5). 직접 열었으면 지금 고른 상황이다.
+  const context = drivenContext ?? selectedContext;
   const profile = useQuery(bodyfitQueries.profile(profileId));
   const gear = useGear();
   const restrictions = useUxRestrictions();
@@ -57,7 +94,13 @@ export function BodyfitFeedbackScreen({ profileId }: { profileId: string }) {
   if (profile.isPending) {
     return (
       <Screen title={COMFORT_SCREEN_QUESTION}>
-        <View style={styles.skeleton} accessibilityLabel="불러오는 중" />
+        {/* 실제 화면과 같은 2단 모양의 스켈레톤 */}
+        <Columns
+          left={
+            <View style={styles.skeleton} accessibilityLabel="불러오는 중" />
+          }
+          right={<View style={styles.skeletonTall} />}
+        />
       </Screen>
     );
   }
@@ -87,6 +130,7 @@ export function BodyfitFeedbackScreen({ profileId }: { profileId: string }) {
       {
         profile: driver,
         source: "touch",
+        context,
         nudges: nudgesForTouchChoices(choices),
       },
       {
@@ -119,12 +163,14 @@ export function BodyfitFeedbackScreen({ profileId }: { profileId: string }) {
               />
               <Button
                 label="지금 맞추기"
-                onPress={() =>
+                onPress={() => {
+                  // 안내도 방금 답한 상황의 추천으로 한다 (주행 중 앱이 종료돼 고른 상황이 사라졌어도).
+                  dispatch(driveContextSelected(context));
                   router.replace({
                     pathname: "/bodyfit/[profileId]/guide",
                     params: { profileId: driver.id },
-                  })
-                }
+                  });
+                }}
                 accessibilityHint="시트 버튼을 움직이면 화면이 축별로 알려 드려요"
               />
             </>
@@ -153,24 +199,39 @@ export function BodyfitFeedbackScreen({ profileId }: { profileId: string }) {
   return (
     <Screen
       title={COMFORT_SCREEN_QUESTION}
-      description={`${driver.name}님, 바꾸고 싶은 곳을 고르면 다음 추천에 반영해요`}
+      description={
+        context === DEFAULT_DRIVE_CONTEXT
+          ? `${driver.name}님, 바꾸고 싶은 곳만 골라 주세요. 다음 추천에 반영해요`
+          : `${driver.name}님, 바꾸고 싶은 곳만 골라 주세요. 다음 ${DRIVE_CONTEXT_LABEL[context]} 추천에 반영해요`
+      }
       footer={
-        <>
+        selected.length === 0 ? (
+          // 고른 곳이 없으면 "편했어요" 한 번으로 답이 끝난다.
           <Button
             label="편했어요"
-            variant="secondary"
             onPress={() => submit([])}
-            disabled={!canAnswer || record.isPending}
+            disabled={!canAnswer}
+            loading={record.isPending}
             accessibilityHint="지금 자세를 편한 자세로 기억해요"
           />
-          <Button
-            label="반영하기"
-            onPress={() => submit(selected)}
-            disabled={!canAnswer || selected.length === 0}
-            loading={record.isPending}
-            accessibilityHint="시트는 움직이지 않고 다음 추천에만 반영해요"
-          />
-        </>
+        ) : (
+          <>
+            <Button
+              label="다시 고르기"
+              variant="secondary"
+              onPress={() => setSelected([])}
+              disabled={record.isPending}
+              accessibilityHint="고른 방향을 모두 지워요"
+            />
+            <Button
+              label={`${selected.length}곳 반영하기`}
+              onPress={() => submit(selected)}
+              disabled={!canAnswer}
+              loading={record.isPending}
+              accessibilityHint="시트는 움직이지 않고 다음 추천에만 반영해요"
+            />
+          </>
+        )
       }
     >
       {!vehicleConnected ? (
@@ -187,26 +248,51 @@ export function BodyfitFeedbackScreen({ profileId }: { profileId: string }) {
         <Columns
           left={
             <Card>
+              {context !== DEFAULT_DRIVE_CONTEXT ? (
+                <View style={styles.contextTag}>
+                  <AppText variant="caption">
+                    {DRIVE_CONTEXT_LABEL[context]} 기록으로 남겨요
+                  </AppText>
+                </View>
+              ) : null}
               <BodyfitSeatImage />
-              <AppText variant="caption" tone="tertiary" style={styles.center}>
-                시트는 움직이지 않아요. 고른 방향은 다음 추천에만 반영돼요
+              <AppText
+                variant="secondary"
+                tone="secondary"
+                style={styles.center}
+              >
+                시트는 움직이지 않아요
               </AppText>
             </Card>
           }
           right={
             <Card title="바꾸고 싶은 곳">
-              <View style={styles.grid}>
-                {TOUCH_FEEDBACK_CHOICES.map(({ id, label }) => (
-                  <View key={id} style={styles.cell}>
-                    <ToggleChip
-                      shape="tile"
-                      glyph={CHOICE_GLYPH[id]}
-                      label={label}
-                      checked={selected.includes(id)}
-                      onPress={() =>
-                        setSelected((current) => toggleTouchChoice(current, id))
-                      }
-                    />
+              <View style={styles.rows}>
+                {CHOICE_ROWS.map(({ label, ids }, index) => (
+                  <View
+                    key={label}
+                    style={[styles.row, index > 0 && styles.rowDivider]}
+                  >
+                    <AppText variant="secondary" tone="secondary">
+                      {label}
+                    </AppText>
+                    <View style={styles.pair}>
+                      {ids.map((id) => (
+                        <View key={id} style={styles.cell}>
+                          <ToggleChip
+                            shape="tile"
+                            glyph={CHOICE_GLYPH[id]}
+                            label={choiceLabel(id)}
+                            checked={selected.includes(id)}
+                            onPress={() =>
+                              setSelected((current) =>
+                                toggleTouchChoice(current, id),
+                              )
+                            }
+                          />
+                        </View>
+                      ))}
+                    </View>
                   </View>
                 ))}
               </View>
@@ -221,22 +307,43 @@ export function BodyfitFeedbackScreen({ profileId }: { profileId: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   skeleton: {
     height: 320,
     borderRadius: radius.card,
     backgroundColor: colors.surface,
   },
+  skeletonTall: {
+    height: 480,
+    borderRadius: radius.card,
+    backgroundColor: colors.surface,
+  },
   // 터치 대상 사이는 최소 24dp
   choices: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
-  // 넓은 카드에서는 두 줄 격자, 좁으면 한 줄에 하나씩 놓인다.
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
-  cell: { flexGrow: 1, flexBasis: "40%", minWidth: 280 },
+  // 축마다 한 줄: 축 이름 아래에 반대 방향 두 개를 나란히 둔다.
+  rows: { gap: spacing.md },
+  row: { gap: spacing.sm },
+  rowDivider: {
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+  },
+  // 넓으면 두 개를 나란히, 좁으면 한 줄에 하나씩 놓인다.
+  pair: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
+  cell: { flexGrow: 1, flexBasis: "40%", minWidth: 240 },
   center: { textAlign: "center" },
+  // 어느 상황의 기록으로 남는지 알려 주는 표시 (옅은 파랑 면 + ink 글자: theme.test 의 검사 조합)
+  contextTag: {
+    alignSelf: "flex-start",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primaryTint,
+  },
   picked: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: radius.pill,
     backgroundColor: colors.fill,
   },
-});
+}));

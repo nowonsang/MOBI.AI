@@ -1,10 +1,30 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
-import { type ConfigPlugin, withAppBuildGradle } from "expo/config-plugins";
+import {
+  AndroidConfig,
+  type ConfigPlugin,
+  withAndroidColorsNight,
+  withAppBuildGradle,
+} from "expo/config-plugins";
 
 // Pleos Connect SDK 요구 사항: Android API 28 이상, Pleos 전용 Maven 저장소.
 // android/ 폴더는 prebuild 가 이 설정으로 매번 다시 만든다 (직접 수정 금지, .gitignore 대상).
 const PLEOS_MAVEN_REPO =
   "https://nexus-playground.pleos.ai/repository/maven-releases/";
+
+// 앱이 뜨기 전(창 바탕·시작 화면)의 색. src/shared/ui/theme.ts 의 surfaceMuted 주간·야간 값과 같게 둔다.
+const DAY_BACKGROUND = "#F4F5F7";
+const NIGHT_BACKGROUND = "#0E1116";
+
+// expo-system-ui 는 창 바탕색(activityBackground)을 주간 값 하나만 받는다.
+// 야간 값은 values-night 에 따로 넣어, JS 가 뜨기 전에도 야간에 밝은 면이 보이지 않게 한다.
+const withNightWindowBackground: ConfigPlugin = (config) =>
+  withAndroidColorsNight(config, (mod) => {
+    mod.modResults = AndroidConfig.Colors.assignColorValue(mod.modResults, {
+      name: "activityBackground",
+      value: NIGHT_BACKGROUND,
+    });
+    return mod;
+  });
 
 // contest: 공모전 시연용 (시트 자동 조절·음성 포함). market: Pleos 앱 마켓 심사용 (승인 전 권한·기능 제외).
 const APP_VARIANTS = ["contest", "market"] as const;
@@ -49,7 +69,7 @@ const withReleaseSigning: ConfigPlugin = (config) =>
     return mod;
   });
 
-export default ({ config }: ConfigContext): ExpoConfig =>
+const appConfig = ({ config }: ConfigContext): ExpoConfig =>
   withReleaseSigning({
     ...config,
     name: "MOBI.AI",
@@ -58,7 +78,9 @@ export default ({ config }: ConfigContext): ExpoConfig =>
     scheme: "mobiai",
     platforms: ["android"],
     orientation: "default",
-    userInterfaceStyle: "light",
+    // 차량의 주간·야간 상태(시스템 다크 모드)를 따른다. Android 에서는 expo-system-ui 가 있어야 적용된다.
+    userInterfaceStyle: "automatic",
+    backgroundColor: DAY_BACKGROUND,
     icon: "./assets/images/icon.png",
     android: {
       package: "ai.mobi.app",
@@ -82,6 +104,10 @@ export default ({ config }: ConfigContext): ExpoConfig =>
         {
           backgroundColor: "#FFFFFF",
           image: "./assets/images/splash-icon.png",
+          dark: {
+            backgroundColor: NIGHT_BACKGROUND,
+            image: "./assets/images/splash-icon.png",
+          },
           imageWidth: 76,
         },
       ],
@@ -108,3 +134,6 @@ export default ({ config }: ConfigContext): ExpoConfig =>
       reactCompiler: true,
     },
   });
+
+export default (context: ConfigContext): ExpoConfig =>
+  withNightWindowBackground(appConfig(context));

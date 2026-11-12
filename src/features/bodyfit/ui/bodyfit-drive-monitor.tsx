@@ -27,6 +27,7 @@ import {
 import {
   feedbackProposed,
   selectActiveDriverId,
+  selectDriveContext,
 } from "../model/bodyfit-session.slice";
 import type { DriveSession } from "../model/bodyfit.types";
 
@@ -41,6 +42,7 @@ export function BodyfitDriveMonitor() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const driverId = useAppSelector(selectActiveDriverId);
+  const context = useAppSelector(selectDriveContext);
   const driver = useQuery({
     ...bodyfitQueries.profile(driverId ?? ""),
     enabled: driverId !== null,
@@ -70,10 +72,11 @@ export function BodyfitDriveMonitor() {
     if (!prompt) return;
 
     // D-1 주 경로: 화면으로 묻는다. 주차(P) 중에만 띄운다 (S-5).
+    // 주행 중 앱이 종료됐다 다시 켜지면 고른 상황이 사라지므로, 출발할 때 남겨 둔 상황을 넘겨 같은 상황의 기록으로 남긴다.
     const askOnScreen = () =>
       router.navigate({
         pathname: "/bodyfit/[profileId]/feedback",
-        params: { profileId: session.profileId },
+        params: { profileId: session.profileId, context: session.context },
       });
     if (prompt === "screen") {
       askOnScreen();
@@ -126,9 +129,13 @@ export function BodyfitDriveMonitor() {
       // 운전자를 고르지 않았으면 누구의 주행인지 몰라 남기지 않는다.
       if (!driverId) return;
       // 차량이 곧 앱을 종료할 수 있다. 시트를 읽느라 시간이 걸리는 자세 기록보다 출발 시각을 먼저 남긴다.
-      startDrive.mutate({ profileId: driverId, startedAt: Date.now() });
+      startDrive.mutate({
+        profileId: driverId,
+        startedAt: Date.now(),
+        context,
+      });
       if (driver.data)
-        record.mutate({ profile: driver.data, source: "drive-start" });
+        record.mutate({ profile: driver.data, source: "drive-start", context });
       // 출발할 때의 열선·온도도 함께 기억한다 (다음에 탈 때 같은 취향으로 맞춘다).
       recordComfort.mutate({ profileId: driverId });
     } else if (tracked.event === "parked") {

@@ -18,6 +18,7 @@ import type {
   BodyProfile,
   BodyProfileInput,
   ComfortSettings,
+  DriveContext,
   DriveSession,
   SeatAdjustmentSource,
   SeatNudge,
@@ -120,10 +121,13 @@ export function useRecordSeatAdjustment() {
     mutationFn: async ({
       profile,
       source,
+      context,
       nudges = [],
     }: {
       profile: BodyProfile;
       source: SeatAdjustmentSource;
+      /** 이 자세로 앉은 운전 상황 (C-5). 같은 상황의 추천에 반영된다 */
+      context: DriveContext;
       nudges?: readonly SeatNudge[];
     }) => {
       const state = await pleos().getDriverSeatState();
@@ -133,6 +137,7 @@ export function useRecordSeatAdjustment() {
         baseline: recommendBaseline(profile),
         final: applyNudges(toSeatRatios(state), nudges),
         source,
+        context,
       });
     },
     onSettled: (_data, _error, { profile }) =>

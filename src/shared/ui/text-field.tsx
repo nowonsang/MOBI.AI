@@ -1,8 +1,9 @@
 import { useState, type ComponentRef, type Ref } from "react";
-import { StyleSheet, TextInput, View, type TextInputProps } from "react-native";
+import { TextInput, View, type TextInputProps } from "react-native";
 
 import { AppText } from "./app-text";
-import { colors, radius, sizes, spacing, typography } from "./theme";
+import { radius, sizes, spacing, typography } from "./theme";
+import { themedStyles, useColors } from "./use-theme";
 
 /** 키보드의 "다음" 키로 포커스를 옮길 때 쓰는 입력칸 ref 타입 */
 export type TextFieldHandle = ComponentRef<typeof TextInput>;
@@ -26,6 +27,8 @@ export function TextField({
   ...props
 }: TextFieldProps) {
   const [focused, setFocused] = useState(false);
+  const styles = useStyles();
+  const colors = useColors();
 
   return (
     <View style={styles.field}>
@@ -71,7 +74,7 @@ export function TextField({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   field: { gap: spacing.xs },
   labels: {},
   input: {
@@ -86,4 +89,4 @@ const styles = StyleSheet.create({
   },
   focused: { borderColor: colors.primary },
   invalid: { borderColor: colors.danger },
-});
+}));

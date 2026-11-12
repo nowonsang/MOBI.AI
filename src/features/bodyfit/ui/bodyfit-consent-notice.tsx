@@ -1,7 +1,10 @@
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, View } from "react-native";
 
 import { AppText } from "@/shared/ui/app-text";
-import { colors, radius, sizes, spacing } from "@/shared/ui/theme";
+import { Card } from "@/shared/ui/card";
+import { Divider } from "@/shared/ui/divider";
+import { radius, sizes, spacing } from "@/shared/ui/theme";
+import { themedStyles } from "@/shared/ui/use-theme";
 
 // Pleos 심사 가이드: 수집 항목·처리 목적·보유 기간·동의 거부 권리를 알리고 명시적인 동의를 받는다.
 // 필수 동의는 등록 버튼("동의하고 등록하기")으로만 받는다. 다른 동작을 동의로 보지 않는다.
@@ -22,17 +25,17 @@ type Props = {
   onVoiceConsentChange: (next: boolean) => void;
 };
 
+// 체형 정보 카드와 같은 모양의 카드로 둔다. 안내 → (선택) 음성 동의 순서로 위에서 아래로 읽힌다.
 export function BodyfitConsentNotice({
   askVoice,
   voiceConsent,
   onVoiceConsentChange,
 }: Props) {
+  const styles = useStyles();
   return (
-    <View style={styles.container}>
+    <Card title="개인정보 수집·이용 안내 (필수)">
+      {/* 항목 사이(sm)는 띄우고, 항목 이름과 내용은 한 줄에 붙여 표처럼 읽히게 한다. */}
       <View style={styles.notice}>
-        <AppText variant="bodyStrong" accessibilityRole="header">
-          개인정보 수집·이용 안내 (필수)
-        </AppText>
         {REQUIRED_NOTICE.map((row) => (
           <View key={row.label} style={styles.row}>
             <AppText variant="secondary" tone="secondary" style={styles.label}>
@@ -46,47 +49,46 @@ export function BodyfitConsentNotice({
       </View>
 
       {askVoice ? (
-        <Pressable
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: voiceConsent }}
-          accessibilityLabel="음성 기능 사용에 동의해요, 선택"
-          onPress={() => onVoiceConsentChange(!voiceConsent)}
-          style={({ pressed }) => [
-            styles.check,
-            pressed && styles.checkPressed,
-          ]}
-        >
-          <View style={[styles.box, voiceConsent && styles.boxChecked]}>
-            {voiceConsent ? (
-              <AppText variant="bodyStrong" tone="inverse">
-                ✓
+        <>
+          <Divider />
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: voiceConsent }}
+            accessibilityLabel="음성 기능 사용에 동의해요, 선택"
+            onPress={() => onVoiceConsentChange(!voiceConsent)}
+            style={({ pressed }) => [
+              styles.check,
+              pressed && styles.checkPressed,
+            ]}
+          >
+            <View style={[styles.box, voiceConsent && styles.boxChecked]}>
+              {voiceConsent ? (
+                <AppText variant="bodyStrong" tone="inverse">
+                  ✓
+                </AppText>
+              ) : null}
+            </View>
+            <View style={styles.text}>
+              <AppText variant="body">음성 기능 사용에 동의해요 (선택)</AppText>
+              <AppText variant="caption" tone="tertiary">
+                착좌감을 말로 답할 때 써요. 음성은 Pleos 음성
+                인식(현대자동차그룹)에서 처리될 수 있어요. 동의하지 않아도
+                화면으로 쓸 수 있어요
               </AppText>
-            ) : null}
-          </View>
-          <View style={styles.text}>
-            <AppText variant="body">음성 기능 사용에 동의해요 (선택)</AppText>
-            <AppText variant="caption" tone="tertiary">
-              착좌감을 말로 답할 때 써요. 음성은 Pleos 음성
-              인식(현대자동차그룹)에서 처리될 수 있어요. 동의하지 않아도
-              화면으로 쓸 수 있어요
-            </AppText>
-          </View>
-        </Pressable>
+            </View>
+          </Pressable>
+        </>
       ) : null}
-    </View>
+    </Card>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { gap: spacing.md },
-  // 항목 사이(md)는 띄우고, 항목 이름과 내용(xs)은 붙여서 묶음이 보이게 한다.
-  notice: {
-    gap: spacing.md,
-    padding: spacing.md,
-    borderRadius: radius.control,
-    backgroundColor: colors.surface,
-  },
-  row: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+// 체크 칸: Pleos 아이콘 그리드(48dp) 크기. 누르는 범위는 행 전체(76dp 이상)다.
+const CHECK_BOX = 48;
+
+const useStyles = themedStyles((colors) => ({
+  notice: { gap: spacing.sm },
+  row: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   label: { minWidth: 140 },
   text: { flex: 1, minWidth: 240, gap: spacing.xs },
   check: {
@@ -95,12 +97,14 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: spacing.md,
     minHeight: sizes.touchTarget,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.control,
   },
-  checkPressed: { opacity: 0.7 },
+  // Pleos 인터랙션 가이드: 눌린 요소는 배경색을 바꾼다.
+  checkPressed: { backgroundColor: colors.surfaceMuted },
   box: {
-    width: 48,
-    height: 48,
+    width: CHECK_BOX,
+    height: CHECK_BOX,
     borderRadius: radius.control,
     borderWidth: 3,
     borderColor: colors.inkTertiary,
@@ -108,4 +112,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   boxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
-});
+}));

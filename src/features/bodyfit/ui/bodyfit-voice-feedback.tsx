@@ -1,13 +1,16 @@
 import { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 
 import { useAppDispatch, useAppSelector } from "@/core/store/hooks";
 import type { DriverSeatState } from "@/shared/pleos/pleos.types";
 import { usePleosEvent } from "@/shared/pleos/use-pleos-event";
 import { AppText } from "@/shared/ui/app-text";
 import { Button } from "@/shared/ui/button";
+import { Card } from "@/shared/ui/card";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
-import { colors, radius, spacing } from "@/shared/ui/theme";
+import { IconBadge } from "@/shared/ui/icon-badge";
+import { radius, spacing } from "@/shared/ui/theme";
+import { themedStyles } from "@/shared/ui/use-theme";
 
 import {
   useMoveSeat,
@@ -20,6 +23,7 @@ import { applyNudges, toSeatRatios } from "../model/bodyfit-seat";
 import {
   feedbackDismissed,
   feedbackProposed,
+  selectDriveContext,
   selectPendingFeedback,
 } from "../model/bodyfit-session.slice";
 import type { BodyProfile } from "../model/bodyfit.types";
@@ -37,14 +41,20 @@ export function BodyfitVoiceFeedback({
   seat,
   parked,
 }: BodyfitVoiceFeedbackProps) {
+  const styles = useStyles();
   const dispatch = useAppDispatch();
   const pending = useAppSelector(selectPendingFeedback);
+  const context = useAppSelector(selectDriveContext);
   const listen = useVoiceSeatFeedback();
   const stopListening = useStopListening();
   const move = useMoveSeat();
   const record = useRecordSeatAdjustment();
   const [partial, setPartial] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
+  // done: 시트를 조절해 끝난 안내(✓ 표시), 아니면 조절할 곳이 없다는 답
+  const [message, setMessage] = useState<{
+    text: string;
+    done: boolean;
+  } | null>(null);
   const [confirming, setConfirming] = useState(false);
 
   usePleosEvent("onSpeechPartial", (event) => setPartial(event.text));
@@ -59,7 +69,7 @@ export function BodyfitVoiceFeedback({
           if (interpretation.nudges.length > 0) {
             dispatch(feedbackProposed(interpretation));
           } else {
-            setMessage(interpretation.reply);
+            setMessage({ text: interpretation.reply, done: false });
           }
           void speakQuietly(interpretation.reply);
         },
@@ -74,17 +84,21 @@ export function BodyfitVoiceFeedback({
     const target = applyNudges(toSeatRatios(seat), pending.nudges);
     move.mutate(target, {
       onSuccess: () => {
-        record.mutate({ profile, source: "voice" });
+        record.mutate({ profile, source: "voice", context });
         dispatch(feedbackDismissed());
-        setMessage("말씀하신 대로 조절했어요. 다음 추천에 반영할게요");
+        setMessage({
+          text: "말씀하신 대로 조절했어요. 다음 추천에 반영할게요",
+          done: true,
+        });
       },
     });
   };
 
   const error = listen.error ?? move.error;
+  const errorCopy = error ? describeBodyfitError(error) : null;
 
   return (
-    <View style={styles.section}>
+    <Card>
       <ConfirmDialog
         visible={confirming}
         title="시트를 움직일게요"
@@ -94,16 +108,23 @@ export function BodyfitVoiceFeedback({
         onCancel={() => setConfirming(false)}
       />
       <View style={styles.heading}>
-        <AppText variant="heading" accessibilityRole="header">
-          불편한 곳이 있나요?
-        </AppText>
-        <AppText variant="secondary" tone="secondary">
-          말로 알려 주시면 시트를 조절하고 다음 추천에 반영해요
-        </AppText>
+        <IconBadge glyph="말" tone="tint" />
+        <View style={styles.headingText}>
+          <AppText variant="heading" accessibilityRole="header">
+            불편한 곳이 있나요?
+          </AppText>
+          <AppText variant="secondary" tone="secondary">
+            말로 알려 주시면 조절안을 먼저 보여 드려요
+          </AppText>
+        </View>
       </View>
 
       {pending ? (
-        <View style={styles.card}>
+        // 음성으로 만든 조절안. 운전자가 확인 창에서 고르기 전에는 움직이지 않는다.
+        <View style={[styles.box, styles.proposal]}>
+          <AppText variant="caption" tone="tertiary">
+            이렇게 조절할까요?
+          </AppText>
           <AppText variant="bodyStrong">{pending.reply}</AppText>
           {!parked ? (
             <AppText variant="secondary" tone="secondary">
@@ -112,28 +133,35 @@ export function BodyfitVoiceFeedback({
           ) : null}
           <View style={styles.actions}>
             <Button
-              label="이대로 조절하기"
-              variant="secondary"
-              onPress={() => setConfirming(true)}
-              disabled={!parked || !seat}
-              loading={move.isPending}
-            />
-            <Button
               label="취소하기"
               variant="secondary"
               onPress={() => dispatch(feedbackDismissed())}
               disabled={move.isPending}
             />
+            <Button
+              label="이대로 조절하기"
+              variant="secondary"
+              onPress={() => setConfirming(true)}
+              disabled={!parked || !seat}
+              loading={move.isPending}
+              accessibilityHint="확인 창에서 한 번 더 확인한 뒤 시트를 움직여요"
+            />
           </View>
         </View>
       ) : listen.isPending ? (
-        <View style={styles.card} accessibilityLiveRegion="polite">
-          <AppText variant="bodyStrong">듣고 있어요…</AppText>
-          {partial ? (
-            <AppText variant="secondary" tone="secondary">
-              {partial}
-            </AppText>
-          ) : null}
+        <View
+          style={[styles.box, styles.listening]}
+          accessibilityLiveRegion="polite"
+        >
+          <View style={styles.status}>
+            <IconBadge glyph="●" tone="primary" />
+            <View style={styles.headingText}>
+              <AppText variant="bodyStrong">듣고 있어요</AppText>
+              {partial ? (
+                <AppText variant="secondary">“{partial}”</AppText>
+              ) : null}
+            </View>
+          </View>
           <View style={styles.actions}>
             <Button
               label="그만 듣기"
@@ -143,38 +171,55 @@ export function BodyfitVoiceFeedback({
           </View>
         </View>
       ) : (
-        <View style={styles.actions}>
-          <Button
-            label="말로 알려 주기"
-            variant="secondary"
-            onPress={startListening}
-          />
-        </View>
+        <>
+          <AppText variant="caption" tone="tertiary">
+            예: “허리가 불편해”, “조금 더 낮게”
+          </AppText>
+          <View style={styles.actions}>
+            <Button
+              label="말로 알려 주기"
+              variant="secondary"
+              onPress={startListening}
+            />
+          </View>
+        </>
       )}
 
       {message ? (
-        <AppText variant="secondary" tone="secondary" accessibilityLiveRegion="polite">
-          {message}
-        </AppText>
+        <View style={styles.status} accessibilityLiveRegion="polite">
+          {message.done ? <IconBadge glyph="✓" tone="success" /> : null}
+          <AppText
+            variant={message.done ? "bodyStrong" : "secondary"}
+            tone={message.done ? "default" : "secondary"}
+            style={styles.statusText}
+          >
+            {message.text}
+          </AppText>
+        </View>
       ) : null}
-      {error ? (
-        <AppText variant="secondary" tone="danger" accessibilityLiveRegion="polite">
-          {describeBodyfitError(error).title}.{" "}
-          {describeBodyfitError(error).description}
-        </AppText>
+      {errorCopy ? (
+        <View style={styles.headingText} accessibilityLiveRegion="polite">
+          <AppText variant="bodyStrong" tone="danger">
+            {errorCopy.title}
+          </AppText>
+          <AppText variant="secondary" tone="secondary">
+            {errorCopy.description}
+          </AppText>
+        </View>
       ) : null}
-    </View>
+    </Card>
   );
 }
 
-const styles = StyleSheet.create({
-  section: { gap: spacing.md },
-  heading: { gap: spacing.xs },
-  card: {
-    gap: spacing.sm,
-    padding: spacing.lg,
-    borderRadius: radius.control,
-    backgroundColor: colors.surface,
-  },
+const useStyles = themedStyles((colors) => ({
+  heading: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  headingText: { flexShrink: 1, gap: spacing.xs },
+  // 듣는 중·조절안은 카드 안의 옅은 면으로 구분한다 (글자는 theme.test 가 검사하는 조합).
+  box: { gap: spacing.sm, padding: spacing.lg, borderRadius: radius.control },
+  listening: { backgroundColor: colors.primaryTint },
+  proposal: { backgroundColor: colors.fill },
+  status: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  statusText: { flexShrink: 1 },
+  // 터치 대상 사이는 최소 24dp
   actions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
-});
+}));

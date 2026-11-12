@@ -2,8 +2,18 @@
 
 export type Gear = "park" | "reverse" | "neutral" | "drive" | "unknown";
 
-/** 앞뒤(foreAft), 높이(height), 등받이 각도(backrest), 좌판 기울기(tilt) */
-export type SeatAxis = "foreAft" | "height" | "backrest" | "tilt";
+/**
+ * 앞뒤(foreAft), 높이(height), 등받이 각도(backrest), 좌판 기울기(tilt),
+ * 좌판 길이(depth), 헤드레스트 높이(headrestHeight), 안전벨트 높이(beltHeight)
+ */
+export type SeatAxis =
+  | "foreAft"
+  | "height"
+  | "backrest"
+  | "tilt"
+  | "depth"
+  | "headrestHeight"
+  | "beltHeight";
 
 /** 차량이 알려 주는 원시 값. 단위는 차종마다 다르므로 min~max 비율로만 해석한다. */
 export type SeatAxisState = {
@@ -16,24 +26,45 @@ export type SeatAxisState = {
 /** 차량이 지원하는 축만 들어 있다. */
 export type DriverSeatState = Partial<Record<SeatAxis, SeatAxisState>>;
 
-/** 차량이 알려 주는 단계 값과 범위. 열선은 음수 = 통풍, 0 = 꺼짐, 양수 = 열선 단계다 (AAOS 규약). */
+/** 차량이 알려 주는 단계 값과 범위. 시트 열선은 음수 = 냉각, 0 = 꺼짐, 양수 = 열선 단계다 (AAOS 규약). 통풍은 seatVent 로 따로 온다. */
 export type ComfortLevelState = { value: number; min: number; max: number };
+
+/** 바람이 나오는 곳 (SDK FanDirectionType). face = 얼굴, floor = 발, defrost = 앞유리 */
+export type FanDirection =
+  | "face"
+  | "floor"
+  | "faceFloor"
+  | "defrost"
+  | "faceDefrost"
+  | "floorDefrost"
+  | "faceFloorDefrost";
 
 /** 운전석 온도 취향. 차량이 지원하는 항목만 들어 있다. 온도는 섭씨. */
 export type DriverComfortState = {
   seatHeat?: ComfortLevelState;
+  /** 시트 통풍 단계 (0 = 꺼짐). 열선과 별개 값이다 */
+  seatVent?: ComfortLevelState;
   steeringHeat?: ComfortLevelState;
   /** 운전석 공조 설정 온도 */
   cabinTarget?: ComfortLevelState;
   /** 지금 실내 온도 (외부 온도는 SDK 에 없다) */
   cabinCurrent?: number;
+  /** 풍량 단계 */
+  fanSpeed?: ComfortLevelState;
+  /** 바람 방향과 이 차량에서 고를 수 있는 방향 */
+  fanDirection?: { value: FanDirection; options: FanDirection[] };
+  /** 풍량·바람 방향을 지금 누가 정하는지. auto(자동 공조)·off(공조 꺼짐)면 차가 정한 값이라 기록하지도 바꾸지도 않는다 */
+  fanMode?: "manual" | "auto" | "off";
 };
 
-/** 바꿀 항목만 넣는다. 차량 범위 밖이면 범위 안으로 맞춰 보낸다. */
+/** 바꿀 항목만 넣는다. 차량 범위 밖이면 범위 안으로 맞춰 보낸다. 풍량·바람 방향은 fanMode 가 manual 일 때만 바뀐다. */
 export type DriverComfortSettings = {
   seatHeat?: number;
+  seatVent?: number;
   steeringHeat?: number;
   cabinTarget?: number;
+  fanSpeed?: number;
+  fanDirection?: FanDirection;
 };
 
 export type PleosErrorCode =

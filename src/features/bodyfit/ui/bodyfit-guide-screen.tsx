@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 
+import { useAppSelector } from "@/core/store/hooks";
 import { canUseDemoMode } from "@/shared/config/app-variant";
 import { isPleosAvailable } from "@/shared/pleos/pleos";
 import { useGear } from "@/shared/pleos/use-gear";
@@ -15,50 +16,28 @@ import { IconBadge } from "@/shared/ui/icon-badge";
 import { InfoRow } from "@/shared/ui/info-row";
 import { Screen } from "@/shared/ui/screen";
 import { StatusView } from "@/shared/ui/status-view";
-import { colors, radius, spacing } from "@/shared/ui/theme";
+import { radius, spacing } from "@/shared/ui/theme";
+import { themedStyles } from "@/shared/ui/use-theme";
 
 import { useRecordSeatAdjustment } from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
 import { useLiveDriverSeat } from "../api/bodyfit.seat-live";
 import { speakQuietly } from "../api/bodyfit.voice";
+import {
+  groupSeatAxes,
+  recommendationForVehicle,
+} from "../model/bodyfit-axis-group";
 import { pressDemoSeat, startDemoSeat } from "../model/bodyfit-demo-seat";
 import { guideSeat, type AxisGuide } from "../model/bodyfit-guide";
 import { learnOffsets } from "../model/bodyfit-learning";
 import { recommendSeat } from "../model/bodyfit-recommend";
 import { toSeatRatios } from "../model/bodyfit-seat";
+import { selectDriveContext } from "../model/bodyfit-session.slice";
 import type { SeatAxis, SeatRatios } from "../model/bodyfit.types";
+import { AXIS_COPY } from "./bodyfit-axis-copy";
+import { BodyfitAxisGroupHeading } from "./bodyfit-axis-group-heading";
 import { describeBodyfitError } from "./bodyfit-error-copy";
 import { BodyfitSeatImage } from "./bodyfit-seat-image";
-
-const AXIS_COPY: Record<
-  SeatAxis,
-  { label: string; increase: string; decrease: string }
-> = {
-  foreAft: {
-    label: "앞뒤 위치",
-    increase: "앞으로 당겨 주세요",
-    decrease: "뒤로 밀어 주세요",
-  },
-  height: { label: "높이", increase: "올려 주세요", decrease: "내려 주세요" },
-  backrest: {
-    label: "등받이",
-    increase: "세워 주세요",
-    decrease: "눕혀 주세요",
-  },
-  tilt: {
-    label: "좌판 기울기",
-    increase: "앞쪽을 올려 주세요",
-    decrease: "앞쪽을 내려 주세요",
-  },
-};
-
-// 시연 모드에서 시트 버튼 대신 누르는 화면 버튼의 짧은 이름
-const PRESS_COPY: Record<SeatAxis, { increase: string; decrease: string }> = {
-  foreAft: { increase: "앞으로", decrease: "뒤로" },
-  height: { increase: "올리기", decrease: "내리기" },
-  backrest: { increase: "세우기", decrease: "눕히기" },
-  tilt: { increase: "앞쪽 올리기", decrease: "앞쪽 내리기" },
-};
 
 type DemoSeat = { start: SeatRatios; seat: SeatRatios };
 
@@ -66,7 +45,7 @@ const percent = (ratio: number) => Math.round(ratio * 100);
 
 function describeAxis({ axis, status, direction, far }: AxisGuide): string {
   if (status === "ok" || direction === null) return "딱 좋아요";
-  const action = AXIS_COPY[axis][direction];
+  const action = AXIS_COPY[axis].guide[direction];
   if (status === "overshot") return `지나쳤어요. 조금 ${action}`;
   return far ? `더 ${action}` : `조금 더 ${action}`;
 }
@@ -76,6 +55,7 @@ function describeAxis({ axis, status, direction, far }: AxisGuide): string {
  * 시트를 움직이는 쪽은 운전자이므로 시트 제어 권한 없이 동작한다.
  */
 export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
+  const styles = useStyles();
   const router = useRouter();
   const vehicleConnected = isPleosAvailable();
   const profile = useQuery(bodyfitQueries.profile(profileId));
@@ -84,6 +64,8 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
   const gear = useGear();
   const restrictions = useUxRestrictions();
   const record = useRecordSeatAdjustment();
+  // 맞춤 자세 화면에서 고른 상황의 추천으로 안내하고, 기억하는 자세도 그 상황의 기록으로 남긴다 (C-5).
+  const context = useAppSelector(selectDriveContext);
   const [notice, setNotice] = useState<string | null>(null);
   // 시연 모드: 에뮬레이터가 시트 위치를 0 으로만 돌려줄 때 화면 버튼으로 움직이는 모의 위치 (한 화면 안의 상태).
   const [demo, setDemo] = useState<DemoSeat | null>(null);
@@ -96,7 +78,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
 
   const recommended =
     profile.data && adjustments.data
-      ? recommendSeat(profile.data, learnOffsets(adjustments.data))
+      ? recommendSeat(profile.data, learnOffsets(adjustments.data, context))
       : null;
   const guide =
     recommended && current
@@ -137,7 +119,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
 
   const rememberCurrent = () =>
     record.mutate(
-      { profile: driver, source: "saved" },
+      { profile: driver, source: "saved", context },
       {
         onSuccess: () =>
           setNotice("지금 자세를 기억했어요. 다음 추천에 반영할게요"),
@@ -146,7 +128,10 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
 
   const startDemo = () => {
     if (!recommended) return;
-    const demoStart = startDemoSeat(recommended);
+    // 실제 안내와 같은 축으로 시연한다: 차량이 알려 주지 않는 축(좌판 길이·헤드레스트·안전벨트)은 넣지 않는다.
+    const demoStart = startDemoSeat(
+      recommendationForVehicle(recommended, vehicleSeat),
+    );
     setNotice(null);
     setDemo({ start: demoStart, seat: demoStart });
   };
@@ -229,6 +214,11 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
 
     const focus = guide.axes.find((axis) => axis.axis === guide.focus);
     const matched = guide.axes.filter((axis) => axis.status === "ok").length;
+    // 축이 많은 차량에서는 "자세 / 머리·벨트" 로 나눠 보여 준다. 번호는 맞추는 순서대로 이어서 매긴다.
+    const groups = groupSeatAxes(
+      guide.axes.map((axis, index) => ({ ...axis, step: index + 1 })),
+    );
+    const titled = groups.length > 1;
     return (
       <Columns
         left={
@@ -259,7 +249,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
                   {(["decrease", "increase"] as const).map((direction) => (
                     <Button
                       key={direction}
-                      label={PRESS_COPY[focus.axis][direction]}
+                      label={AXIS_COPY[focus.axis].press[direction]}
                       variant="secondary"
                       onPress={() => press(focus.axis, direction)}
                       accessibilityHint={`${AXIS_COPY[focus.axis].label}를 시트 버튼처럼 한 번 움직여요`}
@@ -282,35 +272,48 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
         }
         right={
           <Card title="축별 안내">
-            <View style={styles.list}>
-              {guide.axes.map((axis, index) => {
-                const active = axis.axis === guide.focus;
-                return (
-                  <View
-                    key={axis.axis}
-                    style={[styles.step, active && styles.stepActive]}
-                  >
-                    <InfoRow
-                      icon={
-                        <IconBadge
-                          glyph={axis.status === "ok" ? "✓" : `${index + 1}`}
-                          tone={
-                            axis.status === "ok"
-                              ? "success"
-                              : active
-                                ? "primary"
-                                : "muted"
-                          }
-                        />
-                      }
-                      label={AXIS_COPY[axis.axis].label}
-                      value={describeAxis(axis)}
-                      detail={`지금 ${percent(axis.current)}% · 목표 ${percent(axis.target)}%`}
-                      accessibilityLabel={`${AXIS_COPY[axis.axis].label}, ${describeAxis(axis)}, 지금 ${percent(axis.current)}퍼센트, 목표 ${percent(axis.target)}퍼센트`}
+            <View style={styles.groups}>
+              {groups.map((group, groupIndex) => (
+                <View key={group.id} style={styles.list}>
+                  {titled ? (
+                    <BodyfitAxisGroupHeading
+                      group={group.id}
+                      note={`${group.items.filter((axis) => axis.status === "ok").length}/${group.items.length} 맞춤`}
+                      divided={groupIndex > 0}
                     />
-                  </View>
-                );
-              })}
+                  ) : null}
+                  {group.items.map((axis) => {
+                    const active = axis.axis === guide.focus;
+                    return (
+                      <View
+                        key={axis.axis}
+                        style={[styles.step, active && styles.stepActive]}
+                      >
+                        <InfoRow
+                          icon={
+                            <IconBadge
+                              glyph={
+                                axis.status === "ok" ? "✓" : `${axis.step}`
+                              }
+                              tone={
+                                axis.status === "ok"
+                                  ? "success"
+                                  : active
+                                    ? "primary"
+                                    : "muted"
+                              }
+                            />
+                          }
+                          label={AXIS_COPY[axis.axis].label}
+                          value={describeAxis(axis)}
+                          detail={`지금 ${percent(axis.current)}% · 목표 ${percent(axis.target)}%`}
+                          accessibilityLabel={`${AXIS_COPY[axis.axis].label}, ${describeAxis(axis)}, 지금 ${percent(axis.current)}퍼센트, 목표 ${percent(axis.target)}퍼센트`}
+                        />
+                      </View>
+                    );
+                  })}
+                </View>
+              ))}
             </View>
           </Card>
         }
@@ -345,7 +348,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   skeleton: {
     height: 320,
     borderRadius: radius.card,
@@ -368,6 +371,7 @@ const styles = StyleSheet.create({
   progressText: { color: colors.primary, fontWeight: "700" },
   progressDone: { color: colors.success, fontWeight: "700" },
   press: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
+  groups: { gap: spacing.md },
   list: { gap: spacing.xs },
   step: {
     paddingHorizontal: spacing.sm,
@@ -376,4 +380,4 @@ const styles = StyleSheet.create({
   },
   // 지금 맞출 축은 옅은 파란 면과 번호 원 색으로 함께 표시한다.
   stepActive: { backgroundColor: colors.primaryTint },
-});
+}));

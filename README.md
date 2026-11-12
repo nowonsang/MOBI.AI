@@ -67,7 +67,7 @@ JS 에서 쓰는 API (`@/shared/pleos/pleos` 의 `pleos()` 로만 접근):
 | 메서드 / 이벤트 | 설명 |
 | --- | --- |
 | `getGear()` · `onGearChanged` | 현재 기어 (`park`/`drive`/`reverse`/`neutral`/`unknown`) |
-| `getDriverSeatState()` | 운전석 축별 현재 값·지원 범위·이동 가능 여부 (앞뒤·높이·등받이·좌판 기울기) |
+| `getDriverSeatState()` | 운전석 축별 현재 값·지원 범위·이동 가능 여부 (앞뒤·높이·등받이·좌판 기울기·좌판 길이·헤드레스트 높이·안전벨트 높이. 차량이 지원하는 축만) |
 | `moveDriverSeatAxis(axis, target)` | 목표 위치까지 이동. **기어 P 에서만**, 이동 중에도 기어를 확인하고, 끝나면 항상 멈춤 |
 | `stopDriverSeat()` | 즉시 멈춤 |
 | `isDriverSeatOccupied()` · `onDriverSeatOccupancyChanged` | 운전석 착석 여부 |
@@ -143,7 +143,7 @@ src/
     ├── pleos/                차량 SDK 접근 창구 (pleos.ts, pleos.types.ts, use-gear, use-ux-restrictions, use-pleos-event)
     ├── storage/              기기 저장 값 암호화 (encrypted-storage.ts)
     ├── config/               빌드 종류별 기능 (app-variant.ts: contest/market)
-    └── ui/                   디자인 토큰(theme.ts)과 공용 컴포넌트(Screen, Columns, Card, InfoRow, IconBadge, Chip, Button, TextField, StatusView)
+    └── ui/                   디자인 토큰(theme.ts, 주간·야간 색 세트), 색을 읽는 훅(use-theme.ts)과 공용 컴포넌트(Screen, Columns, Card, InfoRow, IconBadge, Chip, Button, TextField, StatusView)
 scripts/                      개발 도구 (비밀 검사, env 권한, 마이그레이션 검사, Supabase 점검)
 scripts/android/              Android 스크립트 (점검·기기 목록·prebuild·빌드·에뮬레이터·실기기 실행, 공용 lib.mjs)
 ANDROID_SETUP.md              Android Studio 설치부터 실행까지 매뉴얼
@@ -158,7 +158,7 @@ app → core → features → shared → native(modules/*)
 
 - 서비스끼리 import 금지, features 는 core 중 `@/core/store/hooks` 만.
 - 네이티브 모듈은 `src/shared/pleos/*` 만 import 한다. `model` 과 테스트는 네이티브를 부르지 않는 `pleos.types.ts` 만 쓴다.
-- 색은 `src/shared/ui/theme.ts` 토큰만 (임의 색상은 ESLint 에러).
+- 색은 `src/shared/ui/theme.ts` 토큰만 (임의 색상은 ESLint 에러). 주간·야간 두 세트라 `StyleSheet.create` 대신 `themedStyles((colors) => ({...}))` 로 스타일을 만들고 컴포넌트에서 `const styles = useStyles()` 로 읽는다 (`src/shared/ui/use-theme.ts`).
 
 ## 상태 책임
 

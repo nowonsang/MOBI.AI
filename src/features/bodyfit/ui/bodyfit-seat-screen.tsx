@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 
-import { useAppDispatch } from "@/core/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/core/store/hooks";
 import { canControlSeat, canUseVoice } from "@/shared/config/app-variant";
 import { isPleosAvailable } from "@/shared/pleos/pleos";
 import { useGear } from "@/shared/pleos/use-gear";
@@ -18,18 +18,36 @@ import { IconBadge } from "@/shared/ui/icon-badge";
 import { InfoRow } from "@/shared/ui/info-row";
 import { Screen } from "@/shared/ui/screen";
 import { StatusView } from "@/shared/ui/status-view";
-import { colors, radius, spacing } from "@/shared/ui/theme";
+import { radius, spacing } from "@/shared/ui/theme";
+import { themedStyles } from "@/shared/ui/use-theme";
 
 import { useAutoAdjust } from "../api/bodyfit.auto-adjust";
 import { useDeleteBodyProfile, useStopSeat } from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
 import { speakQuietly } from "../api/bodyfit.voice";
+import {
+  DEFAULT_DRIVE_CONTEXT,
+  DRIVE_CONTEXT_LABEL,
+  DRIVE_CONTEXTS,
+} from "../model/bodyfit-drive-context";
 import { guideSeat } from "../model/bodyfit-guide";
-import { explainOffsets, learnOffsets } from "../model/bodyfit-learning";
+import {
+  explainOffsets,
+  learningBasis,
+  learnOffsets,
+  type LearningBasis,
+} from "../model/bodyfit-learning";
 import { recommendSeat } from "../model/bodyfit-recommend";
 import { toSeatRatios } from "../model/bodyfit-seat";
-import { driverSelected } from "../model/bodyfit-session.slice";
-import type { SeatAdjustmentSource } from "../model/bodyfit.types";
+import {
+  driveContextSelected,
+  driverSelected,
+  selectDriveContext,
+} from "../model/bodyfit-session.slice";
+import type {
+  DriveContext,
+  SeatAdjustmentSource,
+} from "../model/bodyfit.types";
 import { BodyfitComfortCard } from "./bodyfit-comfort-card";
 import { BodyfitAutoAdjustProgress } from "./bodyfit-auto-adjust-progress";
 import { describeBodyfitError } from "./bodyfit-error-copy";
@@ -61,14 +79,40 @@ const SOURCE_COPY: Record<
 
 const RECENT_RECORDS = 3;
 
+const CONTEXT_OPTIONS = DRIVE_CONTEXTS.map((value) => ({
+  value,
+  label: DRIVE_CONTEXT_LABEL[value],
+}));
+
+// C-5: 고른 상황의 추천이 어떤 기록으로 만들어졌는지 한 줄로 알려 준다.
+function describeContextBasis(
+  context: DriveContext,
+  basis: LearningBasis,
+): string {
+  if (context === DEFAULT_DRIVE_CONTEXT) {
+    return "상황을 고르면 그 상황에서 앉던 자세로 추천해요";
+  }
+  const label = DRIVE_CONTEXT_LABEL[context];
+  if (basis.kind === "all") {
+    return basis.usedCount > 0
+      ? `${label} 기록이 아직 없어 전체 기록으로 추천해요`
+      : `${label} 기록이 아직 없어요. 출발할 때 자세부터 기억해요`;
+  }
+  return basis.kind === "mixed"
+    ? `${label} 기록 ${basis.contextCount}건을 전체 기록과 함께 반영했어요`
+    : `${label} 기록 ${basis.contextCount}건으로 추천해요`;
+}
+
 const formatDay = (at: number) => {
   const date = new Date(at);
   return `${date.getMonth() + 1}월 ${date.getDate()}일`;
 };
 
 export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
+  const styles = useStyles();
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const context = useAppSelector(selectDriveContext);
   const vehicleConnected = isPleosAvailable();
   const profile = useQuery(bodyfitQueries.profile(profileId));
   const profiles = useQuery(bodyfitQueries.profiles());
@@ -115,14 +159,19 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   }
 
   const driver = profile.data;
-  const recommended = recommendSeat(driver, learnOffsets(adjustments.data));
+  const recommended = recommendSeat(
+    driver,
+    learnOffsets(adjustments.data, context),
+  );
   const current = seat.data ? toSeatRatios(seat.data) : null;
   // 시트 조절은 플랫폼 제한(CarUxRestrictions NO_SETUP)이 없고 기어가 P 일 때만 연다.
   // 네이티브도 움직이기 전과 도중에 기어 P 를 다시 확인한다 (DriverSeat.kt).
   const parked = gear === "park" && !restrictions.noSetup;
-  const learnedCount = adjustments.data.length;
+  // C-5: 고른 상황의 기록이 충분하면 그 기록만, 아니면 전체 기록을 반영한다.
+  const basis = learningBasis(adjustments.data, context);
+  const learnedCount = basis.usedCount;
   // C-4: 기록이 추천을 눈에 띄게 바꿨으면 무엇 때문인지 알려 준다.
-  const reason = explainOffsets(adjustments.data);
+  const reason = explainOffsets(adjustments.data, context);
   const recentRecords = [...adjustments.data]
     .sort((a, b) => b.at - a.at)
     .slice(0, RECENT_RECORDS);
@@ -289,6 +338,28 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                   }}
                 />
               ) : null}
+              {vehicleConnected ? (
+                <View style={styles.context}>
+                  {/* 상황은 주차(P) 중에만 고른다. 주행 중에는 조작을 요구하지 않는다 (S-5). */}
+                  {parked ? (
+                    <ChipGroup
+                      label="운전 상황 고르기"
+                      options={CONTEXT_OPTIONS}
+                      selected={context}
+                      onSelect={(next) => dispatch(driveContextSelected(next))}
+                    />
+                  ) : null}
+                  <AppText
+                    variant="caption"
+                    tone="tertiary"
+                    accessibilityLiveRegion="polite"
+                  >
+                    {parked
+                      ? describeContextBasis(context, basis)
+                      : `운전 상황 · ${DRIVE_CONTEXT_LABEL[context]} (주차 중에만 바꿀 수 있어요)`}
+                  </AppText>
+                </View>
+              ) : null}
               <BodyfitSeatImage />
               <View
                 style={[styles.status, status.style]}
@@ -351,7 +422,7 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
               />
             ) : null}
 
-            <Card title="자세 기록" count={`${learnedCount}건`}>
+            <Card title="자세 기록" count={`${adjustments.data.length}건`}>
               {recentRecords.length === 0 ? (
                 <AppText variant="secondary" tone="secondary">
                   아직 기록이 없어요. 출발할 때의 자세부터 자동으로 기억해요
@@ -366,6 +437,11 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                       }
                       label={formatDay(record.at)}
                       value={SOURCE_COPY[record.source].label}
+                      detail={
+                        record.context === DEFAULT_DRIVE_CONTEXT
+                          ? undefined
+                          : DRIVE_CONTEXT_LABEL[record.context]
+                      }
                     />
                   ))}
                 </View>
@@ -387,7 +463,7 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   skeleton: {
     height: 320,
     borderRadius: radius.card,
@@ -411,7 +487,8 @@ const styles = StyleSheet.create({
   },
   statusIdle: { borderColor: colors.fill, backgroundColor: colors.fill },
   center: { textAlign: "center" },
+  context: { gap: spacing.xs },
   records: { gap: spacing.xs },
   demo: { alignItems: "center", gap: spacing.xs },
   manage: { alignItems: "flex-start" },
-});
+}));

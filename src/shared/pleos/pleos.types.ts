@@ -3,6 +3,7 @@ import type {
   DriverComfortSettings,
   DriverComfortState,
   DriverSeatState,
+  FanDirection,
   Gear,
   PleosConnectEvents,
   PleosErrorCode,
@@ -17,6 +18,7 @@ export type {
   DriverComfortSettings,
   DriverComfortState,
   DriverSeatState,
+  FanDirection,
   Gear,
   PleosConnectEvents,
   PleosErrorCode,
@@ -30,4 +32,7 @@ export const SEAT_AXES: readonly SeatAxis[] = [
   "height",
   "backrest",
   "tilt",
+  "depth",
+  "headrestHeight",
+  "beltHeight",
 ];
