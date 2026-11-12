@@ -30,6 +30,10 @@ import {
   DRIVE_CONTEXT_LABEL,
   DRIVE_CONTEXTS,
 } from "../model/bodyfit-drive-context";
+import {
+  describeDriveSuggestion,
+  suggestDriveContext,
+} from "../model/bodyfit-drive-suggestion";
 import { guideSeat } from "../model/bodyfit-guide";
 import {
   explainOffsets,
@@ -126,6 +130,15 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   const auto = useAutoAdjust({
     parked: gear === "park" && !restrictions.noSetup,
   });
+  // C-5: 주차 중이고 아직 상황을 고르지 않았을 때만 내비 경로를 읽어 상황을 제안한다. 읽지 못하면 제안 없이 지나간다.
+  const naviRoute = useQuery({
+    ...bodyfitQueries.naviRoute(),
+    enabled:
+      vehicleConnected &&
+      gear === "park" &&
+      !restrictions.noSetup &&
+      context === DEFAULT_DRIVE_CONTEXT,
+  });
   const stop = useStopSeat();
   const remove = useDeleteBodyProfile();
   const [confirming, setConfirming] = useState<"move" | "delete" | null>(null);
@@ -176,6 +189,9 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
     .sort((a, b) => b.at - a.at)
     .slice(0, RECENT_RECORDS);
   const drivers = profiles.data ?? [];
+  const suggestion = parked
+    ? suggestDriveContext(naviRoute.data, context)
+    : null;
 
   // 시연 모드로 움직인 뒤에는 모의 위치를 "지금" 자세로 보여 준다 (기록·음성 조절은 차량 값만 쓴다).
   const shown = auto.demoSeat ?? current;
@@ -349,6 +365,26 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                       onSelect={(next) => dispatch(driveContextSelected(next))}
                     />
                   ) : null}
+                  {suggestion ? (
+                    // 제안만 한다. 운전자가 눌러야 상황이 바뀐다.
+                    <View style={styles.suggestion}>
+                      <AppText
+                        variant="caption"
+                        tone="secondary"
+                        accessibilityLiveRegion="polite"
+                      >
+                        {describeDriveSuggestion(suggestion)}
+                      </AppText>
+                      <Button
+                        label={`${DRIVE_CONTEXT_LABEL[suggestion.context]} 자세로 보기`}
+                        variant="secondary"
+                        onPress={() =>
+                          dispatch(driveContextSelected(suggestion.context))
+                        }
+                        accessibilityHint="내비게이션 경로에 맞는 상황으로 추천을 바꿔요"
+                      />
+                    </View>
+                  ) : null}
                   <AppText
                     variant="caption"
                     tone="tertiary"
@@ -488,6 +524,7 @@ const useStyles = themedStyles((colors) => ({
   statusIdle: { borderColor: colors.fill, backgroundColor: colors.fill },
   center: { textAlign: "center" },
   context: { gap: spacing.xs },
+  suggestion: { alignItems: "flex-start", gap: spacing.xs },
   records: { gap: spacing.xs },
   demo: { alignItems: "center", gap: spacing.xs },
   manage: { alignItems: "flex-start" },

@@ -24,6 +24,7 @@ export const bodyfitKeys = {
   comfortRecords: (profileId: string) =>
     [...bodyfitKeys.all, "comfort-records", profileId] as const,
   comfort: () => [...bodyfitKeys.all, "comfort"] as const,
+  naviRoute: () => [...bodyfitKeys.all, "navi-route"] as const,
 };
 
 export const bodyfitQueries = {
@@ -53,6 +54,17 @@ export const bodyfitQueries = {
       queryKey: bodyfitKeys.comfort(),
       queryFn: () => pleos().getDriverComfortState(),
       staleTime: 0,
+    }),
+  /**
+   * 내비게이션 목적지까지 남은 거리·시간 (C-5 상황 제안). 목적지가 없으면 null.
+   * 목적지는 밖에서 바뀌므로 항상 다시 읽고, 화면을 떠나면 값을 남기지 않는다 (그 순간에만 쓴다).
+   */
+  naviRoute: () =>
+    queryOptions({
+      queryKey: bodyfitKeys.naviRoute(),
+      queryFn: () => pleos().getNaviRoute(),
+      staleTime: 0,
+      gcTime: 0,
     }),
   /** 운전석의 현재 위치와 지원 범위. 운전자가 버튼으로 바꿀 수 있어 항상 다시 읽는다. */
   seat: () =>

@@ -101,6 +101,9 @@ class PleosConnectModule : Module() {
 
       AsyncFunction("applyDriverComfort") Coroutine { settings: ComfortSettings -> comfort.apply(settings) }
 
+      // 목적지까지 남은 거리·시간만 넘긴다 (좌표·이름은 넘기지 않는다). 차량이 아니거나 목적지가 없으면 null.
+      AsyncFunction("getNaviRoute") Coroutine { -> if (isAutomotive) naviLazy.value.readRoute() else null }
+
       AsyncFunction("listen") Coroutine { ->
         voice.listen { partial -> sendEvent("onSpeechPartial", mapOf("text" to partial)) }
       }

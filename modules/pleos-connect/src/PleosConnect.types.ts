@@ -67,6 +67,12 @@ export type DriverComfortSettings = {
   fanDirection?: FanDirection;
 };
 
+/**
+ * 내비게이션 목적지까지 남은 거리·시간 (NaviHelper DestinationInfo 의 원시 값).
+ * SDK 문서에 단위가 없어 미터·초로 본다. 좌표·이름·주소는 넘어오지 않는다.
+ */
+export type NaviRoute = { remainDistance: number; remainTime: number };
+
 export type PleosErrorCode =
   | "ERR_NOT_AUTOMOTIVE"
   | "ERR_NOT_PARKED"

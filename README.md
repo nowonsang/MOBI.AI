@@ -58,7 +58,7 @@ npm run verify         # 위 4개 전부 — push 전 필수
 | `pleos.car.permission.CONTROL_CAR_SEATS` | 시트 이동 |
 | `android.car.permission.CAR_POWERTRAIN` | 기어 상태 (주차 중에만 시트 이동). Pleos Gear API 는 deprecated 라 Android Car API `GEAR_SELECTION` 사용 |
 | `pleos.car.permission.STT_SERVICE` / `TTS_SERVICE` | 음성 인식 · 음성 안내 |
-| `pleos.car.permission.NAVI_ROUTE` | 목적지 도착 이벤트 (장거리 주행 후 착좌감 질문) |
+| `pleos.car.permission.NAVI_ROUTE` | 목적지 도착 이벤트 (장거리 주행 후 착좌감 질문), 목적지까지 남은 거리·시간 읽기 (주차 중 운전 상황 제안) |
 
 > Pleos 권한은 Pleos App Market 과 사전 협의·승인된 범위에서만 쓸 수 있다. 쓰지 않는 권한은 넣지 않는다.
 
@@ -126,7 +126,7 @@ modules/pleos-connect/        Pleos Connect SDK 로컬 Expo 모듈
 │   ├── GearMonitor.kt        Android Car API GEAR_SELECTION
 │   ├── UxRestrictionsMonitor.kt  플랫폼 주행 중 UX 제한 (CarUxRestrictions, NO_SETUP)
 │   ├── VoiceServices.kt      STT · TTS
-│   ├── NaviEvents.kt         목적지 도착 이벤트
+│   ├── NaviEvents.kt         목적지 도착 이벤트, 남은 거리·시간 읽기
 │   └── PleosErrors.kt        JS 에러 코드
 └── src/                      JS 계약 (PleosConnect.types.ts, PleosConnectModule.ts)
 src/
