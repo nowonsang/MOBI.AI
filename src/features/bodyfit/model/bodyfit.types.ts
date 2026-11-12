@@ -26,6 +26,7 @@ export type BodyProfileInput = Omit<
  * 차종마다 원시 값의 단위가 달라서 저장·학습은 비율로만 한다.
  * foreAft 1 = 가장 앞, height 1 = 가장 높게, backrest 1 = 가장 세움, tilt 1 = 좌판 앞쪽 가장 높게.
  * depth 1 = 좌판 가장 길게, headrestHeight 1 = 가장 높게, beltHeight 1 = 가장 높게.
+ * lumbar 1 = 허리 지지대 가장 앞으로(가장 많이 받침), headrestAngle 1 = 헤드레스트 가장 앞으로 세움.
  */
 export type SeatRatios = Partial<Record<SeatAxis, number>>;
 

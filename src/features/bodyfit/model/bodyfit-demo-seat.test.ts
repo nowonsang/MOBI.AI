@@ -105,3 +105,16 @@ describe("driveDemoSeat", () => {
     expect(driveDemoSeat(seat, "height", 0.5)).toBe(seat);
   });
 });
+
+describe("startDemoSeat: 허리 지지대·헤드레스트 각도", () => {
+  it("목표(기억한 값)가 있을 때만 어긋난 시작 위치를 만든다", () => {
+    expect(startDemoSeat(target).lumbar).toBeUndefined();
+    const start = startDemoSeat({ lumbar: 0.5, headrestAngle: 0.95 });
+    expect(start.lumbar).not.toBe(0.5);
+    expect(start.headrestAngle).not.toBe(0.95);
+    for (const value of Object.values(start)) {
+      expect(value).toBeGreaterThanOrEqual(0);
+      expect(value).toBeLessThanOrEqual(1);
+    }
+  });
+});

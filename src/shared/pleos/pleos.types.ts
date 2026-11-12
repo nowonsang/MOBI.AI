@@ -35,4 +35,6 @@ export const SEAT_AXES: readonly SeatAxis[] = [
   "depth",
   "headrestHeight",
   "beltHeight",
+  "lumbar",
+  "headrestAngle",
 ];

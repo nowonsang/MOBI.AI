@@ -66,9 +66,33 @@ export const AXIS_COPY: Record<SeatAxis, AxisCopy> = {
     guide: { increase: "올려 주세요", decrease: "내려 주세요" },
     press: { increase: "올리기", decrease: "내리기" },
   },
+  lumbar: {
+    label: "허리 지지대",
+    min: "넣음",
+    max: "내밈",
+    guide: { increase: "내밀어 주세요", decrease: "넣어 주세요" },
+    press: { increase: "내밀기", decrease: "넣기" },
+  },
+  headrestAngle: {
+    label: "헤드레스트 각도",
+    min: "뒤로",
+    max: "앞으로",
+    guide: { increase: "앞으로 세워 주세요", decrease: "뒤로 젖혀 주세요" },
+    press: { increase: "앞으로", decrease: "뒤로" },
+  },
 };
 
 export const AXIS_GROUP_LABEL: Record<SeatAxisGroupId, string> = {
   posture: "자세",
   headBelt: "머리·벨트",
+  remembered: "기억한 위치",
 };
+
+/** 아직 추천하지 못하는 축(기록이 덜 쌓인 허리 지지대·헤드레스트 각도)을 알려 주는 한 줄. 없으면 null */
+export function describeAxesToRemember(
+  axes: readonly SeatAxis[],
+): string | null {
+  if (axes.length === 0) return null;
+  const names = axes.map((axis) => AXIS_COPY[axis].label).join("·");
+  return `${names}는 편하게 맞춰 두면 기억했다가 다음부터 맞춰 드려요`;
+}

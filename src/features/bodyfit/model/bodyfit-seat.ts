@@ -40,7 +40,7 @@ export type SeatTarget = { axis: SeatAxis; target: number };
 
 /**
  * 비율 → 차량 원시 목표값. 움직일 수 있는 축만 돌려준다.
- * 앞뒤 → 높이 → 등받이 → 기울기 → 좌판 길이 → 헤드레스트 → 안전벨트 순서로 움직인다.
+ * 앞뒤 → 높이 → 등받이 → 기울기 → 좌판 길이 → 헤드레스트 → 안전벨트 → 허리 지지대 → 헤드레스트 각도 순서로 움직인다.
  */
 export function toSeatTargets(
   ratios: SeatRatios,

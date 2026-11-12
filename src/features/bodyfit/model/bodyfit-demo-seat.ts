@@ -24,6 +24,8 @@ const START_OFFSET: Record<SeatAxis, number> = {
   depth: -0.1,
   headrestHeight: -0.16,
   beltHeight: 0.08,
+  lumbar: -0.12,
+  headrestAngle: 0.1,
 };
 
 /** 목표 자세에서 조금씩 어긋난 시작 자세. 범위 끝에 막히면 반대 방향으로 어긋나게 한다. */

@@ -67,7 +67,7 @@ JS 에서 쓰는 API (`@/shared/pleos/pleos` 의 `pleos()` 로만 접근):
 | 메서드 / 이벤트 | 설명 |
 | --- | --- |
 | `getGear()` · `onGearChanged` | 현재 기어 (`park`/`drive`/`reverse`/`neutral`/`unknown`) |
-| `getDriverSeatState()` | 운전석 축별 현재 값·지원 범위·이동 가능 여부 (앞뒤·높이·등받이·좌판 기울기·좌판 길이·헤드레스트 높이·안전벨트 높이. 차량이 지원하는 축만) |
+| `getDriverSeatState()` | 운전석 축별 현재 값·지원 범위·이동 가능 여부 (앞뒤·높이·등받이·좌판 기울기·좌판 길이·헤드레스트 높이·안전벨트 높이·허리 지지대·헤드레스트 각도. 차량이 지원하는 축만) |
 | `moveDriverSeatAxis(axis, target)` | 목표 위치까지 이동. **기어 P 에서만**, 이동 중에도 기어를 확인하고, 끝나면 항상 멈춤 |
 | `stopDriverSeat()` | 즉시 멈춤 |
 | `isDriverSeatOccupied()` · `onDriverSeatOccupancyChanged` | 운전석 착석 여부 |

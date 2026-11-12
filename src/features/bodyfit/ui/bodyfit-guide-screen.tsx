@@ -29,7 +29,7 @@ import {
 } from "../model/bodyfit-axis-group";
 import { pressDemoSeat, startDemoSeat } from "../model/bodyfit-demo-seat";
 import { guideSeat, type AxisGuide } from "../model/bodyfit-guide";
-import { learnOffsets } from "../model/bodyfit-learning";
+import { learnOffsets, learnRemembered } from "../model/bodyfit-learning";
 import { recommendSeat } from "../model/bodyfit-recommend";
 import { toSeatRatios } from "../model/bodyfit-seat";
 import { selectDriveContext } from "../model/bodyfit-session.slice";
@@ -78,7 +78,11 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
 
   const recommended =
     profile.data && adjustments.data
-      ? recommendSeat(profile.data, learnOffsets(adjustments.data, context))
+      ? recommendSeat(
+          profile.data,
+          learnOffsets(adjustments.data, context),
+          learnRemembered(adjustments.data, context),
+        )
       : null;
   const guide =
     recommended && current

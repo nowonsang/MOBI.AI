@@ -1,6 +1,12 @@
 import { SEAT_AXES } from "@/shared/pleos/pleos.types";
 
-import { recommendBaseline, recommendSeat } from "./bodyfit-recommend";
+import {
+  BASELINE_AXES,
+  isLearnedOnlyAxis,
+  LEARNED_ONLY_AXES,
+  recommendBaseline,
+  recommendSeat,
+} from "./bodyfit-recommend";
 import type { BodyProfile } from "./bodyfit.types";
 
 const profile = (overrides: Partial<BodyProfile> = {}): BodyProfile => ({
@@ -65,7 +71,23 @@ describe("recommendBaseline", () => {
 
   it("앉은키를 모르면 키로 추정해 새 축도 추천한다", () => {
     const ratios = recommendBaseline(profile({ sittingHeightCm: null }));
-    expect(Object.keys(ratios)).toEqual([...SEAT_AXES]);
+    expect(Object.keys(ratios)).toEqual([...BASELINE_AXES]);
+  });
+
+  it("허리 지지대·헤드레스트 각도는 체형으로 추천하지 않는다", () => {
+    const ratios: Record<string, number> = recommendBaseline(profile());
+    for (const axis of LEARNED_ONLY_AXES) {
+      expect(ratios[axis]).toBeUndefined();
+    }
+  });
+
+  it("모든 축은 기본 추천이 있는 축이거나 기억만 하는 축이다", () => {
+    expect([...BASELINE_AXES, ...LEARNED_ONLY_AXES].sort()).toEqual(
+      [...SEAT_AXES].sort(),
+    );
+    expect(isLearnedOnlyAxis("lumbar")).toBe(true);
+    expect(isLearnedOnlyAxis("headrestAngle")).toBe(true);
+    expect(isLearnedOnlyAxis("headrestHeight")).toBe(false);
   });
 
   it("극단적인 체형도 0~1 범위를 벗어나지 않는다", () => {
@@ -75,7 +97,7 @@ describe("recommendBaseline", () => {
           const ratios = recommendBaseline(
             profile({ heightCm, weightKg, sittingHeightCm }),
           );
-          expect(Object.values(ratios)).toHaveLength(SEAT_AXES.length);
+          expect(Object.values(ratios)).toHaveLength(BASELINE_AXES.length);
           for (const value of Object.values(ratios)) {
             expect(value).toBeGreaterThanOrEqual(0);
             expect(value).toBeLessThanOrEqual(1);
@@ -113,5 +135,34 @@ describe("recommendSeat", () => {
     expect(result.depth).toBeCloseTo(base.depth! + 0.1);
     expect(result.headrestHeight).toBe(1);
     expect(result.beltHeight).toBe(0);
+  });
+
+  it("기억한 값이 없으면 허리 지지대·헤드레스트 각도를 추천하지 않는다", () => {
+    const result = recommendSeat(profile(), { foreAft: 0.1 });
+    expect(result.lumbar).toBeUndefined();
+    expect(result.headrestAngle).toBeUndefined();
+    expect(Object.keys(result)).toEqual([...BASELINE_AXES]);
+  });
+
+  it("기억한 값이 있는 축만 그 값 그대로 추천한다", () => {
+    const result = recommendSeat(profile(), {}, { lumbar: 0.62 });
+    expect(result.lumbar).toBe(0.62);
+    expect(result.headrestAngle).toBeUndefined();
+  });
+
+  it("허리 지지대·헤드레스트 각도에는 보정값을 더하지 않고, 기억한 값은 범위 안으로 자른다", () => {
+    const result = recommendSeat(
+      profile(),
+      { lumbar: 0.2, headrestAngle: 0.2 },
+      { lumbar: 0.5, headrestAngle: 1.4 },
+    );
+    expect(result.lumbar).toBe(0.5);
+    expect(result.headrestAngle).toBe(1);
+  });
+
+  it("기억한 값으로는 체형 추천 축이 달라지지 않는다", () => {
+    const base = recommendSeat(profile(), {});
+    const result = recommendSeat(profile(), {}, { foreAft: 0.99, lumbar: 0.3 });
+    expect(result.foreAft).toBe(base.foreAft);
   });
 });

@@ -156,3 +156,27 @@ describe("seatAdjustmentSchema", () => {
     ).toBe(false);
   });
 });
+
+describe("seatAdjustmentSchema: 허리 지지대·헤드레스트 각도", () => {
+  const base = {
+    profileId: "p1",
+    at: 1,
+    baseline: { foreAft: 0.5 },
+    final: { foreAft: 0.4 },
+    source: "drive-start",
+  };
+
+  it("기본 추천 없이 받아들인 값만 있는 기록을 버리지 않고 읽는다", () => {
+    const record = { ...base, final: { ...base.final, lumbar: 0.6, headrestAngle: 0.3 } };
+    expect(seatAdjustmentSchema.parse(record)).toEqual({
+      ...record,
+      context: "usual",
+    });
+  });
+
+  it("범위를 벗어난 값은 받지 않는다", () => {
+    expect(
+      seatAdjustmentSchema.safeParse({ ...base, final: { lumbar: -0.1 } }).success,
+    ).toBe(false);
+  });
+});

@@ -1,6 +1,11 @@
 import { SEAT_AXES } from "@/shared/pleos/pleos.types";
 
 import { GUIDE_TOLERANCE } from "./bodyfit-guide";
+import {
+  BASELINE_AXES,
+  LEARNED_ONLY_AXES,
+  type BaselineAxis,
+} from "./bodyfit-recommend";
 import { clamp } from "./bodyfit-seat";
 import type {
   DriveContext,
@@ -19,31 +24,79 @@ const MAX_OFFSET = 0.3;
  * 그 전에는 (그 상황의 기록 수 ÷ 이 값)만큼만 반영하고 나머지는 전체 기록으로 채운다.
  */
 export const CONTEXT_FULL_RECORDS = 3;
+/**
+ * 기본 추천이 없는 축(허리 지지대·헤드레스트 각도)은 그 축의 기록이 이만큼 쌓여야 추천한다.
+ * 한 번뿐인 기록은 앞사람이 맞춰 둔 위치를 그대로 타고 출발한 것일 수 있다.
+ */
+export const REMEMBER_MIN_RECORDS = 2;
+
+/** 최근 기록일수록 크게 반영한 축별 평균. pick 이 값을 주지 않는 기록은 건너뛴다. */
+function weightedAverage(
+  history: readonly SeatAdjustment[],
+  axes: readonly SeatAxis[],
+  pick: (record: SeatAdjustment, axis: SeatAxis) => number | undefined,
+): Partial<Record<SeatAxis, { value: number; count: number }>> {
+  const recent = [...history].sort((a, b) => b.at - a.at).slice(0, MAX_RECORDS);
+  const averages: Partial<Record<SeatAxis, { value: number; count: number }>> =
+    {};
+
+  for (const axis of axes) {
+    let weightedSum = 0;
+    let totalWeight = 0;
+    let count = 0;
+    recent.forEach((record, index) => {
+      const value = pick(record, axis);
+      if (value === undefined) return;
+      const weight = DECAY ** index;
+      weightedSum += value * weight;
+      totalWeight += weight;
+      count += 1;
+    });
+    if (count > 0) averages[axis] = { value: weightedSum / totalWeight, count };
+  }
+  return averages;
+}
 
 /**
  * 운전자가 실제로 받아들인 자세(final)와 체형 기반 추천(baseline)의 차이를 학습해 축별 보정값을 만든다.
  * 수동 조절·음성 피드백·주행 시작 자세가 모두 같은 방식으로 반영된다.
  */
 function averageOffsets(history: readonly SeatAdjustment[]): SeatRatios {
-  const recent = [...history].sort((a, b) => b.at - a.at).slice(0, MAX_RECORDS);
+  const averages = weightedAverage(history, BASELINE_AXES, (record, axis) => {
+    const baseline = record.baseline[axis];
+    const final = record.final[axis];
+    return baseline === undefined || final === undefined
+      ? undefined
+      : final - baseline;
+  });
   const offsets: SeatRatios = {};
-
-  for (const axis of SEAT_AXES) {
-    let weightedSum = 0;
-    let totalWeight = 0;
-    recent.forEach((record, index) => {
-      const baseline = record.baseline[axis];
-      const final = record.final[axis];
-      if (baseline === undefined || final === undefined) return;
-      const weight = DECAY ** index;
-      weightedSum += (final - baseline) * weight;
-      totalWeight += weight;
-    });
-    if (totalWeight > 0) {
-      offsets[axis] = clamp(weightedSum / totalWeight, -MAX_OFFSET, MAX_OFFSET);
+  for (const axis of BASELINE_AXES) {
+    const average = averages[axis];
+    if (average) {
+      offsets[axis] = clamp(average.value, -MAX_OFFSET, MAX_OFFSET);
     }
   }
   return offsets;
+}
+
+/** 기본 추천이 없는 축에서 운전자가 두던 위치의 평균. minRecords 건보다 적게 기록된 축은 뺀다. */
+function averageRemembered(
+  history: readonly SeatAdjustment[],
+  minRecords: number,
+): SeatRatios {
+  const averages = weightedAverage(
+    history,
+    LEARNED_ONLY_AXES,
+    (record, axis) => record.final[axis],
+  );
+  const remembered: SeatRatios = {};
+  for (const axis of LEARNED_ONLY_AXES) {
+    const average = averages[axis];
+    if (average && average.count >= minRecords) {
+      remembered[axis] = clamp(average.value, 0, 1);
+    }
+  }
+  return remembered;
 }
 
 const recordsIn = (
@@ -75,6 +128,30 @@ export function learnOffsets(
     offsets[axis] = all + (mine - all) * weight;
   }
   return offsets;
+}
+
+/**
+ * 기본 추천이 없는 축(허리 지지대·헤드레스트 각도)에서 이 운전자가 평소 두는 위치.
+ * 차량이 그 축의 위치를 알려 준 기록이 REMEMBER_MIN_RECORDS 건 쌓인 축만 돌려준다. 그 전에는 추천하지 않는다.
+ * 상황별 반영은 learnOffsets 와 같다: 고른 상황의 기록이 충분하면 그 기록만, 적으면 전체 기록과 섞는다.
+ */
+export function learnRemembered(
+  history: readonly SeatAdjustment[],
+  context: DriveContext,
+): SeatRatios {
+  const overall = averageRemembered(history, REMEMBER_MIN_RECORDS);
+  const own = recordsIn(history, context);
+  const ownRemembered = averageRemembered(own, 1);
+  const weight = Math.min(own.length / CONTEXT_FULL_RECORDS, 1);
+  const remembered: SeatRatios = {};
+
+  for (const axis of LEARNED_ONLY_AXES) {
+    const all = overall[axis];
+    if (all === undefined) continue;
+    const mine = ownRemembered[axis] ?? all;
+    remembered[axis] = all + (mine - all) * weight;
+  }
+  return remembered;
 }
 
 export type LearningBasis = {
@@ -111,8 +188,9 @@ const CONTEXT_WHEN: Record<DriveContext, string | null> = {
 };
 
 // 축 방향은 SeatRatios 를 따른다 (1 = 가장 앞·높게·세움·좌판 앞쪽 높게·좌판 길게).
+// 기본 추천이 없는 축은 보정할 기준이 없어 여기에 없다 (기억한 값을 그대로 추천한다).
 const ADJUSTED_PHRASE: Record<
-  SeatAxis,
+  BaselineAxis,
   { increase: string; decrease: string }
 > = {
   foreAft: {
@@ -150,8 +228,8 @@ export function explainOffsets(
   context: DriveContext,
 ): string | null {
   const offsets = learnOffsets(history, context);
-  let strongest: { axis: SeatAxis; offset: number } | null = null;
-  for (const axis of SEAT_AXES) {
+  let strongest: { axis: BaselineAxis; offset: number } | null = null;
+  for (const axis of BASELINE_AXES) {
     const offset = offsets[axis];
     if (offset === undefined || Math.abs(offset) < GUIDE_TOLERANCE) continue;
     if (strongest === null || Math.abs(offset) > Math.abs(strongest.offset)) {

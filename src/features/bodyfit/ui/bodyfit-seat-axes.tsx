@@ -6,11 +6,12 @@ import { radius, spacing } from "@/shared/ui/theme";
 import { themedStyles } from "@/shared/ui/use-theme";
 
 import {
+  axesToRemember,
   groupSeatAxes,
   recommendationForVehicle,
 } from "../model/bodyfit-axis-group";
 import type { SeatAxis, SeatRatios } from "../model/bodyfit.types";
-import { AXIS_COPY } from "./bodyfit-axis-copy";
+import { AXIS_COPY, describeAxesToRemember } from "./bodyfit-axis-copy";
 import { BodyfitAxisGroupHeading } from "./bodyfit-axis-group-heading";
 
 const percent = (ratio: number) => Math.round(ratio * 100);
@@ -38,6 +39,10 @@ export function BodyfitSeatAxes({
   const groups = groupSeatAxes(rows);
   // 묶음이 하나뿐이면 제목 없이 죽 보여 준다.
   const titled = groups.length > 1;
+  // 허리 지지대·헤드레스트 각도는 기록이 쌓이기 전에는 추천하지 않는다. 이 차량에 있으면 왜 안 보이는지 한 줄로 알린다.
+  const toRemember = describeAxesToRemember(
+    axesToRemember(recommended, current),
+  );
 
   return (
     <View style={styles.list}>
@@ -57,6 +62,11 @@ export function BodyfitSeatAxes({
           </View>
         </View>
       ))}
+      {toRemember ? (
+        <AppText variant="caption" tone="tertiary">
+          {toRemember}
+        </AppText>
+      ) : null}
     </View>
   );
 }

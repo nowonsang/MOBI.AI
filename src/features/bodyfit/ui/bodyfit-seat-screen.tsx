@@ -35,6 +35,7 @@ import {
   explainOffsets,
   learningBasis,
   learnOffsets,
+  learnRemembered,
   type LearningBasis,
 } from "../model/bodyfit-learning";
 import { recommendSeat } from "../model/bodyfit-recommend";
@@ -162,6 +163,7 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   const recommended = recommendSeat(
     driver,
     learnOffsets(adjustments.data, context),
+    learnRemembered(adjustments.data, context),
   );
   const current = seat.data ? toSeatRatios(seat.data) : null;
   // 시트 조절은 플랫폼 제한(CarUxRestrictions NO_SETUP)이 없고 기어가 P 일 때만 연다.

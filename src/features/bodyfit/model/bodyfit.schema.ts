@@ -53,6 +53,8 @@ export const seatRatiosSchema = z.object({
   depth: ratio.optional(),
   headrestHeight: ratio.optional(),
   beltHeight: ratio.optional(),
+  lumbar: ratio.optional(),
+  headrestAngle: ratio.optional(),
 });
 
 // 상황(C-5)이 생기기 전에 저장된 기록·주행은 평소로 읽는다 (예전 기록 때문에 목록 전체가 비지 않게).

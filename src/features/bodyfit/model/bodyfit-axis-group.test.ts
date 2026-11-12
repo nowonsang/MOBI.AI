@@ -1,6 +1,7 @@
 import { SEAT_AXES } from "@/shared/pleos/pleos.types";
 
 import {
+  axesToRemember,
   groupSeatAxes,
   recommendationForVehicle,
 } from "./bodyfit-axis-group";
@@ -54,13 +55,59 @@ describe("recommendationForVehicle", () => {
   });
 });
 
+describe("기억만 하는 축 (허리 지지대·헤드레스트 각도)", () => {
+  const withRemembered: SeatRatios = { ...recommended, lumbar: 0.6 };
+
+  it("기억한 값이 있어도 차량이 위치를 알려 줄 때만 보여 준다", () => {
+    expect(
+      recommendationForVehicle(withRemembered, { foreAft: 0.2 }).lumbar,
+    ).toBeUndefined();
+    expect(
+      recommendationForVehicle(withRemembered, { lumbar: 0.1 }).lumbar,
+    ).toBe(0.6);
+    expect(recommendationForVehicle(withRemembered, null).lumbar).toBeUndefined();
+  });
+
+  it("차량에 있지만 아직 추천하지 못하는 축을 알려 준다", () => {
+    const current: SeatRatios = { foreAft: 0.2, lumbar: 0.1, headrestAngle: 0.4 };
+    expect(axesToRemember(recommended, current)).toEqual([
+      "lumbar",
+      "headrestAngle",
+    ]);
+    expect(axesToRemember(withRemembered, current)).toEqual(["headrestAngle"]);
+  });
+
+  it("지원하지 않는 차량과 차량 밖에서는 알릴 축이 없다", () => {
+    expect(axesToRemember(recommended, { foreAft: 0.2, depth: 0.3 })).toEqual(
+      [],
+    );
+    expect(axesToRemember(recommended, null)).toEqual([]);
+  });
+
+  it("기억한 위치 묶음은 자세·머리·벨트 뒤에 따로 묶는다", () => {
+    const groups = groupSeatAxes(
+      (["foreAft", "lumbar", "headrestAngle"] as const).map((axis) => ({ axis })),
+    );
+    expect(groups.map((group) => group.id)).toEqual(["posture", "remembered"]);
+    expect(groups[1]?.items.map((item) => item.axis)).toEqual([
+      "lumbar",
+      "headrestAngle",
+    ]);
+  });
+});
+
 describe("groupSeatAxes", () => {
   const items = (axes: readonly (typeof SEAT_AXES)[number][]) =>
     axes.map((axis) => ({ axis }));
 
-  it("모든 축을 자세 / 머리·벨트 두 묶음으로 빠짐없이 나눈다", () => {
+  it("모든 축을 자세 / 머리·벨트 / 기억한 위치 묶음으로 빠짐없이 나눈다", () => {
     const groups = groupSeatAxes(items(SEAT_AXES));
-    expect(groups.map((group) => group.id)).toEqual(["posture", "headBelt"]);
+    expect(groups.map((group) => group.id)).toEqual([
+      "posture",
+      "headBelt",
+      "remembered",
+    ]);
+    for (const group of groups) expect(group.items.length).toBeLessThanOrEqual(5);
     expect(groups[0]?.items.map((item) => item.axis)).toEqual([
       "foreAft",
       "height",

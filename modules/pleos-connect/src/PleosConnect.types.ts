@@ -4,7 +4,8 @@ export type Gear = "park" | "reverse" | "neutral" | "drive" | "unknown";
 
 /**
  * 앞뒤(foreAft), 높이(height), 등받이 각도(backrest), 좌판 기울기(tilt),
- * 좌판 길이(depth), 헤드레스트 높이(headrestHeight), 안전벨트 높이(beltHeight)
+ * 좌판 길이(depth), 헤드레스트 높이(headrestHeight), 안전벨트 높이(beltHeight),
+ * 허리 지지대 앞뒤(lumbar), 헤드레스트 각도(headrestAngle)
  */
 export type SeatAxis =
   | "foreAft"
@@ -13,7 +14,9 @@ export type SeatAxis =
   | "tilt"
   | "depth"
   | "headrestHeight"
-  | "beltHeight";
+  | "beltHeight"
+  | "lumbar"
+  | "headrestAngle";
 
 /** 차량이 알려 주는 원시 값. 단위는 차종마다 다르므로 min~max 비율로만 해석한다. */
 export type SeatAxisState = {
