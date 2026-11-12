@@ -7,6 +7,7 @@ import ai.pleos.playground.vehicle.api.model.area.SeatArea
 import ai.pleos.playground.vehicle.api.model.capability.AccessType
 import ai.pleos.playground.vehicle.api.model.capability.AreaBounds
 import ai.pleos.playground.vehicle.api.model.capability.CapabilityConfig
+import ai.pleos.playground.vehicle.api.model.capability.HvacTemperatureConfigArray
 import ai.pleos.playground.vehicle.constant.area.SeatValue
 import ai.pleos.playground.vehicle.constant.unit.TemperatureUnit
 import expo.modules.kotlin.records.Field
@@ -125,7 +126,8 @@ class DriverComfort(
   private suspend fun cabinTargetRange(): Pair<SeatArea, ClosedFloatingPointRange<Float>>? =
     suspendPleos { resume, fail ->
       hvac.checkHvacTemperatureCapabilities(
-        { config: CapabilityConfig?, areas: Map<out SeatArea?, AreaBounds<*>?>? ->
+        // 2.3.2 에서 두 인자 버전은 deprecated. 설정 단계 정보(세 번째 인자)는 쓰지 않는다.
+        { config: CapabilityConfig?, areas: Map<out SeatArea?, AreaBounds<*>?>?, _: HvacTemperatureConfigArray? ->
           val entry =
             areas?.entries?.firstOrNull { it.key.isDriver() } ?: areas?.entries?.firstOrNull()
           val area = entry?.key
