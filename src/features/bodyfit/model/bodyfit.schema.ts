@@ -46,6 +46,9 @@ export const seatRatiosSchema = z.object({
   height: ratio.optional(),
   backrest: ratio.optional(),
   tilt: ratio.optional(),
+  depth: ratio.optional(),
+  headrestHeight: ratio.optional(),
+  beltHeight: ratio.optional(),
 });
 
 export const driveSessionSchema = z.object({

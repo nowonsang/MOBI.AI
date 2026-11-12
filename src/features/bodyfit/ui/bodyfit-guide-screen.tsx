@@ -21,44 +21,20 @@ import { useRecordSeatAdjustment } from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
 import { useLiveDriverSeat } from "../api/bodyfit.seat-live";
 import { speakQuietly } from "../api/bodyfit.voice";
+import {
+  groupSeatAxes,
+  recommendationForVehicle,
+} from "../model/bodyfit-axis-group";
 import { pressDemoSeat, startDemoSeat } from "../model/bodyfit-demo-seat";
 import { guideSeat, type AxisGuide } from "../model/bodyfit-guide";
 import { learnOffsets } from "../model/bodyfit-learning";
 import { recommendSeat } from "../model/bodyfit-recommend";
 import { toSeatRatios } from "../model/bodyfit-seat";
 import type { SeatAxis, SeatRatios } from "../model/bodyfit.types";
+import { AXIS_COPY } from "./bodyfit-axis-copy";
+import { BodyfitAxisGroupHeading } from "./bodyfit-axis-group-heading";
 import { describeBodyfitError } from "./bodyfit-error-copy";
 import { BodyfitSeatImage } from "./bodyfit-seat-image";
-
-const AXIS_COPY: Record<
-  SeatAxis,
-  { label: string; increase: string; decrease: string }
-> = {
-  foreAft: {
-    label: "앞뒤 위치",
-    increase: "앞으로 당겨 주세요",
-    decrease: "뒤로 밀어 주세요",
-  },
-  height: { label: "높이", increase: "올려 주세요", decrease: "내려 주세요" },
-  backrest: {
-    label: "등받이",
-    increase: "세워 주세요",
-    decrease: "눕혀 주세요",
-  },
-  tilt: {
-    label: "좌판 기울기",
-    increase: "앞쪽을 올려 주세요",
-    decrease: "앞쪽을 내려 주세요",
-  },
-};
-
-// 시연 모드에서 시트 버튼 대신 누르는 화면 버튼의 짧은 이름
-const PRESS_COPY: Record<SeatAxis, { increase: string; decrease: string }> = {
-  foreAft: { increase: "앞으로", decrease: "뒤로" },
-  height: { increase: "올리기", decrease: "내리기" },
-  backrest: { increase: "세우기", decrease: "눕히기" },
-  tilt: { increase: "앞쪽 올리기", decrease: "앞쪽 내리기" },
-};
 
 type DemoSeat = { start: SeatRatios; seat: SeatRatios };
 
@@ -66,7 +42,7 @@ const percent = (ratio: number) => Math.round(ratio * 100);
 
 function describeAxis({ axis, status, direction, far }: AxisGuide): string {
   if (status === "ok" || direction === null) return "딱 좋아요";
-  const action = AXIS_COPY[axis][direction];
+  const action = AXIS_COPY[axis].guide[direction];
   if (status === "overshot") return `지나쳤어요. 조금 ${action}`;
   return far ? `더 ${action}` : `조금 더 ${action}`;
 }
@@ -146,7 +122,10 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
 
   const startDemo = () => {
     if (!recommended) return;
-    const demoStart = startDemoSeat(recommended);
+    // 실제 안내와 같은 축으로 시연한다: 차량이 알려 주지 않는 축(좌판 길이·헤드레스트·안전벨트)은 넣지 않는다.
+    const demoStart = startDemoSeat(
+      recommendationForVehicle(recommended, vehicleSeat),
+    );
     setNotice(null);
     setDemo({ start: demoStart, seat: demoStart });
   };
@@ -229,6 +208,11 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
 
     const focus = guide.axes.find((axis) => axis.axis === guide.focus);
     const matched = guide.axes.filter((axis) => axis.status === "ok").length;
+    // 축이 많은 차량에서는 "자세 / 머리·벨트" 로 나눠 보여 준다. 번호는 맞추는 순서대로 이어서 매긴다.
+    const groups = groupSeatAxes(
+      guide.axes.map((axis, index) => ({ ...axis, step: index + 1 })),
+    );
+    const titled = groups.length > 1;
     return (
       <Columns
         left={
@@ -259,7 +243,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
                   {(["decrease", "increase"] as const).map((direction) => (
                     <Button
                       key={direction}
-                      label={PRESS_COPY[focus.axis][direction]}
+                      label={AXIS_COPY[focus.axis].press[direction]}
                       variant="secondary"
                       onPress={() => press(focus.axis, direction)}
                       accessibilityHint={`${AXIS_COPY[focus.axis].label}를 시트 버튼처럼 한 번 움직여요`}
@@ -282,35 +266,48 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
         }
         right={
           <Card title="축별 안내">
-            <View style={styles.list}>
-              {guide.axes.map((axis, index) => {
-                const active = axis.axis === guide.focus;
-                return (
-                  <View
-                    key={axis.axis}
-                    style={[styles.step, active && styles.stepActive]}
-                  >
-                    <InfoRow
-                      icon={
-                        <IconBadge
-                          glyph={axis.status === "ok" ? "✓" : `${index + 1}`}
-                          tone={
-                            axis.status === "ok"
-                              ? "success"
-                              : active
-                                ? "primary"
-                                : "muted"
-                          }
-                        />
-                      }
-                      label={AXIS_COPY[axis.axis].label}
-                      value={describeAxis(axis)}
-                      detail={`지금 ${percent(axis.current)}% · 목표 ${percent(axis.target)}%`}
-                      accessibilityLabel={`${AXIS_COPY[axis.axis].label}, ${describeAxis(axis)}, 지금 ${percent(axis.current)}퍼센트, 목표 ${percent(axis.target)}퍼센트`}
+            <View style={styles.groups}>
+              {groups.map((group, groupIndex) => (
+                <View key={group.id} style={styles.list}>
+                  {titled ? (
+                    <BodyfitAxisGroupHeading
+                      group={group.id}
+                      note={`${group.items.filter((axis) => axis.status === "ok").length}/${group.items.length} 맞춤`}
+                      divided={groupIndex > 0}
                     />
-                  </View>
-                );
-              })}
+                  ) : null}
+                  {group.items.map((axis) => {
+                    const active = axis.axis === guide.focus;
+                    return (
+                      <View
+                        key={axis.axis}
+                        style={[styles.step, active && styles.stepActive]}
+                      >
+                        <InfoRow
+                          icon={
+                            <IconBadge
+                              glyph={
+                                axis.status === "ok" ? "✓" : `${axis.step}`
+                              }
+                              tone={
+                                axis.status === "ok"
+                                  ? "success"
+                                  : active
+                                    ? "primary"
+                                    : "muted"
+                              }
+                            />
+                          }
+                          label={AXIS_COPY[axis.axis].label}
+                          value={describeAxis(axis)}
+                          detail={`지금 ${percent(axis.current)}% · 목표 ${percent(axis.target)}%`}
+                          accessibilityLabel={`${AXIS_COPY[axis.axis].label}, ${describeAxis(axis)}, 지금 ${percent(axis.current)}퍼센트, 목표 ${percent(axis.target)}퍼센트`}
+                        />
+                      </View>
+                    );
+                  })}
+                </View>
+              ))}
             </View>
           </Card>
         }
@@ -368,6 +365,7 @@ const styles = StyleSheet.create({
   progressText: { color: colors.primary, fontWeight: "700" },
   progressDone: { color: colors.success, fontWeight: "700" },
   press: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
+  groups: { gap: spacing.md },
   list: { gap: spacing.xs },
   step: {
     paddingHorizontal: spacing.sm,

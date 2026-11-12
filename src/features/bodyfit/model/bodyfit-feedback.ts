@@ -57,6 +57,10 @@ const PHRASES: Record<
   height: { object: "시트를", increase: "높여", decrease: "낮춰" },
   backrest: { object: "등받이를", increase: "세워", decrease: "눕혀" },
   tilt: { object: "좌판 앞쪽을", increase: "올려", decrease: "내려" },
+  // 아래 세 축은 음성 해석 규칙이 없다 (말로 바꾸지 않는다). 조절안을 읽어 주는 문구만 갖춘다.
+  depth: { object: "좌판을", increase: "늘려", decrease: "줄여" },
+  headrestHeight: { object: "헤드레스트를", increase: "높여", decrease: "낮춰" },
+  beltHeight: { object: "안전벨트를", increase: "높여", decrease: "낮춰" },
 };
 
 /** 예: "시트를 조금 앞으로 옮겨 보고, 등받이를 세워 볼게요" */

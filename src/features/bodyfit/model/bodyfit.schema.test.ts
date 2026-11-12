@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import { bodyProfileSchema, driveSessionSchema } from "./bodyfit.schema";
+import {
+  bodyProfileSchema,
+  driveSessionSchema,
+  seatAdjustmentSchema,
+} from "./bodyfit.schema";
 
 const legacyProfile = {
   id: "p1",
@@ -30,6 +34,54 @@ describe("bodyProfileSchema", () => {
       .safeParse([legacyProfile, current]);
     expect(parsed.success).toBe(true);
     expect(parsed.data).toHaveLength(2);
+  });
+});
+
+describe("seatAdjustmentSchema", () => {
+  const legacyRecord = {
+    profileId: "p1",
+    at: 1,
+    baseline: { foreAft: 0.5, height: 0.5, backrest: 0.6, tilt: 0.5 },
+    final: { foreAft: 0.4, height: 0.5, backrest: 0.6, tilt: 0.5 },
+    source: "drive-start",
+  };
+
+  it("네 축만 있는 예전 기록을 그대로 읽는다", () => {
+    expect(seatAdjustmentSchema.parse(legacyRecord)).toEqual(legacyRecord);
+  });
+
+  it("좌판 길이·헤드레스트·안전벨트 높이가 든 기록을 버리지 않고 읽는다", () => {
+    const record = {
+      ...legacyRecord,
+      baseline: {
+        ...legacyRecord.baseline,
+        depth: 0.5,
+        headrestHeight: 0.6,
+        beltHeight: 0.4,
+      },
+      final: { ...legacyRecord.final, depth: 0.55, beltHeight: 0.35 },
+    };
+    expect(seatAdjustmentSchema.parse(record)).toEqual(record);
+  });
+
+  it("예전 기록과 새 기록이 섞여 있어도 목록 전체가 비지 않는다", () => {
+    const parsed = z
+      .array(seatAdjustmentSchema)
+      .safeParse([
+        legacyRecord,
+        { ...legacyRecord, at: 2, final: { depth: 0.3 } },
+      ]);
+    expect(parsed.success).toBe(true);
+    expect(parsed.data).toHaveLength(2);
+  });
+
+  it("범위를 벗어난 새 축 값은 받지 않는다", () => {
+    expect(
+      seatAdjustmentSchema.safeParse({
+        ...legacyRecord,
+        final: { headrestHeight: 1.2 },
+      }).success,
+    ).toBe(false);
   });
 });
 

@@ -4,15 +4,13 @@ import { SEAT_AXES } from "@/shared/pleos/pleos.types";
 import { AppText } from "@/shared/ui/app-text";
 import { colors, radius, spacing } from "@/shared/ui/theme";
 
+import {
+  groupSeatAxes,
+  recommendationForVehicle,
+} from "../model/bodyfit-axis-group";
 import type { SeatAxis, SeatRatios } from "../model/bodyfit.types";
-
-const AXIS_COPY: Record<SeatAxis, { label: string; min: string; max: string }> =
-  {
-    foreAft: { label: "앞뒤 위치", min: "뒤", max: "앞" },
-    height: { label: "높이", min: "낮게", max: "높게" },
-    backrest: { label: "등받이", min: "눕힘", max: "세움" },
-    tilt: { label: "좌판 기울기", min: "내림", max: "올림" },
-  };
+import { AXIS_COPY } from "./bodyfit-axis-copy";
+import { BodyfitAxisGroupHeading } from "./bodyfit-axis-group-heading";
 
 const percent = (ratio: number) => Math.round(ratio * 100);
 
@@ -22,50 +20,76 @@ type BodyfitSeatAxesProps = {
   current: SeatRatios | null;
 };
 
+type AxisRowProps = { axis: SeatAxis; target: number; now: number | undefined };
+
 // 색만으로 구분하지 않도록 막대 옆에 "지금 → 추천" 숫자를 함께 쓴다.
 export function BodyfitSeatAxes({ recommended, current }: BodyfitSeatAxesProps) {
+  // 좌판 길이·헤드레스트·안전벨트는 차량이 알려 줄 때만 보여 준다. 없는 차량에서는 기본 네 축 그대로다.
+  const shown = recommendationForVehicle(recommended, current);
+  const rows = SEAT_AXES.flatMap((axis): AxisRowProps[] => {
+    const target = shown[axis];
+    return target === undefined ? [] : [{ axis, target, now: current?.[axis] }];
+  });
+  const groups = groupSeatAxes(rows);
+  // 묶음이 하나뿐이면 제목 없이 죽 보여 준다.
+  const titled = groups.length > 1;
+
   return (
     <View style={styles.list}>
-      {SEAT_AXES.map((axis) => {
-        const target = recommended[axis];
-        if (target === undefined) return null;
-        const now = current?.[axis];
-        const copy = AXIS_COPY[axis];
-        return (
-          <View key={axis} style={styles.row}>
-            <View style={styles.heading}>
-              <AppText variant="bodyStrong">{copy.label}</AppText>
-              <AppText variant="secondary" tone="secondary">
-                {now === undefined
-                  ? `추천 ${percent(target)}%`
-                  : `지금 ${percent(now)}% → 추천 ${percent(target)}%`}
-              </AppText>
-            </View>
-            <View style={styles.track} accessible={false}>
-              {now !== undefined ? (
-                <View
-                  style={[styles.marker, styles.current, { left: `${percent(now)}%` }]}
-                />
-              ) : null}
-              <View
-                style={[
-                  styles.marker,
-                  styles.recommended,
-                  { left: `${percent(target)}%` },
-                ]}
-              />
-            </View>
-            <View style={styles.ends}>
-              <AppText variant="caption" tone="tertiary">
-                {copy.min}
-              </AppText>
-              <AppText variant="caption" tone="tertiary">
-                {copy.max}
-              </AppText>
-            </View>
+      {groups.map((group, index) => (
+        <View key={group.id} style={styles.group}>
+          {titled ? (
+            <BodyfitAxisGroupHeading
+              group={group.id}
+              note={`${group.items.length}곳`}
+              divided={index > 0}
+            />
+          ) : null}
+          <View style={styles.list}>
+            {group.items.map((row) => (
+              <AxisRow key={row.axis} {...row} />
+            ))}
           </View>
-        );
-      })}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function AxisRow({ axis, target, now }: AxisRowProps) {
+  const copy = AXIS_COPY[axis];
+  return (
+    <View style={styles.row}>
+      <View style={styles.heading}>
+        <AppText variant="bodyStrong">{copy.label}</AppText>
+        <AppText variant="secondary" tone="secondary">
+          {now === undefined
+            ? `추천 ${percent(target)}%`
+            : `지금 ${percent(now)}% → 추천 ${percent(target)}%`}
+        </AppText>
+      </View>
+      <View style={styles.track} accessible={false}>
+        {now !== undefined ? (
+          <View
+            style={[styles.marker, styles.current, { left: `${percent(now)}%` }]}
+          />
+        ) : null}
+        <View
+          style={[
+            styles.marker,
+            styles.recommended,
+            { left: `${percent(target)}%` },
+          ]}
+        />
+      </View>
+      <View style={styles.ends}>
+        <AppText variant="caption" tone="tertiary">
+          {copy.min}
+        </AppText>
+        <AppText variant="caption" tone="tertiary">
+          {copy.max}
+        </AppText>
+      </View>
     </View>
   );
 }
@@ -75,6 +99,8 @@ const DOT = 28;
 
 const styles = StyleSheet.create({
   list: { gap: spacing.lg },
+  // 묶음 제목은 그 묶음의 첫 축에 붙여 둔다 (축 사이보다 좁게).
+  group: { gap: spacing.md },
   row: { gap: spacing.xs },
   heading: {
     flexDirection: "row",

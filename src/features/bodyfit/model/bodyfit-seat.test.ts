@@ -33,6 +33,51 @@ describe("toSeatTargets", () => {
   });
 });
 
+describe("새 축 (좌판 길이·헤드레스트·안전벨트 높이)", () => {
+  const extended = {
+    ...state,
+    depth: { value: 30, min: 0, max: 60, movable: true },
+    headrestHeight: { value: 2, min: 0, max: 8, movable: false },
+    beltHeight: { value: 100, min: 100, max: 100, movable: true },
+  };
+
+  it("차량이 알려 주는 새 축도 비율로 바꾸고, 범위가 0 인 축은 뺀다", () => {
+    expect(toSeatRatios(extended)).toEqual({
+      foreAft: 0.25,
+      height: 0.25,
+      tilt: 0.5,
+      depth: 0.5,
+      headrestHeight: 0.25,
+    });
+  });
+
+  it("자세 축을 먼저, 새 축을 뒤에 움직이고 움직일 수 없는 축은 뺀다", () => {
+    expect(
+      toSeatTargets(
+        { depth: 0.75, foreAft: 0.5, headrestHeight: 0.5, beltHeight: 0.5 },
+        extended,
+      ),
+    ).toEqual([
+      { axis: "foreAft", target: 100 },
+      { axis: "depth", target: 45 },
+      { axis: "beltHeight", target: 100 },
+    ]);
+  });
+
+  it("차량이 알려 주지 않는 새 축은 추천이 있어도 움직이지 않는다", () => {
+    expect(
+      toSeatTargets(
+        { foreAft: 0.5, depth: 0.7, headrestHeight: 0.6, beltHeight: 0.5 },
+        state,
+      ),
+    ).toEqual([{ axis: "foreAft", target: 100 }]);
+  });
+
+  it("새 축만 읽힌 상태도 빈 상태가 아니므로 다시 읽지 않는다", () => {
+    expect(shouldRereadSeat({ depth: extended.depth }, 1)).toBe(false);
+  });
+});
+
 describe("applyNudges", () => {
   it("조절량을 더하고 0~1 로 자른다", () => {
     expect(
