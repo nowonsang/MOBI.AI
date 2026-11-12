@@ -1,7 +1,9 @@
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { View } from "react-native";
 
 import { useAppDispatch, useAppSelector } from "@/core/store/hooks";
+import { canControlComfort } from "@/shared/config/app-variant";
 import type { DriverSeatState } from "@/shared/pleos/pleos.types";
 import { usePleosEvent } from "@/shared/pleos/use-pleos-event";
 import { AppText } from "@/shared/ui/app-text";
@@ -13,21 +15,33 @@ import { radius, spacing } from "@/shared/ui/theme";
 import { themedStyles } from "@/shared/ui/use-theme";
 
 import {
+  useApplyComfort,
   useMoveSeat,
   useRecordSeatAdjustment,
   useStopListening,
-  useVoiceSeatFeedback,
+  useVoiceAdjustment,
 } from "../api/bodyfit.mutations";
+import { bodyfitQueries } from "../api/bodyfit.queries";
 import { speakQuietly } from "../api/bodyfit.voice";
 import { applyNudges, toSeatRatios } from "../model/bodyfit-seat";
 import {
+  comfortDismissed,
+  comfortProposed,
   feedbackDismissed,
   feedbackProposed,
   selectDriveContext,
+  selectPendingComfort,
   selectPendingFeedback,
 } from "../model/bodyfit-session.slice";
+import {
+  comfortItemLabel,
+  describeComfortValue,
+} from "../model/bodyfit-voice-comfort";
 import type { BodyProfile } from "../model/bodyfit.types";
-import { describeBodyfitError } from "./bodyfit-error-copy";
+import {
+  describeBodyfitError,
+  describeComfortError,
+} from "./bodyfit-error-copy";
 
 type BodyfitVoiceFeedbackProps = {
   profile: BodyProfile;
@@ -36,6 +50,7 @@ type BodyfitVoiceFeedbackProps = {
 };
 
 // "허리가 불편해" 같은 말을 조절안으로 바꾸고, 운전자가 확인하면 주차 상태에서만 시트를 움직인다.
+// "추워요", "핸들 열선 켜 줘" 같은 온도 이야기는 온도 조절안으로 바꾸고, 운전자가 누르면 주차 상태에서만 맞춘다 (E-4).
 export function BodyfitVoiceFeedback({
   profile,
   seat,
@@ -45,7 +60,13 @@ export function BodyfitVoiceFeedback({
   const dispatch = useAppDispatch();
   const pending = useAppSelector(selectPendingFeedback);
   const context = useAppSelector(selectDriveContext);
-  const listen = useVoiceSeatFeedback();
+  const pendingComfort = useAppSelector(selectPendingComfort);
+  const comfortState = useQuery({
+    ...bodyfitQueries.comfort(),
+    enabled: pendingComfort !== null,
+  }).data;
+  const listen = useVoiceAdjustment();
+  const applyComfort = useApplyComfort();
   const stopListening = useStopListening();
   const move = useMoveSeat();
   const record = useRecordSeatAdjustment();
@@ -62,19 +83,46 @@ export function BodyfitVoiceFeedback({
   const startListening = () => {
     setPartial("");
     setMessage(null);
+    applyComfort.reset();
     listen.mutate(
-      {},
+      { profileId: profile.id },
       {
-        onSuccess: ({ interpretation }) => {
-          if (interpretation.nudges.length > 0) {
-            dispatch(feedbackProposed(interpretation));
+        onSuccess: (result) => {
+          const reply =
+            result.kind === "seat"
+              ? result.interpretation.reply
+              : result.kind === "comfort"
+                ? result.plan.reply
+                : result.reply;
+          if (
+            result.kind === "seat" &&
+            result.interpretation.nudges.length > 0
+          ) {
+            dispatch(feedbackProposed(result.interpretation));
+          } else if (
+            result.kind === "comfort" &&
+            result.plan.items.length > 0
+          ) {
+            dispatch(comfortProposed(result.plan));
           } else {
-            setMessage({ text: interpretation.reply, done: false });
+            setMessage({ text: reply, done: false });
           }
-          void speakQuietly(interpretation.reply);
+          void speakQuietly(reply);
         },
       },
     );
+  };
+
+  // 온도 조절안도 음성에서 왔다: 바뀔 값을 화면에 보여 주고 운전자가 누른 뒤에만 차량에 보낸다. 네이티브가 기어 P 를 다시 확인한다.
+  const applyPendingComfort = () => {
+    if (!pendingComfort) return;
+    applyComfort.mutate(pendingComfort.changes, {
+      onSuccess: () => {
+        dispatch(comfortDismissed());
+        setMessage({ text: "말씀하신 대로 온도를 맞췄어요", done: true });
+        void speakQuietly("말씀하신 대로 온도를 맞췄어요");
+      },
+    });
   };
 
   // 음성 결과는 신뢰하지 않는 입력이다: 조절안을 화면에 보여 주고 운전자가 확인 창에서 고른 뒤에만 움직인다.
@@ -95,7 +143,11 @@ export function BodyfitVoiceFeedback({
   };
 
   const error = listen.error ?? move.error;
-  const errorCopy = error ? describeBodyfitError(error) : null;
+  const errorCopy = applyComfort.error
+    ? describeComfortError(applyComfort.error)
+    : error
+      ? describeBodyfitError(error)
+      : null;
 
   return (
     <Card>
@@ -114,7 +166,9 @@ export function BodyfitVoiceFeedback({
             불편한 곳이 있나요?
           </AppText>
           <AppText variant="secondary" tone="secondary">
-            말로 알려 주시면 조절안을 먼저 보여 드려요
+            {canControlComfort
+              ? "자세나 온도를 말로 알려 주시면 조절안을 먼저 보여 드려요"
+              : "말로 알려 주시면 조절안을 먼저 보여 드려요"}
           </AppText>
         </View>
       </View>
@@ -148,6 +202,59 @@ export function BodyfitVoiceFeedback({
             />
           </View>
         </View>
+      ) : pendingComfort ? (
+        // 음성으로 만든 온도 조절안. 운전자가 누르기 전에는 바꾸지 않는다.
+        <View style={[styles.box, styles.proposal]}>
+          <AppText variant="caption" tone="tertiary">
+            이렇게 바꿀까요?
+          </AppText>
+          {pendingComfort.items.map(({ key, from, to }) => (
+            <View
+              key={key}
+              style={styles.change}
+              accessible
+              accessibilityLabel={
+                comfortState
+                  ? `${comfortItemLabel(key)}, 지금 ${describeComfortValue(key, from, comfortState)}에서 ${describeComfortValue(key, to, comfortState)}`
+                  : comfortItemLabel(key)
+              }
+            >
+              <AppText variant="secondary" tone="secondary">
+                {comfortItemLabel(key)}
+              </AppText>
+              {comfortState ? (
+                <AppText variant="bodyStrong">
+                  {describeComfortValue(key, from, comfortState)} →{" "}
+                  {describeComfortValue(key, to, comfortState)}
+                </AppText>
+              ) : null}
+            </View>
+          ))}
+          <AppText variant="secondary" tone="secondary">
+            {pendingComfort.reply}
+          </AppText>
+          {!parked ? (
+            <AppText variant="secondary" tone="secondary">
+              차를 세우고 기어를 P로 바꾸면 맞출 수 있어요
+            </AppText>
+          ) : null}
+          <View style={styles.actions}>
+            <Button
+              label="취소하기"
+              variant="secondary"
+              onPress={() => dispatch(comfortDismissed())}
+              disabled={applyComfort.isPending}
+            />
+            <Button
+              label="이대로 맞추기"
+              variant="secondary"
+              onPress={applyPendingComfort}
+              disabled={!parked}
+              loading={applyComfort.isPending}
+              accessibilityHint="보여 드린 대로 열선과 온도, 바람을 바꿔요"
+            />
+          </View>
+        </View>
       ) : listen.isPending ? (
         <View
           style={[styles.box, styles.listening]}
@@ -173,7 +280,9 @@ export function BodyfitVoiceFeedback({
       ) : (
         <>
           <AppText variant="caption" tone="tertiary">
-            예: “허리가 불편해”, “조금 더 낮게”
+            {canControlComfort
+              ? "예: “허리가 불편해”, “추워요”, “핸들 열선 켜 줘”"
+              : "예: “허리가 불편해”, “조금 더 낮게”"}
           </AppText>
           <View style={styles.actions}>
             <Button
@@ -220,6 +329,14 @@ const useStyles = themedStyles((colors) => ({
   proposal: { backgroundColor: colors.fill },
   status: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   statusText: { flexShrink: 1 },
+  // 바뀔 항목 한 줄: 이름과 "지금 → 바뀔 값". 좁은 창에서는 값이 아래로 내려간다.
+  change: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    columnGap: spacing.md,
+  },
   // 터치 대상 사이는 최소 24dp
   actions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
 }));

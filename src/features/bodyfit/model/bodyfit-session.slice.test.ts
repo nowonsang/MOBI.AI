@@ -2,10 +2,12 @@ import {
   bodyfitSessionSlice,
   driveContextSelected,
   driverSelected,
+  comfortProposed,
   feedbackProposed,
   occupantChanged,
   selectActiveDriverId,
   selectDriveContext,
+  selectPendingComfort,
   selectPendingFeedback,
 } from "./bodyfit-session.slice";
 
@@ -29,6 +31,40 @@ describe("bodyfitSessionSlice", () => {
 
     expect(selectActiveDriverId(root(state))).toBeNull();
     expect(selectPendingFeedback(root(state))).toBeNull();
+  });
+});
+
+describe("bodyfitSessionSlice: 음성 온도 조절안 (E-4)", () => {
+  const plan = {
+    changes: { cabinTarget: 23 },
+    items: [{ key: "cabinTarget" as const, from: 22, to: 23 }],
+    reply: "실내 온도를 23도로 올릴게요",
+  };
+  const seat = {
+    nudges: [
+      {
+        axis: "backrest" as const,
+        direction: "increase" as const,
+        amount: "small" as const,
+      },
+    ],
+    reply: "등받이를 조금 세워 볼게요",
+  };
+
+  it("시트 조절안과 온도 조절안은 나중에 말한 하나만 남는다", () => {
+    let state = reduce(undefined, feedbackProposed(seat));
+    state = reduce(state, comfortProposed(plan));
+    expect(selectPendingComfort(root(state))).toEqual(plan);
+    expect(selectPendingFeedback(root(state))).toBeNull();
+
+    state = reduce(state, feedbackProposed(seat));
+    expect(selectPendingComfort(root(state))).toBeNull();
+  });
+
+  it("운전석에 앉은 사람이 바뀌면 온도 조절안도 잊는다", () => {
+    let state = reduce(undefined, comfortProposed(plan));
+    state = reduce(state, occupantChanged());
+    expect(selectPendingComfort(root(state))).toBeNull();
   });
 });
 

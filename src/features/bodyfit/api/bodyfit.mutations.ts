@@ -1,14 +1,20 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { canControlComfort } from "@/shared/config/app-variant";
 import { pleos } from "@/shared/pleos/pleos";
 
 import {
   planAutoAdjust,
   type AutoAdjustStep,
 } from "../model/bodyfit-auto-adjust";
-import { toComfortRecord } from "../model/bodyfit-comfort";
+import { recommendComfort, toComfortRecord } from "../model/bodyfit-comfort";
 import { interpretByRules } from "../model/bodyfit-feedback";
 import { recommendBaseline } from "../model/bodyfit-recommend";
+import {
+  interpretVoiceRequest,
+  planVoiceComfort,
+  type VoiceComfortPlan,
+} from "../model/bodyfit-voice-comfort";
 import {
   applyNudges,
   toSeatRatios,
@@ -20,11 +26,12 @@ import type {
   ComfortSettings,
   DriveContext,
   DriveSession,
+  FeedbackInterpretation,
   SeatAdjustmentSource,
   SeatNudge,
   SeatRatios,
 } from "../model/bodyfit.types";
-import { bodyfitKeys } from "./bodyfit.queries";
+import { bodyfitKeys, bodyfitQueries } from "./bodyfit.queries";
 import {
   createBodyProfile,
   createComfortRecord,
@@ -211,6 +218,43 @@ export function useVoiceSeatFeedback() {
       return {
         utterance,
         interpretation: interpretByRules(utterance),
+      };
+    },
+  });
+}
+
+export type VoiceAdjustment =
+  | { kind: "seat"; interpretation: FeedbackInterpretation }
+  | { kind: "comfort"; plan: VoiceComfortPlan }
+  | { kind: "none"; reply: string };
+
+/**
+ * 운전자의 말을 듣고 시트 조절안이나 온도 조절안으로 바꾼다 (E-4). 여기서는 아무것도 움직이거나 바꾸지 않는다.
+ * 온도 조절안은 방금 읽은 차량 상태로 만든다 (운전자가 공조 버튼으로 바꿨을 수 있다).
+ * 온도를 맞출 수 없는 빌드(market)에서는 시트 해석만 한다.
+ */
+export function useVoiceAdjustment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      profileId,
+    }: {
+      profileId: string;
+    }): Promise<VoiceAdjustment> => {
+      const utterance = await pleos().listen();
+      const request = interpretVoiceRequest(utterance, {
+        comfort: canControlComfort,
+      });
+      if (request.kind !== "comfort") return request;
+      const [state, records] = await Promise.all([
+        queryClient.fetchQuery(bodyfitQueries.comfort()),
+        queryClient.fetchQuery(bodyfitQueries.comfortRecords(profileId)),
+      ]);
+      const usual =
+        recommendComfort(records, state.cabinCurrent ?? null)?.settings ?? null;
+      return {
+        kind: "comfort",
+        plan: planVoiceComfort(request.requests, state, usual),
       };
     },
   });
