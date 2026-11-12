@@ -243,7 +243,11 @@ function toRequest(
   }
 }
 
-type ComfortKey = keyof ComfortSettings;
+// 말로는 온도 항목만 바꾼다. 무드등은 온도 이야기가 아니라 음성 조절안에 넣지 않는다.
+type ComfortKey = Exclude<
+  keyof ComfortSettings,
+  "ambientOn" | "ambientBrightness" | "ambientColor"
+>;
 
 export type VoiceComfortItem = {
   key: ComfortKey;
@@ -282,6 +286,11 @@ const LABELS: Record<
     name: "바람 방향",
     object: "바람 방향을",
     topic: "바람 방향은",
+  },
+  mirrorHeat: {
+    name: "사이드미러 열선",
+    object: "사이드미러 열선을",
+    topic: "사이드미러 열선은",
   },
 };
 
@@ -420,7 +429,14 @@ export function planVoiceComfort(
       case "usual":
         if (!usual) note(NO_RECORDS_REPLY);
         else {
-          usualChanges = comfortChanges(state, usual);
+          // 화면에 보여 주는 항목만 바꾼다 (무드등은 "평소 온도"에 넣지 않는다).
+          const all = comfortChanges(state, usual);
+          usualChanges = {};
+          for (const key of Object.keys(LABELS) as ComfortKey[]) {
+            const value = all[key];
+            if (value !== undefined)
+              (usualChanges as Record<string, unknown>)[key] = value;
+          }
           if (Object.keys(usualChanges).length === 0) note(SAME_AS_USUAL_REPLY);
         }
         break;

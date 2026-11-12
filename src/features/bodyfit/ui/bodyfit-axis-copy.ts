@@ -77,6 +77,7 @@ export const AXIS_COPY: Record<SeatAxis, AxisCopy> = {
   },
   lumbar: {
     label: "허리 지지대",
+    glyph: "⇔",
     min: "넣음",
     max: "내밈",
     guide: { increase: "내밀어 주세요", decrease: "넣어 주세요" },
@@ -84,6 +85,7 @@ export const AXIS_COPY: Record<SeatAxis, AxisCopy> = {
   },
   headrestAngle: {
     label: "헤드레스트 각도",
+    glyph: "∠",
     min: "뒤로",
     max: "앞으로",
     guide: { increase: "앞으로 세워 주세요", decrease: "뒤로 젖혀 주세요" },
