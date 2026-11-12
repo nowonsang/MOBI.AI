@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 
 import { useAppSelector } from "@/core/store/hooks";
 import { canUseDemoMode } from "@/shared/config/app-variant";
@@ -16,7 +16,8 @@ import { IconBadge } from "@/shared/ui/icon-badge";
 import { InfoRow } from "@/shared/ui/info-row";
 import { Screen } from "@/shared/ui/screen";
 import { StatusView } from "@/shared/ui/status-view";
-import { colors, radius, spacing } from "@/shared/ui/theme";
+import { radius, spacing } from "@/shared/ui/theme";
+import { themedStyles } from "@/shared/ui/use-theme";
 
 import { useRecordSeatAdjustment } from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
@@ -78,6 +79,7 @@ function describeAxis({ axis, status, direction, far }: AxisGuide): string {
  * 시트를 움직이는 쪽은 운전자이므로 시트 제어 권한 없이 동작한다.
  */
 export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
+  const styles = useStyles();
   const router = useRouter();
   const vehicleConnected = isPleosAvailable();
   const profile = useQuery(bodyfitQueries.profile(profileId));
@@ -349,7 +351,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   skeleton: {
     height: 320,
     borderRadius: radius.card,
@@ -380,4 +382,4 @@ const styles = StyleSheet.create({
   },
   // 지금 맞출 축은 옅은 파란 면과 번호 원 색으로 함께 표시한다.
   stepActive: { backgroundColor: colors.primaryTint },
-});
+}));

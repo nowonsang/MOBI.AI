@@ -1,7 +1,8 @@
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, View } from "react-native";
 
 import { AppText } from "./app-text";
-import { colors, radius, sizes, spacing } from "./theme";
+import { radius, sizes, spacing } from "./theme";
+import { themedStyles } from "./use-theme";
 
 type ChipOption<T extends string> = { value: T; label: string };
 
@@ -20,6 +21,7 @@ export function ChipGroup<T extends string>({
   selected,
   onSelect,
 }: ChipGroupProps<T>) {
+  const styles = useStyles();
   return (
     <View
       style={styles.group}
@@ -73,6 +75,7 @@ export function ToggleChip({
   glyph,
   shape = "pill",
 }: ToggleChipProps) {
+  const styles = useStyles();
   const text = glyph ? `${glyph} ${label}` : label;
   return (
     <Pressable
@@ -97,7 +100,7 @@ export function ToggleChip({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   // 터치 대상 사이는 최소 24dp
   group: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   chip: {
@@ -119,4 +122,4 @@ const styles = StyleSheet.create({
   idle: { backgroundColor: colors.fill },
   // Pleos 인터랙션 가이드: 눌린 요소는 95% 로 줄인다.
   pressed: { transform: [{ scale: 0.95 }] },
-});
+}));

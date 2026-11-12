@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 
 import { useAppDispatch, useAppSelector } from "@/core/store/hooks";
 import { isPleosAvailable } from "@/shared/pleos/pleos";
@@ -14,7 +14,8 @@ import { ToggleChip } from "@/shared/ui/chip";
 import { Columns } from "@/shared/ui/columns";
 import { Screen } from "@/shared/ui/screen";
 import { StatusView } from "@/shared/ui/status-view";
-import { colors, radius, spacing } from "@/shared/ui/theme";
+import { radius, spacing } from "@/shared/ui/theme";
+import { themedStyles } from "@/shared/ui/use-theme";
 
 import { useRecordSeatAdjustment } from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
@@ -59,6 +60,7 @@ export function BodyfitFeedbackScreen({
   /** 주행이 끝나 뜬 질문이면 그 주행을 출발할 때의 상황. 운전자가 직접 열었으면 null */
   drivenContext: DriveContext | null;
 }) {
+  const styles = useStyles();
   const router = useRouter();
   const dispatch = useAppDispatch();
   const vehicleConnected = isPleosAvailable();
@@ -249,7 +251,7 @@ export function BodyfitFeedbackScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   skeleton: {
     height: 320,
     borderRadius: radius.card,
@@ -267,4 +269,4 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: colors.fill,
   },
-});
+}));

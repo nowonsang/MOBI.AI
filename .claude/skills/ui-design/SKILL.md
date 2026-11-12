@@ -17,7 +17,7 @@ description: MOBI.AI 차량 앱 디자인 규칙(현대자동차 공모전, Pleo
 | 공모전 | **디자인 규정 없음** | 공모전 사이트(appdevchallenge.auto-hmg.io) 접수·심사·FAQ·유의사항 확인 (2026-11-10). 심사 항목 중 차량특화성("주행·정차 맥락 및 차량 기능과 유기적으로 결합")과 기술 활용성("핵심 기능과 사용 경험에 적절히 활용")이 디자인과 관련된다. 2차 PT 심사 기준은 아직 공개되지 않았다 |
 
 **토큰은 `src/shared/ui/theme.ts` 에 있다.** 컴포넌트에서 색·크기를 직접 정하지 말고 토큰(`colors.*`, `typography.*`, `spacing.*`, `sizes.*`, `radius.*`, `layout.*`)만 쓴다. 이 파일 밖의 임의 색상(`"#..."`, `"rgb(...)"`)은 ESLint 에러다.
-공용 컴포넌트(`src/shared/ui/`): `AppText`, `Button`, `TextField`, `Screen`, `Columns`, `StatusView`, `Card`·`SummaryCard`, `InfoRow`, `IconBadge`, `ChipGroup`·`ToggleChip`, `ConfirmDialog`. 새 화면은 이것부터 쓴다.
+공용 컴포넌트(`src/shared/ui/`): `AppText`, `Button`, `TextField`, `Screen`, `Columns`, `StatusView`, `Card`·`SummaryCard`, `InfoRow`, `IconBadge`, `ChipGroup`·`ToggleChip`, `ConfirmDialog`. 새 화면은 이것부터 쓴다. 색은 주간·야간 두 세트라 `themedStyles`·`useColors` 로 읽는다 (1-3장).
 
 ## 1. 차량 화면 크기와 배치
 
@@ -60,13 +60,29 @@ description: MOBI.AI 차량 앱 디자인 규칙(현대자동차 공모전, Pleo
 
 ## 1-3. 주간·야간
 
-- Pleos 가이드는 주간·야간 밝기·대비 자동 조정을 **권장**한다. 지금 앱은 라이트만 지원한다 (`userInterfaceStyle: "light"`). **2차 PT(12/3~4) 전에 도입**하기로 정했다 (2026-11-11). 11/15 제출은 라이트만으로 한다 (`docs/todo.md`).
-- 도입 전이라도 지금부터 지킨다 (야간 색을 넣을 때 고칠 곳을 줄인다):
-  - 색은 `colors` 토큰으로만 쓴다 (ESLint 로 강제됨).
-  - 이미지·아이콘은 투명 배경 PNG 로 넣는다. 흰 배경을 이미지에 박아 넣지 않는다.
-- 도입할 때:
-  - `app.config.ts` 를 `userInterfaceStyle: "automatic"` 으로 바꾸고, `theme.ts` 에 야간 색 세트를 추가해 시스템 색 모드(`useColorScheme()`)로 고른다. Android Automotive 는 차량의 주간·야간 상태를 시스템 다크 모드로 넘겨준다. Pleos 에뮬레이터에서 실제로 바뀌는지 먼저 확인한다.
-  - 야간에는 넓은 밝은 면을 쓰지 않는다 (운전자 눈부심). 대비 4.5:1 이상은 그대로 지킨다.
+- 앱은 시스템 색 모드를 따라 주간·야간 색 세트를 자동으로 바꾼다 (`app.config.ts` 의 `userInterfaceStyle: "automatic"`, 2026-11-12 도입). Android Automotive 는 차량의 주간·야간 상태를 시스템 다크 모드로 넘겨준다. 사용자가 직접 고르는 설정은 없다.
+- 색 세트는 `theme.ts` 의 `palettes.day`·`palettes.night` 다. 토큰 이름은 같고 값만 다르다. **색을 모듈 최상위에서 고정해 쓰지 않는다** (`colors` 를 직접 import 할 수 없다). `src/shared/ui/use-theme.ts` 로 읽는다:
+
+  ```tsx
+  const useStyles = themedStyles((colors) => ({
+    box: { backgroundColor: colors.surface, borderRadius: radius.card },
+  }));
+
+  export function Box() {
+    const styles = useStyles(); // 차량이 주간·야간을 바꾸면 다시 렌더된다
+    const colors = useColors(); // 스타일 밖에서 색이 필요할 때만 (ActivityIndicator, placeholder)
+    ...
+  }
+  ```
+
+- 야간 색 원칙:
+  - 넓은 밝은 면을 쓰지 않는다 (운전자 눈부심). 화면 바탕 `surfaceMuted` #0E1116, 카드 `surface` #1A1F27, 칩 `fill` #2A313C. 글자 `ink` 는 순백이 아닌 #E6E9EE.
+  - 강조·상태 색(`primary` #5C9DFF, `success` #57C785, `danger` #F28B82, `warning` #E5A94B)은 어두운 면 위 글자로도 4.5:1 이 나오게 밝은 톤으로 바뀐다. 그래서 그 면 위 글자 `onPrimary` 는 야간에 어두운 색(#0B1220)이다. **색 면 위 글자는 `colors.surface` 가 아니라 `onPrimary`(`AppText tone="inverse"`)를 쓴다.**
+  - 확인 창 뒤를 가리는 막은 `scrim` 토큰.
+- 색을 바꾸거나 새 조합(글자색·바탕색)을 쓰면 `src/shared/ui/theme.test.ts` 의 조합 목록에 넣는다. 두 세트 모두 4.5:1 이상인지 테스트가 검사한다.
+- 앱이 뜨기 전의 색은 `app.config.ts` 가 맡는다: 창 바탕(`backgroundColor` + `values-night` 의 `activityBackground`), 시작 화면(`expo-splash-screen` 의 `dark`). 값은 `surfaceMuted` 의 주간·야간 값과 같게 둔다. 바꾸면 prebuild 로 다시 만들어야 반영된다.
+- 이미지·아이콘은 투명 배경 PNG 로 넣는다. 흰 배경을 이미지에 박아 넣지 않는다. 운전석 그림(밝은 회색 시트)은 야간 카드 위에서도 그대로 쓴다.
+- Pleos 에뮬레이터에서 주간·야간 전환 확인은 아직 하지 못했다 (`docs/todo.md`).
 
 ## 2. 주행 중 제약 (안전)
 
@@ -93,7 +109,7 @@ description: MOBI.AI 차량 앱 디자인 규칙(현대자동차 공모전, Pleo
 
 ## 4. 색 (마이현대 앱 기반)
 
-| 토큰 (`colors.`) | 값 | 용도 | 금지 |
+| 토큰 (`colors.`) | 주간 값 | 용도 | 금지 |
 | --- | --- | --- | --- |
 | `primary` | #1570EF (밝은 파랑) | 주 CTA 배경, 선택 상태, 요약 카드, 추천 위치 표시 | 넓은 배경 면 |
 | `primaryStrong` | #0F5BD0 | 주 CTA 눌림 | — |
@@ -104,17 +120,19 @@ description: MOBI.AI 차량 앱 디자인 규칙(현대자동차 공모전, Pleo
 | `inkSecondary` | #4B5563 | 보조 본문 | — |
 | `inkTertiary` | #5F6673 | 설명·캡션 | 이보다 옅은 색으로 정보 전달 금지 |
 | `inkDisabled` | #9CA3AF | 비활성·placeholder, 막대의 "지금" 점 | **본문·정보 텍스트** |
-| `surface` | #FFFFFF | 카드·입력칸, 주 CTA 위 글자 | — |
+| `onPrimary` | #FFFFFF | `primary`·`success`·`warning` 면 위 글자 (`tone="inverse"`) | 일반 바탕 위 글자 |
+| `surface` | #FFFFFF | 카드·입력칸 | 색 면 위 글자 (야간에 어두워진다) |
 | `surfaceMuted` | #F4F5F7 | 화면 바탕, 스켈레톤, 눌림 | — |
 | `fill` | #EEF0F3 | 고르지 않은 칩, 개수 표시, 막대 바탕 | — |
 | `surfaceDark` | #1C1B1B | 다크 섹션 | — |
 | `line` / `lineStrong` | #E5E7EB / #D1D5DB | 카드 안 구분선 / 보조 버튼·입력칸 테두리 | — |
+| `scrim` | 60% 어두운 막 | 확인 창 뒤 화면 가리기 | — |
 | `danger` / `success` / `warning` | #D32F2F / #15803D / #B26A00 | 상태 표시 | 장식 |
 
 - **화면 색 비율**: 옅은 회색 바탕(`surfaceMuted`) 위에 흰 카드가 대부분, 글자는 `ink` 계열, `primary` 는 CTA·선택 상태·요약 카드처럼 작은 면적에만.
 - 대비: 본문 4.5:1 이상 (WCAG AA). `primary`·`success` 위 흰 글자는 4.5:1 이상이 되는 값으로 골랐다. 색을 바꾸면 대비를 다시 계산한다.
 - 이전 규칙(Hyundai Blue #002C5F, 샌드 계열, 그림자 없음)은 2026-11-10 에 마이현대 앱 모양으로 바꿨다. 글자·터치 크기 규칙(1장)은 그대로다.
-- 다크 모드는 현재 범위 밖이다 (`userInterfaceStyle: "light"`). 야간 대응 규칙과 도입 방법은 1-3장.
+- 위 표는 주간 값이다. 야간 값과 원칙은 1-3장.
 
 ## 5. 타이포그래피 (`typography.`)
 
@@ -188,7 +206,7 @@ description: MOBI.AI 차량 앱 디자인 규칙(현대자동차 공모전, Pleo
 ## 11. 완료 체크리스트 (UI 작업)
 
 - [ ] Pleos Connect 에뮬레이터(가로형 차량 화면)에서 확인했다 (가로 스크롤 없음, 글자 잘림 없음)
-- [ ] 색·글자 크기·간격은 토큰만 썼다 (`npm run lint` 통과)
+- [ ] 색·글자 크기·간격은 토큰만 썼다 (`npm run lint` 통과). 색은 `themedStyles`·`useColors` 로 읽었고 야간에서도 읽힌다
 - [ ] 터치 대상 76dp 이상, 주요 글자 32dp·보조 글자 24dp 이상
 - [ ] 화면당 주 CTA 1개, 요약 카드(파란 면) 1개 이하
 - [ ] 로딩(0.25초 안에 끝나지 않으면 스켈레톤·`loading`)·실패·빈 상태를 모두 만들었다

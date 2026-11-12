@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 
 import { useAppDispatch, useAppSelector } from "@/core/store/hooks";
 import { canControlSeat, canUseVoice } from "@/shared/config/app-variant";
@@ -18,7 +18,8 @@ import { IconBadge } from "@/shared/ui/icon-badge";
 import { InfoRow } from "@/shared/ui/info-row";
 import { Screen } from "@/shared/ui/screen";
 import { StatusView } from "@/shared/ui/status-view";
-import { colors, radius, spacing } from "@/shared/ui/theme";
+import { radius, spacing } from "@/shared/ui/theme";
+import { themedStyles } from "@/shared/ui/use-theme";
 
 import {
   useDeleteBodyProfile,
@@ -103,6 +104,7 @@ const formatDay = (at: number) => {
 };
 
 export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
+  const styles = useStyles();
   const router = useRouter();
   const dispatch = useAppDispatch();
   const context = useAppSelector(selectDriveContext);
@@ -432,7 +434,7 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   skeleton: {
     height: 320,
     borderRadius: radius.card,
@@ -459,4 +461,4 @@ const styles = StyleSheet.create({
   context: { gap: spacing.xs },
   records: { gap: spacing.xs },
   manage: { alignItems: "flex-start" },
-});
+}));

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, View } from "react-native";
 
 import { AppText } from "@/shared/ui/app-text";
 import { Card } from "@/shared/ui/card";
@@ -9,7 +9,8 @@ import { IconBadge } from "@/shared/ui/icon-badge";
 import { InfoRow } from "@/shared/ui/info-row";
 import { Screen } from "@/shared/ui/screen";
 import { StatusView } from "@/shared/ui/status-view";
-import { colors, radius, sizes, spacing } from "@/shared/ui/theme";
+import { radius, sizes, spacing } from "@/shared/ui/theme";
+import { themedStyles } from "@/shared/ui/use-theme";
 
 import { bodyfitQueries } from "../api/bodyfit.queries";
 import { describeBodyfitError } from "./bodyfit-error-copy";
@@ -17,6 +18,7 @@ import { BodyfitSeatImage } from "./bodyfit-seat-image";
 
 // 탑승 단계 (A-1·A-2): 운전자를 고르면 바로 맞춤 자세로 간다.
 export function BodyfitDriverListScreen() {
+  const styles = useStyles();
   const router = useRouter();
   const profiles = useQuery(bodyfitQueries.profiles());
   const goToNew = () => router.push("/bodyfit/new");
@@ -112,7 +114,7 @@ export function BodyfitDriverListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   banner: { gap: spacing.xs },
   // 터치 대상 사이는 최소 24dp
   rows: { gap: spacing.md },
@@ -135,4 +137,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
     transform: [{ scale: 0.98 }],
   },
-});
+}));

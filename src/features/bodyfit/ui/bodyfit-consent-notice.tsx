@@ -1,7 +1,8 @@
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, View } from "react-native";
 
 import { AppText } from "@/shared/ui/app-text";
-import { colors, radius, sizes, spacing } from "@/shared/ui/theme";
+import { radius, sizes, spacing } from "@/shared/ui/theme";
+import { themedStyles } from "@/shared/ui/use-theme";
 
 // Pleos 심사 가이드: 수집 항목·처리 목적·보유 기간·동의 거부 권리를 알리고 명시적인 동의를 받는다.
 // 필수 동의는 등록 버튼("동의하고 등록하기")으로만 받는다. 다른 동작을 동의로 보지 않는다.
@@ -27,6 +28,7 @@ export function BodyfitConsentNotice({
   voiceConsent,
   onVoiceConsentChange,
 }: Props) {
+  const styles = useStyles();
   return (
     <View style={styles.container}>
       <View style={styles.notice}>
@@ -77,7 +79,7 @@ export function BodyfitConsentNotice({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   container: { gap: spacing.md },
   // 항목 사이(md)는 띄우고, 항목 이름과 내용(xs)은 붙여서 묶음이 보이게 한다.
   notice: {
@@ -108,4 +110,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   boxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
-});
+}));

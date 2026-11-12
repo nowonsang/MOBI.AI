@@ -143,7 +143,7 @@ src/
     ├── pleos/                차량 SDK 접근 창구 (pleos.ts, pleos.types.ts, use-gear, use-ux-restrictions, use-pleos-event)
     ├── storage/              기기 저장 값 암호화 (encrypted-storage.ts)
     ├── config/               빌드 종류별 기능 (app-variant.ts: contest/market)
-    └── ui/                   디자인 토큰(theme.ts)과 공용 컴포넌트(Screen, Columns, Card, InfoRow, IconBadge, Chip, Button, TextField, StatusView)
+    └── ui/                   디자인 토큰(theme.ts, 주간·야간 색 세트), 색을 읽는 훅(use-theme.ts)과 공용 컴포넌트(Screen, Columns, Card, InfoRow, IconBadge, Chip, Button, TextField, StatusView)
 scripts/                      개발 도구 (비밀 검사, env 권한, 마이그레이션 검사, Supabase 점검)
 scripts/android/              Android 스크립트 (점검·기기 목록·prebuild·빌드·에뮬레이터·실기기 실행, 공용 lib.mjs)
 ANDROID_SETUP.md              Android Studio 설치부터 실행까지 매뉴얼
@@ -158,7 +158,7 @@ app → core → features → shared → native(modules/*)
 
 - 서비스끼리 import 금지, features 는 core 중 `@/core/store/hooks` 만.
 - 네이티브 모듈은 `src/shared/pleos/*` 만 import 한다. `model` 과 테스트는 네이티브를 부르지 않는 `pleos.types.ts` 만 쓴다.
-- 색은 `src/shared/ui/theme.ts` 토큰만 (임의 색상은 ESLint 에러).
+- 색은 `src/shared/ui/theme.ts` 토큰만 (임의 색상은 ESLint 에러). 주간·야간 두 세트라 `StyleSheet.create` 대신 `themedStyles((colors) => ({...}))` 로 스타일을 만들고 컴포넌트에서 `const styles = useStyles()` 로 읽는다 (`src/shared/ui/use-theme.ts`).
 
 ## 상태 책임
 

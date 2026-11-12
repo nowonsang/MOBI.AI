@@ -2,15 +2,18 @@
  * MOBI.AI 디자인 토큰. 사용 규칙: .claude/skills/ui-design/SKILL.md
  * 모양은 마이현대 앱(밝은 파랑 강조, 둥근 흰 카드, 연한 그림자)을 따르고, 크기는 Android for Cars 설계 지침(차량 디스플레이),
  * UX 행동 규칙은 토스 사례 기반. 컴포넌트에는 이 토큰만 쓴다. 이 파일 밖의 임의 색상(#..., rgb())은 ESLint 에러다.
+ * 색은 주간·야간 두 세트라 모듈 최상위에서 고정해 쓰지 않는다. use-theme.ts 의 훅으로 읽는다.
  */
 
-export const colors = {
+// 주간 색. 마이현대 앱 모양 그대로다.
+const dayColors = {
   /* 브랜드 */
   primary: "#1570EF", // 밝은 파랑: 주 CTA·선택 상태·요약 카드 (흰 글자 대비 4.6:1)
   primaryStrong: "#0F5BD0", // 주 CTA 눌림
   primaryTint: "#E8F1FE", // 옅은 파랑: 아바타·진행 중인 행 배경
   accent: "#0F5BD0", // 링크·보조 강조·포커스
   highlight: "#00AAD2", // Sky Blue: 장식 전용, 글자색 금지
+  onPrimary: "#FFFFFF", // primary·success·warning 면 위 글자 (AppText tone="inverse")
 
   /* 글자 */
   ink: "#111827", // 제목·본문
@@ -25,12 +28,58 @@ export const colors = {
   surfaceDark: "#1C1B1B",
   line: "#E5E7EB", // 카드 안 구분선
   lineStrong: "#D1D5DB", // 보조 버튼·입력칸 테두리
+  scrim: "rgba(17, 24, 39, 0.6)", // 확인 창 뒤 화면을 가리는 막
 
   /* 상태 */
   danger: "#D32F2F",
   success: "#15803D", // 흰 글자 대비 5.0:1
   warning: "#B26A00",
 } as const;
+
+export type ColorToken = keyof typeof dayColors;
+export type Colors = Record<ColorToken, string>;
+
+// 야간 색. 넓은 밝은 면을 없애 운전자 눈부심을 막는다 (ui-design 스킬 1-3장).
+// 강조·상태 색은 어두운 면 위에서 글자로도 4.5:1 이 나오게 밝은 톤으로 바꾸고,
+// 그 면 위 글자(onPrimary)는 어두운 색으로 뒤집는다. 대비는 theme.test.ts 가 검사한다.
+const nightColors: Colors = {
+  primary: "#5C9DFF",
+  primaryStrong: "#4688EE",
+  primaryTint: "#172A46",
+  accent: "#8AB8FF",
+  highlight: "#00AAD2",
+  onPrimary: "#0B1220",
+
+  ink: "#E6E9EE", // 순백을 쓰지 않는다 (눈부심)
+  inkSecondary: "#B4BBC6",
+  inkTertiary: "#98A1AE",
+  inkDisabled: "#6B7482",
+
+  surface: "#1A1F27",
+  surfaceMuted: "#0E1116",
+  fill: "#2A313C",
+  surfaceDark: "#1C1B1B",
+  line: "#2A313C",
+  lineStrong: "#3D4654",
+  scrim: "rgba(0, 0, 0, 0.7)",
+
+  danger: "#F28B82",
+  success: "#57C785",
+  warning: "#E5A94B",
+};
+
+export type ColorScheme = "day" | "night";
+
+/** 주간·야간 색 세트. 컴포넌트는 use-theme.ts 의 useColors()·themedStyles() 로 읽는다. */
+export const palettes: Record<ColorScheme, Colors> = {
+  day: dayColors,
+  night: nightColors,
+};
+
+/** 시스템 색 모드 → 색 세트. Android Automotive 는 차량의 주간·야간 상태를 시스템 다크 모드로 넘겨준다. */
+export function colorSchemeFor(system: string | null | undefined): ColorScheme {
+  return system === "dark" ? "night" : "day";
+}
 
 // 차량 디스플레이 기준 글자 크기(dp). 주요 글자 32 이상, 보조 글자 24 이상 (Android for Cars 지침).
 export const typography = {

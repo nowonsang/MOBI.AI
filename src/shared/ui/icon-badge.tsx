@@ -1,7 +1,8 @@
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 
 import { AppText } from "./app-text";
-import { colors, radius, sizes } from "./theme";
+import { radius, sizes, type ColorToken } from "./theme";
+import { themedStyles, useColors } from "./use-theme";
 
 type Tone = "default" | "tint" | "muted" | "primary" | "success" | "warning";
 
@@ -12,18 +13,23 @@ type IconBadgeProps = {
   tone?: Tone;
 };
 
-const toneStyle: Record<Tone, { backgroundColor: string; color: string }> = {
-  default: { backgroundColor: colors.surface, color: colors.inkSecondary },
-  tint: { backgroundColor: colors.primaryTint, color: colors.primary },
-  muted: { backgroundColor: colors.fill, color: colors.inkTertiary },
-  primary: { backgroundColor: colors.primary, color: colors.surface },
-  success: { backgroundColor: colors.success, color: colors.surface },
-  warning: { backgroundColor: colors.warning, color: colors.surface },
+// [원 바탕, 기호]
+const toneTokens: Record<Tone, [ColorToken, ColorToken]> = {
+  default: ["surface", "inkSecondary"],
+  tint: ["primaryTint", "primary"],
+  muted: ["fill", "inkTertiary"],
+  primary: ["primary", "onPrimary"],
+  success: ["success", "onPrimary"],
+  warning: ["warning", "onPrimary"],
 };
 
 // 행 앞에 두는 원형 아이콘. 뜻은 항상 옆 글자가 전하므로 스크린리더에서는 건너뛴다.
 export function IconBadge({ glyph, tone = "default" }: IconBadgeProps) {
-  const { backgroundColor, color } = toneStyle[tone];
+  const styles = useStyles();
+  const colors = useColors();
+  const [background, glyphColor] = toneTokens[tone];
+  const backgroundColor = colors[background];
+  const color = colors[glyphColor];
   return (
     <View
       style={[
@@ -41,7 +47,7 @@ export function IconBadge({ glyph, tone = "default" }: IconBadgeProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   badge: {
     width: sizes.iconBadge,
     height: sizes.iconBadge,
@@ -50,4 +56,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   outlined: { borderWidth: 1, borderColor: colors.line },
-});
+}));
