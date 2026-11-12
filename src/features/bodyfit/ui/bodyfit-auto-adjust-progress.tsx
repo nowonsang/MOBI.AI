@@ -1,14 +1,12 @@
 import { useEffect, useEffectEvent } from "react";
-import { View } from "react-native";
+import { View, useWindowDimensions } from "react-native";
 
 import { AppText } from "@/shared/ui/app-text";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 import { Columns } from "@/shared/ui/columns";
-import { IconBadge } from "@/shared/ui/icon-badge";
-import { InfoRow } from "@/shared/ui/info-row";
 import { Screen } from "@/shared/ui/screen";
-import { radius, spacing } from "@/shared/ui/theme";
+import { radius, shadows, spacing } from "@/shared/ui/theme";
 import { themedStyles } from "@/shared/ui/use-theme";
 
 import { useLiveDriverSeat } from "../api/bodyfit.seat-live";
@@ -22,6 +20,7 @@ import { toSeatRatios } from "../model/bodyfit-seat";
 import type { SeatAxis, SeatRatios } from "../model/bodyfit.types";
 import { describeBodyfitError } from "./bodyfit-error-copy";
 import { BodyfitSeatImage } from "./bodyfit-seat-image";
+import { BodyfitStepList, type BodyfitStep } from "./bodyfit-step-list";
 
 const AXIS_COPY: Record<
   SeatAxis,
@@ -148,6 +147,10 @@ export function BodyfitAutoAdjustProgress({
   onClose,
 }: BodyfitAutoAdjustProgressProps) {
   const styles = useStyles();
+  // 진행 문구와 멈추기가 한 화면에 함께 보이게 운전석 그림은 남는 높이만큼만 쓴다 (낮은 창에서는 뺀다).
+  const windowHeight = useWindowDimensions().height;
+  const pictureHeight =
+    windowHeight >= 1000 ? 240 : windowHeight >= 820 ? 150 : 0;
   // 실제 이동: 시트가 움직이는 동안 오는 위치 알림으로 "지금" 값을 따라간다.
   const seat = useLiveDriverSeat({ enabled: !run.demo });
   const current = run.demo
@@ -194,79 +197,49 @@ export function BodyfitAutoAdjustProgress({
           </View>
         ) : null}
       </Card>
-      <Card>
-        <BodyfitSeatImage height={240} />
-      </Card>
+      {pictureHeight > 0 ? (
+        <View style={styles.stage}>
+          <BodyfitSeatImage height={pictureHeight} />
+        </View>
+      ) : null}
     </>
   );
 
+  const stepItems: BodyfitStep[] = axes.map((axis, index) => {
+    const text = describeAxis(axis, !moving);
+    const label = AXIS_COPY[axis.axis].label;
+    return {
+      axis: axis.axis,
+      step: index + 1,
+      label,
+      value: text,
+      detail: `지금 ${percent(axis.current)}% · 목표 ${percent(axis.target)}%`,
+      accessibilityLabel: `${label}, ${text}, 지금 ${percent(axis.current)}퍼센트, 목표 ${percent(axis.target)}퍼센트`,
+      state:
+        axis.status === "done"
+          ? "done"
+          : axis.status === "moving"
+            ? "active"
+            : axis.status === "waiting"
+              ? "todo"
+              : "issue",
+      track: { current: axis.current, target: axis.target },
+    };
+  });
+
   // 움직일 축을 받기 전에는 스켈레톤을 보여 준다. 축 없이 끝났으면(자동 조절을 지원하지 않는 차량) 목록을 그리지 않는다.
+  // 축이 많아도 멈추기와 함께 한 화면에 들어오게 지금 움직이는 곳만 펼치고 나머지는 접는다.
   const steps =
     axes.length === 0 && !moving ? null : (
-      <Card title="축별 진행">
+      <Card title="움직이는 순서">
         {axes.length === 0 ? (
           <View style={styles.skeleton} accessibilityLabel="불러오는 중" />
         ) : (
-          <View style={styles.list}>
-            {axes.map((axis, index) => {
-              const text = describeAxis(axis, !moving);
-              const label = AXIS_COPY[axis.axis].label;
-              return (
-                <View
-                  key={axis.axis}
-                  style={[
-                    styles.step,
-                    axis.status === "moving" && styles.stepActive,
-                  ]}
-                >
-                  <InfoRow
-                    icon={
-                      <IconBadge
-                        glyph={
-                          axis.status === "done"
-                            ? "✓"
-                            : axis.status === "stopped" ||
-                                axis.status === "failed"
-                              ? "!"
-                              : `${index + 1}`
-                        }
-                        tone={
-                          axis.status === "done"
-                            ? "success"
-                            : axis.status === "moving"
-                              ? "primary"
-                              : axis.status === "waiting"
-                                ? "muted"
-                                : "warning"
-                        }
-                      />
-                    }
-                    label={label}
-                    value={text}
-                    detail={`지금 ${percent(axis.current)}% · 목표 ${percent(axis.target)}%`}
-                    accessibilityLabel={`${label}, ${text}, 지금 ${percent(axis.current)}퍼센트, 목표 ${percent(axis.target)}퍼센트`}
-                  />
-                  {/* 회색 점(지금)이 파란 점(목표)으로 다가간다. 값은 위의 숫자가 함께 전한다. */}
-                  <View style={styles.track} accessible={false}>
-                    <View
-                      style={[
-                        styles.marker,
-                        styles.current,
-                        { left: `${percent(axis.current)}%` },
-                      ]}
-                    />
-                    <View
-                      style={[
-                        styles.marker,
-                        styles.target,
-                        { left: `${percent(axis.target)}%` },
-                      ]}
-                    />
-                  </View>
-                </View>
-              );
-            })}
-          </View>
+          <BodyfitStepList
+            steps={stepItems}
+            doneNoun="맞춘 곳"
+            todoNoun={moving ? "남은 곳" : "움직이지 않은 곳"}
+          />
         )}
       </Card>
     );
@@ -296,9 +269,6 @@ export function BodyfitAutoAdjustProgress({
   );
 }
 
-const TRACK_HEIGHT = 8;
-const DOT = 28;
-
 const useStyles = themedStyles((colors) => ({
   // 넓은 창에서는 하단 줄을 다 채우고, 좁은 창에서는 Screen 이 폭에 맞춘다.
   action: { flexGrow: 1 },
@@ -325,32 +295,12 @@ const useStyles = themedStyles((colors) => ({
     borderRadius: radius.control,
     backgroundColor: colors.surfaceMuted,
   },
-  list: { gap: spacing.xs },
-  step: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.control,
+  // 그림은 꾸밈용이라 카드 제목·여백 없이 낮게 둔다.
+  stage: {
+    alignItems: "center",
+    padding: spacing.sm,
+    borderRadius: radius.card,
+    backgroundColor: colors.surface,
+    ...shadows.card,
   },
-  // 지금 움직이는 축은 옅은 파란 면과 번호 원 색으로 함께 표시한다.
-  stepActive: { backgroundColor: colors.primaryTint },
-  track: {
-    height: TRACK_HEIGHT,
-    marginTop: spacing.xs,
-    marginBottom: spacing.sm,
-    // 점이 양 끝에서 잘리지 않게 점 반지름만큼 안쪽에 둔다
-    marginHorizontal: DOT / 2,
-    borderRadius: radius.pill,
-    // 옅은 파란 면(움직이는 축) 위에서도 보이게 fill 보다 진한 선 색을 쓴다.
-    backgroundColor: colors.lineStrong,
-  },
-  marker: {
-    position: "absolute",
-    top: (TRACK_HEIGHT - DOT) / 2,
-    width: DOT,
-    height: DOT,
-    marginLeft: -DOT / 2,
-    borderRadius: radius.pill,
-  },
-  current: { backgroundColor: colors.inkDisabled },
-  target: { backgroundColor: colors.primary },
 }));

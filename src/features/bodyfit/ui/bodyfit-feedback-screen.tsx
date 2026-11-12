@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { View } from "react-native";
+import { Pressable, View, useWindowDimensions } from "react-native";
 
 import { useAppDispatch, useAppSelector } from "@/core/store/hooks";
 import { isPleosAvailable } from "@/shared/pleos/pleos";
@@ -12,10 +12,9 @@ import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 import { ToggleChip } from "@/shared/ui/chip";
 import { Columns } from "@/shared/ui/columns";
-import { IconBadge } from "@/shared/ui/icon-badge";
 import { Screen } from "@/shared/ui/screen";
 import { StatusView } from "@/shared/ui/status-view";
-import { radius, spacing } from "@/shared/ui/theme";
+import { radius, sizes, spacing } from "@/shared/ui/theme";
 import { themedStyles } from "@/shared/ui/use-theme";
 
 import { useRecordSeatAdjustment } from "../api/bodyfit.mutations";
@@ -36,7 +35,6 @@ import {
   type TouchFeedbackChoiceId,
 } from "../model/bodyfit-touch-feedback";
 import type { DriveContext, SeatAxis } from "../model/bodyfit.types";
-import { AXIS_COPY } from "./bodyfit-axis-copy";
 import { describeBodyfitError } from "./bodyfit-error-copy";
 import { BodyfitSeatImage } from "./bodyfit-seat-image";
 
@@ -60,6 +58,9 @@ const CHOICE_ROWS: readonly {
   { axis: "foreAft", ids: ["foreAft-decrease", "foreAft-increase"] },
   { axis: "height", ids: ["height-decrease", "height-increase"] },
 ];
+
+// 한 화면에 들어오는 줄 수. 축이 더 늘면 나머지는 "다른 곳도 고르기" 뒤에 접는다.
+const MAIN_ROWS = 3;
 
 const choiceLabel = (id: TouchFeedbackChoiceId) =>
   TOUCH_FEEDBACK_CHOICES.find((choice) => choice.id === id)?.label ?? "";
@@ -92,6 +93,9 @@ export function BodyfitFeedbackScreen({
   const [answered, setAnswered] = useState<"comfortable" | "adjusted" | null>(
     null,
   );
+  const [moreOpen, setMoreOpen] = useState(false);
+  // 한 화면에 들어오게 운전석 그림은 창 높이에 맞춰 줄인다 (꾸밈용 그림이다).
+  const pictureHeight = useWindowDimensions().height >= 1000 ? 280 : 200;
 
   if (profile.isPending) {
     return (
@@ -198,6 +202,13 @@ export function BodyfitFeedbackScreen({
     );
   }
 
+  // 접힌 줄에서 고른 것이 가려지지 않게, 고른 곳이 있는 줄은 접혀 있어도 보여 준다.
+  const foldable = CHOICE_ROWS.length > MAIN_ROWS;
+  const rows = CHOICE_ROWS.filter(
+    ({ ids }, index) =>
+      moreOpen || index < MAIN_ROWS || ids.some((id) => selected.includes(id)),
+  );
+
   return (
     <Screen
       title={COMFORT_SCREEN_QUESTION}
@@ -258,7 +269,7 @@ export function BodyfitFeedbackScreen({
                 </View>
               ) : null}
               <View style={styles.stage}>
-                <BodyfitSeatImage height={280} />
+                <BodyfitSeatImage height={pictureHeight} />
               </View>
               <AppText
                 variant="secondary"
@@ -272,37 +283,44 @@ export function BodyfitFeedbackScreen({
           right={
             <Card title="바꾸고 싶은 곳" count="한 줄에 하나">
               <View style={styles.rows}>
-                {CHOICE_ROWS.map(({ axis, ids }, index) => (
-                  <View
-                    key={axis}
-                    style={[styles.row, index > 0 && styles.rowDivider]}
-                  >
-                    {/* 축 이름 + 반대 방향 두 개를 한 줄에. 좁으면 아래로 내려간다 */}
-                    <View style={styles.axis}>
-                      <IconBadge glyph={AXIS_COPY[axis].glyph} tone="muted" />
-                      <AppText variant="bodyStrong">
-                        {AXIS_COPY[axis].label}
-                      </AppText>
-                    </View>
-                    <View style={styles.pair}>
-                      {ids.map((id) => (
-                        <View key={id} style={styles.cell}>
-                          <ToggleChip
-                            shape="tile"
-                            glyph={CHOICE_GLYPH[id]}
-                            label={choiceLabel(id)}
-                            checked={selected.includes(id)}
-                            onPress={() =>
-                              setSelected((current) =>
-                                toggleTouchChoice(current, id),
-                              )
-                            }
-                          />
-                        </View>
-                      ))}
-                    </View>
+                {rows.map(({ axis, ids }) => (
+                  // 축마다 한 줄: 반대 방향 두 개를 나란히. 축 이름은 선택지 글자에 들어 있다.
+                  <View key={axis} style={styles.pair}>
+                    {ids.map((id) => (
+                      <View key={id} style={styles.cell}>
+                        <ToggleChip
+                          shape="tile"
+                          glyph={CHOICE_GLYPH[id]}
+                          label={choiceLabel(id)}
+                          checked={selected.includes(id)}
+                          onPress={() =>
+                            setSelected((current) =>
+                              toggleTouchChoice(current, id),
+                            )
+                          }
+                        />
+                      </View>
+                    ))}
                   </View>
                 ))}
+                {foldable ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: moreOpen }}
+                    onPress={() => setMoreOpen((open) => !open)}
+                    style={({ pressed }) => [
+                      styles.more,
+                      pressed && styles.morePressed,
+                    ]}
+                  >
+                    <AppText variant="bodyStrong" style={styles.grow}>
+                      {moreOpen ? "다른 곳 접기" : "다른 곳도 고르기"}
+                    </AppText>
+                    <AppText variant="heading" tone="tertiary">
+                      {moreOpen ? "▴" : "▾"}
+                    </AppText>
+                  </Pressable>
+                ) : null}
               </View>
             </Card>
           }
@@ -328,34 +346,28 @@ const useStyles = themedStyles((colors) => ({
   },
   // 터치 대상 사이는 최소 24dp
   choices: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
-  // 축마다 한 줄: 축 이름 아래에 반대 방향 두 개를 나란히 둔다.
+  // 터치 대상 사이는 최소 24dp
   rows: { gap: spacing.md },
-  row: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  axis: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    minWidth: 260,
-  },
-  rowDivider: {
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.line,
-  },
   // 넓으면 두 개를 나란히, 좁으면 한 줄에 하나씩 놓인다.
-  pair: {
-    flex: 1,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.md,
-    minWidth: 400,
-  },
+  pair: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   cell: { flexGrow: 1, flexBasis: "40%", minWidth: 180 },
+  grow: { flex: 1 },
+  // 접힌 줄은 누르는 것임이 보이게 보조 버튼과 같은 테두리를 두른다.
+  more: {
+    minHeight: sizes.touchTarget,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.control,
+    borderWidth: 2,
+    borderColor: colors.lineStrong,
+    backgroundColor: colors.surface,
+  },
+  morePressed: {
+    backgroundColor: colors.surfaceMuted,
+    transform: [{ scale: 0.98 }],
+  },
   stage: {
     alignItems: "center",
     paddingVertical: spacing.md,

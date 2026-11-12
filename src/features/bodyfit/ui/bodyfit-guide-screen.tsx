@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { View } from "react-native";
+import { View, useWindowDimensions } from "react-native";
 
 import { useAppSelector } from "@/core/store/hooks";
 import { canUseDemoMode } from "@/shared/config/app-variant";
@@ -12,8 +12,6 @@ import { AppText } from "@/shared/ui/app-text";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 import { Columns } from "@/shared/ui/columns";
-import { IconBadge } from "@/shared/ui/icon-badge";
-import { InfoRow } from "@/shared/ui/info-row";
 import { Screen } from "@/shared/ui/screen";
 import { StatusView } from "@/shared/ui/status-view";
 import { radius, shadows, sizes, spacing } from "@/shared/ui/theme";
@@ -23,10 +21,7 @@ import { useRecordSeatAdjustment } from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
 import { useLiveDriverSeat } from "../api/bodyfit.seat-live";
 import { speakQuietly } from "../api/bodyfit.voice";
-import {
-  groupSeatAxes,
-  recommendationForVehicle,
-} from "../model/bodyfit-axis-group";
+import { recommendationForVehicle } from "../model/bodyfit-axis-group";
 import { pressDemoSeat, startDemoSeat } from "../model/bodyfit-demo-seat";
 import {
   GUIDE_TOLERANCE,
@@ -39,9 +34,9 @@ import { toSeatRatios } from "../model/bodyfit-seat";
 import { selectDriveContext } from "../model/bodyfit-session.slice";
 import type { SeatAxis, SeatRatios } from "../model/bodyfit.types";
 import { AXIS_COPY } from "./bodyfit-axis-copy";
-import { BodyfitAxisGroupHeading } from "./bodyfit-axis-group-heading";
 import { describeBodyfitError } from "./bodyfit-error-copy";
 import { BodyfitSeatImage } from "./bodyfit-seat-image";
+import { BodyfitStepList, type BodyfitStep } from "./bodyfit-step-list";
 
 type DemoSeat = { start: SeatRatios; seat: SeatRatios };
 
@@ -73,6 +68,10 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
   const [notice, setNotice] = useState<string | null>(null);
   // 시연 모드: 에뮬레이터가 시트 위치를 0 으로만 돌려줄 때 화면 버튼으로 움직이는 모의 위치 (한 화면 안의 상태).
   const [demo, setDemo] = useState<DemoSeat | null>(null);
+  // 한 화면에 들어오게 운전석 그림은 남는 높이만큼만 쓴다. 낮은 창이나 시연 버튼이 있을 때는 뺀다 (꾸밈용 그림이다).
+  const windowHeight = useWindowDimensions().height;
+  const pictureHeight =
+    windowHeight >= 1000 ? 240 : windowHeight >= 820 && !demo ? 150 : 0;
 
   const vehicleSeat = seat.data ? toSeatRatios(seat.data) : null;
   const current = demo ? demo.seat : vehicleSeat;
@@ -221,11 +220,24 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
     }
 
     const focus = guide.axes.find((axis) => axis.axis === guide.focus);
-    // 축이 많은 차량에서는 "자세 / 머리·벨트" 로 나눠 보여 준다. 번호는 맞추는 순서대로 이어서 매긴다.
-    const groups = groupSeatAxes(
-      guide.axes.map((axis, index) => ({ ...axis, step: index + 1 })),
-    );
-    const titled = groups.length > 1;
+    const steps: BodyfitStep[] = guide.axes.map((axis, index) => {
+      const label = AXIS_COPY[axis.axis].label;
+      const value = describeAxis(axis);
+      return {
+        axis: axis.axis,
+        step: index + 1,
+        label,
+        value,
+        detail: `지금 ${percent(axis.current)}% · 목표 ${percent(axis.target)}%`,
+        accessibilityLabel: `${label}, ${value}, 지금 ${percent(axis.current)}퍼센트, 목표 ${percent(axis.target)}퍼센트`,
+        state:
+          axis.status === "ok"
+            ? "done"
+            : axis.axis === guide.focus
+              ? "active"
+              : "todo",
+      };
+    });
     return (
       <Columns
         left={
@@ -303,59 +315,21 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
                 </AppText>
               ) : null}
             </View>
-            <Card>
+            {pictureHeight > 0 ? (
               <View style={styles.stage}>
-                <BodyfitSeatImage height={280} />
+                <BodyfitSeatImage height={pictureHeight} />
               </View>
-            </Card>
+            ) : null}
           </>
         }
         right={
-          <Card title="축별 안내">
-            <View style={styles.groups}>
-              {groups.map((group, groupIndex) => (
-                <View key={group.id} style={styles.list}>
-                  {titled ? (
-                    <BodyfitAxisGroupHeading
-                      group={group.id}
-                      note={`${group.items.filter((axis) => axis.status === "ok").length}/${group.items.length} 맞춤`}
-                      divided={groupIndex > 0}
-                    />
-                  ) : null}
-                  {group.items.map((axis) => {
-                    const active = axis.axis === guide.focus;
-                    return (
-                      <View
-                        key={axis.axis}
-                        style={[styles.step, active && styles.stepActive]}
-                      >
-                        <InfoRow
-                          icon={
-                            <IconBadge
-                              glyph={
-                                axis.status === "ok" ? "✓" : `${axis.step}`
-                              }
-                              tone={
-                                axis.status === "ok"
-                                  ? "success"
-                                  : active
-                                    ? "primary"
-                                    : "muted"
-                              }
-                            />
-                          }
-                          label={AXIS_COPY[axis.axis].label}
-                          value={describeAxis(axis)}
-                          valueTone={active ? "accent" : "default"}
-                          detail={`지금 ${percent(axis.current)}% · 목표 ${percent(axis.target)}%`}
-                          accessibilityLabel={`${AXIS_COPY[axis.axis].label}, ${describeAxis(axis)}, 지금 ${percent(axis.current)}퍼센트, 목표 ${percent(axis.target)}퍼센트`}
-                        />
-                      </View>
-                    );
-                  })}
-                </View>
-              ))}
-            </View>
+          // 축이 많아도 한 화면에 들어오게 지금 맞출 곳만 펼치고 나머지는 접는다.
+          <Card title="맞추는 순서">
+            <BodyfitStepList
+              steps={steps}
+              doneNoun="맞춘 곳"
+              todoNoun="남은 곳"
+            />
           </Card>
         }
       />
@@ -465,11 +439,13 @@ const useStyles = themedStyles((colors) => ({
     backgroundColor: colors.onPrimary,
   },
   gaugeLabels: { flexDirection: "row", justifyContent: "space-between" },
+  // 그림은 꾸밈용이라 카드 제목·여백 없이 낮게 둔다.
   stage: {
     alignItems: "center",
-    paddingVertical: spacing.md,
-    borderRadius: radius.control,
-    backgroundColor: colors.surfaceMuted,
+    padding: spacing.sm,
+    borderRadius: radius.card,
+    backgroundColor: colors.surface,
+    ...shadows.card,
   },
   // 제목 오른쪽 "2/4 맞춤"
   progress: {
@@ -486,13 +462,4 @@ const useStyles = themedStyles((colors) => ({
   progressText: { color: colors.primary, fontWeight: "700" },
   progressDone: { color: colors.success, fontWeight: "700" },
   press: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
-  groups: { gap: spacing.md },
-  list: { gap: spacing.xs },
-  step: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.control,
-  },
-  // 지금 맞출 축은 옅은 파란 면과 번호 원 색으로 함께 표시한다.
-  stepActive: { backgroundColor: colors.primaryTint },
 }));
