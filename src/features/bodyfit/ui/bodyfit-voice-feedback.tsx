@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 
 import { useAppDispatch, useAppSelector } from "@/core/store/hooks";
 import type { DriverSeatState } from "@/shared/pleos/pleos.types";
@@ -7,7 +7,8 @@ import { usePleosEvent } from "@/shared/pleos/use-pleos-event";
 import { AppText } from "@/shared/ui/app-text";
 import { Button } from "@/shared/ui/button";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
-import { colors, radius, spacing } from "@/shared/ui/theme";
+import { radius, spacing } from "@/shared/ui/theme";
+import { themedStyles } from "@/shared/ui/use-theme";
 
 import {
   useMoveSeat,
@@ -37,6 +38,7 @@ export function BodyfitVoiceFeedback({
   seat,
   parked,
 }: BodyfitVoiceFeedbackProps) {
+  const styles = useStyles();
   const dispatch = useAppDispatch();
   const pending = useAppSelector(selectPendingFeedback);
   const listen = useVoiceSeatFeedback();
@@ -167,7 +169,7 @@ export function BodyfitVoiceFeedback({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   section: { gap: spacing.md },
   heading: { gap: spacing.xs },
   card: {
@@ -177,4 +179,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
-});
+}));

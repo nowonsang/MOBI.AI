@@ -1,11 +1,12 @@
 import { useRouter } from "expo-router";
 import type { ReactNode } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppText } from "./app-text";
-import { colors, layout, radius, sizes, spacing } from "./theme";
+import { layout, radius, sizes, spacing } from "./theme";
 import { useCompact } from "./use-compact";
+import { themedStyles } from "./use-theme";
 
 type ScreenProps = {
   title: string;
@@ -35,6 +36,7 @@ export function Screen({
 }: ScreenProps) {
   const router = useRouter();
   const compact = useCompact();
+  const styles = useStyles();
   const maxWidth = width === "narrow" ? layout.narrow : layout.content;
   const gutter = compact ? layout.gutterCompact : layout.gutter;
   const goBack = () => (router.canGoBack() ? router.back() : router.replace("/"));
@@ -108,7 +110,7 @@ export function Screen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   safe: { flex: 1, backgroundColor: colors.surfaceMuted },
   scroll: { alignItems: "center" },
   body: { width: "100%" },
@@ -135,4 +137,4 @@ const styles = StyleSheet.create({
   // 넓은 창: 오른쪽에 나란히. 좁은 창: 화면 폭에 맞춰 세로로 쌓아 주 CTA 를 맨 아래(엄지 닿는 곳)에 둔다.
   footerRow: { flexDirection: "row", justifyContent: "flex-end" },
   footerStacked: { flexDirection: "column", alignItems: "stretch" },
-});
+}));

@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, View } from "react-native";
 
 import { AppText } from "./app-text";
-import { colors, sizes, spacing } from "./theme";
+import { sizes, spacing } from "./theme";
+import { themedStyles } from "./use-theme";
 
 type InfoRowProps = {
   /** 행 앞 아이콘 (보통 IconBadge) */
@@ -29,6 +30,7 @@ export function InfoRow({
   onPress,
   accessibilityLabel,
 }: InfoRowProps) {
+  const styles = useStyles();
   const content = (
     <>
       {icon}
@@ -77,7 +79,7 @@ export function InfoRow({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   row: {
     minHeight: sizes.touchTarget,
     flexDirection: "row",
@@ -91,4 +93,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
     transform: [{ scale: 0.98 }],
   },
-});
+}));

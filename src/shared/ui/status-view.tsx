@@ -1,9 +1,10 @@
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 
 import { AppText } from "./app-text";
 import { Button } from "./button";
-import { colors, radius, shadows, spacing } from "./theme";
+import { radius, shadows, spacing } from "./theme";
 import { useCompact } from "./use-compact";
+import { themedStyles } from "./use-theme";
 
 type StatusViewProps = {
   /** 무슨 일인지 한 줄 */
@@ -16,6 +17,7 @@ type StatusViewProps = {
 // 실패·빈 상태는 이 컴포넌트 하나로 통일한다 (같은 실패는 어디서나 같은 모양).
 export function StatusView({ title, description, action }: StatusViewProps) {
   const compact = useCompact();
+  const styles = useStyles();
 
   return (
     <View
@@ -36,7 +38,7 @@ export function StatusView({ title, description, action }: StatusViewProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   box: {
     gap: spacing.sm,
     borderRadius: radius.card,
@@ -45,4 +47,4 @@ const styles = StyleSheet.create({
   },
   action: { marginTop: spacing.sm, alignItems: "flex-start" },
   actionStretch: { alignItems: "stretch" },
-});
+}));

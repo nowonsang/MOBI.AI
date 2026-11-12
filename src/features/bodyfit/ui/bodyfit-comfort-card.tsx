@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 
 import { canControlComfort } from "@/shared/config/app-variant";
 import { AppText } from "@/shared/ui/app-text";
@@ -9,7 +9,8 @@ import { Card } from "@/shared/ui/card";
 import { IconBadge } from "@/shared/ui/icon-badge";
 import { InfoRow } from "@/shared/ui/info-row";
 import { StatusView } from "@/shared/ui/status-view";
-import { colors, radius, spacing } from "@/shared/ui/theme";
+import { radius, spacing } from "@/shared/ui/theme";
+import { themedStyles } from "@/shared/ui/use-theme";
 
 import { useApplyComfort } from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
@@ -52,6 +53,7 @@ export function BodyfitComfortCard({
   vehicleConnected: boolean;
   parked: boolean;
 }) {
+  const styles = useStyles();
   const records = useQuery(bodyfitQueries.comfortRecords(profileId));
   const comfort = useQuery({
     ...bodyfitQueries.comfort(),
@@ -164,7 +166,7 @@ export function BodyfitComfortCard({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   rows: { gap: spacing.xs },
   skeleton: {
     height: 160,
@@ -172,4 +174,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
   },
   action: { gap: spacing.xs, marginTop: spacing.sm },
-});
+}));

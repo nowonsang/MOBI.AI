@@ -1,7 +1,8 @@
-import { ActivityIndicator, Pressable, StyleSheet } from "react-native";
+import { ActivityIndicator, Pressable } from "react-native";
 
 import { AppText } from "./app-text";
-import { colors, radius, sizes, spacing } from "./theme";
+import { radius, sizes, spacing } from "./theme";
+import { themedStyles, useColors } from "./use-theme";
 
 type ButtonProps = {
   label: string;
@@ -24,6 +25,8 @@ export function Button({
 }: ButtonProps) {
   const inactive = disabled || loading;
   const primary = variant === "primary";
+  const styles = useStyles();
+  const colors = useColors();
 
   return (
     <Pressable
@@ -42,7 +45,7 @@ export function Button({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={primary ? colors.surface : colors.primary} />
+        <ActivityIndicator color={primary ? colors.onPrimary : colors.primary} />
       ) : (
         <AppText variant="bodyStrong" tone={primary ? "inverse" : "default"}>
           {label}
@@ -52,7 +55,7 @@ export function Button({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   base: {
     minHeight: sizes.primaryButton,
     minWidth: 240,
@@ -73,4 +76,4 @@ const styles = StyleSheet.create({
   },
   secondaryPressed: { backgroundColor: colors.surfaceMuted },
   inactive: { opacity: 0.4 },
-});
+}));

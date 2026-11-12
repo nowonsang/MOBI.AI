@@ -1,8 +1,9 @@
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 
 import { SEAT_AXES } from "@/shared/pleos/pleos.types";
 import { AppText } from "@/shared/ui/app-text";
-import { colors, radius, spacing } from "@/shared/ui/theme";
+import { radius, spacing } from "@/shared/ui/theme";
+import { themedStyles } from "@/shared/ui/use-theme";
 
 import type { SeatAxis, SeatRatios } from "../model/bodyfit.types";
 
@@ -24,6 +25,7 @@ type BodyfitSeatAxesProps = {
 
 // 색만으로 구분하지 않도록 막대 옆에 "지금 → 추천" 숫자를 함께 쓴다.
 export function BodyfitSeatAxes({ recommended, current }: BodyfitSeatAxesProps) {
+  const styles = useStyles();
   return (
     <View style={styles.list}>
       {SEAT_AXES.map((axis) => {
@@ -73,7 +75,7 @@ export function BodyfitSeatAxes({ recommended, current }: BodyfitSeatAxesProps) 
 const TRACK_HEIGHT = 8;
 const DOT = 28;
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   list: { gap: spacing.lg },
   row: { gap: spacing.xs },
   heading: {
@@ -103,4 +105,4 @@ const styles = StyleSheet.create({
   current: { backgroundColor: colors.inkDisabled },
   recommended: { backgroundColor: colors.primary },
   ends: { flexDirection: "row", justifyContent: "space-between" },
-});
+}));

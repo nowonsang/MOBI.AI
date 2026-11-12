@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 
 import { isPleosAvailable } from "@/shared/pleos/pleos";
 import { useGear } from "@/shared/pleos/use-gear";
@@ -13,7 +13,8 @@ import { ToggleChip } from "@/shared/ui/chip";
 import { Columns } from "@/shared/ui/columns";
 import { Screen } from "@/shared/ui/screen";
 import { StatusView } from "@/shared/ui/status-view";
-import { colors, radius, spacing } from "@/shared/ui/theme";
+import { radius, spacing } from "@/shared/ui/theme";
+import { themedStyles } from "@/shared/ui/use-theme";
 
 import { useRecordSeatAdjustment } from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
@@ -42,6 +43,7 @@ const CHOICE_GLYPH: Record<TouchFeedbackChoiceId, string> = {
  * 시트를 움직이지 않고 "지금 자세 + 고른 방향"을 기록에 남겨 다음 추천을 보정한다 (시트 제어 권한 없이 동작).
  */
 export function BodyfitFeedbackScreen({ profileId }: { profileId: string }) {
+  const styles = useStyles();
   const router = useRouter();
   const vehicleConnected = isPleosAvailable();
   const profile = useQuery(bodyfitQueries.profile(profileId));
@@ -221,7 +223,7 @@ export function BodyfitFeedbackScreen({ profileId }: { profileId: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   skeleton: {
     height: 320,
     borderRadius: radius.card,
@@ -239,4 +241,4 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: colors.fill,
   },
-});
+}));

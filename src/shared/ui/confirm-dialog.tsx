@@ -1,9 +1,10 @@
-import { Modal, Pressable, StyleSheet, View } from "react-native";
+import { Modal, Pressable, View } from "react-native";
 
 import { AppText } from "./app-text";
 import { Button } from "./button";
-import { colors, layout, radius, shadows, spacing } from "./theme";
+import { layout, radius, shadows, spacing } from "./theme";
 import { useCompact } from "./use-compact";
+import { themedStyles } from "./use-theme";
 
 type ConfirmDialogProps = {
   visible: boolean;
@@ -30,6 +31,7 @@ export function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   const compact = useCompact();
+  const styles = useStyles();
   return (
     <Modal
       visible={visible}
@@ -68,14 +70,14 @@ export function ConfirmDialog({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   backdrop: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     padding: layout.gutterCompact,
-    // 뒤 화면을 어둡게 가린다. 색 토큰(ink)에 투명도만 준다.
-    backgroundColor: `${colors.ink}99`,
+    // 뒤 화면을 어둡게 가린다.
+    backgroundColor: colors.scrim,
   },
   box: {
     width: "100%",
@@ -89,4 +91,4 @@ const styles = StyleSheet.create({
   // 터치 대상 사이는 최소 24dp. 주 버튼을 오른쪽(좁은 창에서는 아래)에 둔다.
   actions: { flexDirection: "row", justifyContent: "flex-end", gap: spacing.md },
   actionsStacked: { flexDirection: "column", alignItems: "stretch" },
-});
+}));
