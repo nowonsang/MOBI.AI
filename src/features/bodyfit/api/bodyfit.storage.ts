@@ -6,6 +6,7 @@ import {
   setEncryptedItem,
 } from "@/shared/storage/encrypted-storage";
 
+import { appendSeatAdjustment } from "../model/bodyfit-learning";
 import {
   bodyProfileSchema,
   comfortRecordSchema,
@@ -27,6 +28,8 @@ const DRIVE_SESSION_KEY = "bodyfit:drive-session";
 const COMFORT_KEY = "bodyfit:comfort";
 // 학습에는 최근 기록만 쓰므로 운전자별로 이 개수만 남긴다.
 const MAX_ADJUSTMENTS_PER_PROFILE = 50;
+// 자세 기록은 운전자·상황마다 이 개수만 남긴다 (가끔 고르는 상황의 기록이 밀려나지 않게, C-5).
+const MAX_ADJUSTMENTS_PER_CONTEXT = 50;
 
 const profilesSchema = z.array(bodyProfileSchema);
 const adjustmentsSchema = z.array(seatAdjustmentSchema);
@@ -127,14 +130,10 @@ export async function createSeatAdjustment(
   record: SeatAdjustment,
 ): Promise<void> {
   const adjustments = await readList(ADJUSTMENTS_KEY, adjustmentsSchema);
-  const mine = adjustments
-    .filter((item) => item.profileId === record.profileId)
-    .concat(record)
-    .slice(-MAX_ADJUSTMENTS_PER_PROFILE);
-  const others = adjustments.filter(
-    (item) => item.profileId !== record.profileId,
+  await writeList(
+    ADJUSTMENTS_KEY,
+    appendSeatAdjustment(adjustments, record, MAX_ADJUSTMENTS_PER_CONTEXT),
   );
-  await writeList(ADJUSTMENTS_KEY, [...others, ...mine]);
 }
 
 export async function findComfortRecords(

@@ -29,6 +29,12 @@ export type BodyProfileInput = Omit<
 export type SeatRatios = Partial<Record<SeatAxis, number>>;
 
 /**
+ * 운전 상황 (C-5). 운전자가 주차 중에 고르고, 고르지 않으면 평소(usual)다.
+ * 자세 기록에 함께 남겨 같은 상황의 기록으로 추천을 보정한다.
+ */
+export type DriveContext = "usual" | "commute" | "long" | "city";
+
+/**
  * drive-start: 주행을 시작할 때의 자세, saved: 직접 저장한 자세,
  * touch: 주행 후 터치 피드백(지금 자세 + 고른 방향, 시트는 움직이지 않음), voice: 음성 피드백으로 조절한 자세
  */
@@ -41,6 +47,8 @@ export type SeatAdjustment = {
   baseline: SeatRatios;
   final: SeatRatios;
   source: SeatAdjustmentSource;
+  /** 이 자세로 앉았을 때의 운전 상황. 상황이 생기기 전에 저장된 기록은 평소로 읽는다 */
+  context: DriveContext;
 };
 
 /**
@@ -50,6 +58,8 @@ export type SeatAdjustment = {
 export type DriveSession = {
   profileId: string;
   startedAt: number;
+  /** 출발할 때 고른 운전 상황. 주행 후 피드백(D-2)을 같은 상황의 기록으로 남긴다 */
+  context: DriveContext;
 };
 
 /** increase/decrease 의 뜻은 SeatRatios 의 축 방향을 따른다. */

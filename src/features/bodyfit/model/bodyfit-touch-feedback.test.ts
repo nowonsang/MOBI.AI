@@ -62,10 +62,27 @@ describe("터치 피드백 선택", () => {
       nudgesForTouchChoices(["backrest-increase"]),
     );
     // 주행 시작 기록(추천 그대로) 뒤에 터치 피드백 기록이 쌓인 경우
-    const offsets = learnOffsets([
-      { profileId: "p", at: 1, baseline, final: current, source: "drive-start" },
-      { profileId: "p", at: 2, baseline, final, source: "touch" },
-    ]);
+    const offsets = learnOffsets(
+      [
+        {
+          profileId: "p",
+          at: 1,
+          baseline,
+          final: current,
+          source: "drive-start",
+          context: "usual",
+        },
+        {
+          profileId: "p",
+          at: 2,
+          baseline,
+          final,
+          source: "touch",
+          context: "usual",
+        },
+      ],
+      "usual",
+    );
     expect(offsets.backrest).toBeGreaterThan(GUIDE_TOLERANCE);
   });
 

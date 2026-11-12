@@ -5,6 +5,7 @@ import {
   CABIN_TEMP_RANGE,
   HEAT_LEVEL_RANGE,
 } from "./bodyfit-comfort";
+import { DEFAULT_DRIVE_CONTEXT, DRIVE_CONTEXTS } from "./bodyfit-drive-context";
 
 export const bodyProfileInputSchema = z.object({
   name: z
@@ -48,9 +49,13 @@ export const seatRatiosSchema = z.object({
   tilt: ratio.optional(),
 });
 
+// 상황(C-5)이 생기기 전에 저장된 기록·주행은 평소로 읽는다 (예전 기록 때문에 목록 전체가 비지 않게).
+const driveContext = z.enum(DRIVE_CONTEXTS).default(DEFAULT_DRIVE_CONTEXT);
+
 export const driveSessionSchema = z.object({
   profileId: z.string().min(1),
   startedAt: z.number(),
+  context: driveContext,
 });
 
 export const seatAdjustmentSchema = z.object({
@@ -59,6 +64,7 @@ export const seatAdjustmentSchema = z.object({
   baseline: seatRatiosSchema,
   final: seatRatiosSchema,
   source: z.enum(["drive-start", "voice", "saved", "touch"]),
+  context: driveContext,
 });
 
 // 범위는 기록할 때 쓰는 것과 같은 상수다 (bodyfit-comfort.ts). 기록할 때 범위 밖 값을 빼므로 읽을 때 목록 전체가 버려지지 않는다.

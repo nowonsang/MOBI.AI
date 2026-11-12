@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
+import { useAppDispatch, useAppSelector } from "@/core/store/hooks";
 import { isPleosAvailable } from "@/shared/pleos/pleos";
 import { useGear } from "@/shared/pleos/use-gear";
 import { useUxRestrictions } from "@/shared/pleos/use-ux-restrictions";
@@ -19,11 +20,20 @@ import { useRecordSeatAdjustment } from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
 import { COMFORT_SCREEN_QUESTION } from "../model/bodyfit-drive";
 import {
+  DEFAULT_DRIVE_CONTEXT,
+  DRIVE_CONTEXT_LABEL,
+} from "../model/bodyfit-drive-context";
+import {
+  driveContextSelected,
+  selectDriveContext,
+} from "../model/bodyfit-session.slice";
+import {
   TOUCH_FEEDBACK_CHOICES,
   nudgesForTouchChoices,
   toggleTouchChoice,
   type TouchFeedbackChoiceId,
 } from "../model/bodyfit-touch-feedback";
+import type { DriveContext } from "../model/bodyfit.types";
 import { describeBodyfitError } from "./bodyfit-error-copy";
 import { BodyfitSeatImage } from "./bodyfit-seat-image";
 
@@ -41,9 +51,20 @@ const CHOICE_GLYPH: Record<TouchFeedbackChoiceId, string> = {
  * D-1 주행 후 질문 + D-2 터치 피드백.
  * 시트를 움직이지 않고 "지금 자세 + 고른 방향"을 기록에 남겨 다음 추천을 보정한다 (시트 제어 권한 없이 동작).
  */
-export function BodyfitFeedbackScreen({ profileId }: { profileId: string }) {
+export function BodyfitFeedbackScreen({
+  profileId,
+  drivenContext,
+}: {
+  profileId: string;
+  /** 주행이 끝나 뜬 질문이면 그 주행을 출발할 때의 상황. 운전자가 직접 열었으면 null */
+  drivenContext: DriveContext | null;
+}) {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const vehicleConnected = isPleosAvailable();
+  const selectedContext = useAppSelector(selectDriveContext);
+  // 답은 방금 달린 상황의 기록으로 남긴다 (C-5). 직접 열었으면 지금 고른 상황이다.
+  const context = drivenContext ?? selectedContext;
   const profile = useQuery(bodyfitQueries.profile(profileId));
   const gear = useGear();
   const restrictions = useUxRestrictions();
@@ -87,6 +108,7 @@ export function BodyfitFeedbackScreen({ profileId }: { profileId: string }) {
       {
         profile: driver,
         source: "touch",
+        context,
         nudges: nudgesForTouchChoices(choices),
       },
       {
@@ -119,12 +141,14 @@ export function BodyfitFeedbackScreen({ profileId }: { profileId: string }) {
               />
               <Button
                 label="지금 맞추기"
-                onPress={() =>
+                onPress={() => {
+                  // 안내도 방금 답한 상황의 추천으로 한다 (주행 중 앱이 종료돼 고른 상황이 사라졌어도).
+                  dispatch(driveContextSelected(context));
                   router.replace({
                     pathname: "/bodyfit/[profileId]/guide",
                     params: { profileId: driver.id },
-                  })
-                }
+                  });
+                }}
                 accessibilityHint="시트 버튼을 움직이면 화면이 축별로 알려 드려요"
               />
             </>
@@ -153,7 +177,11 @@ export function BodyfitFeedbackScreen({ profileId }: { profileId: string }) {
   return (
     <Screen
       title={COMFORT_SCREEN_QUESTION}
-      description={`${driver.name}님, 바꾸고 싶은 곳을 고르면 다음 추천에 반영해요`}
+      description={
+        context === DEFAULT_DRIVE_CONTEXT
+          ? `${driver.name}님, 바꾸고 싶은 곳을 고르면 다음 추천에 반영해요`
+          : `${driver.name}님, 바꾸고 싶은 곳을 고르면 다음 ${DRIVE_CONTEXT_LABEL[context]} 추천에 반영해요`
+      }
       footer={
         <>
           <Button

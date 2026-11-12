@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
+import { useAppSelector } from "@/core/store/hooks";
 import { canUseDemoMode } from "@/shared/config/app-variant";
 import { isPleosAvailable } from "@/shared/pleos/pleos";
 import { useGear } from "@/shared/pleos/use-gear";
@@ -26,6 +27,7 @@ import { guideSeat, type AxisGuide } from "../model/bodyfit-guide";
 import { learnOffsets } from "../model/bodyfit-learning";
 import { recommendSeat } from "../model/bodyfit-recommend";
 import { toSeatRatios } from "../model/bodyfit-seat";
+import { selectDriveContext } from "../model/bodyfit-session.slice";
 import type { SeatAxis, SeatRatios } from "../model/bodyfit.types";
 import { describeBodyfitError } from "./bodyfit-error-copy";
 import { BodyfitSeatImage } from "./bodyfit-seat-image";
@@ -84,6 +86,8 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
   const gear = useGear();
   const restrictions = useUxRestrictions();
   const record = useRecordSeatAdjustment();
+  // 맞춤 자세 화면에서 고른 상황의 추천으로 안내하고, 기억하는 자세도 그 상황의 기록으로 남긴다 (C-5).
+  const context = useAppSelector(selectDriveContext);
   const [notice, setNotice] = useState<string | null>(null);
   // 시연 모드: 에뮬레이터가 시트 위치를 0 으로만 돌려줄 때 화면 버튼으로 움직이는 모의 위치 (한 화면 안의 상태).
   const [demo, setDemo] = useState<DemoSeat | null>(null);
@@ -96,7 +100,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
 
   const recommended =
     profile.data && adjustments.data
-      ? recommendSeat(profile.data, learnOffsets(adjustments.data))
+      ? recommendSeat(profile.data, learnOffsets(adjustments.data, context))
       : null;
   const guide =
     recommended && current
@@ -137,7 +141,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
 
   const rememberCurrent = () =>
     record.mutate(
-      { profile: driver, source: "saved" },
+      { profile: driver, source: "saved", context },
       {
         onSuccess: () =>
           setNotice("지금 자세를 기억했어요. 다음 추천에 반영할게요"),

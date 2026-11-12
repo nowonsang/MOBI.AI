@@ -20,6 +20,7 @@ import { applyNudges, toSeatRatios } from "../model/bodyfit-seat";
 import {
   feedbackDismissed,
   feedbackProposed,
+  selectDriveContext,
   selectPendingFeedback,
 } from "../model/bodyfit-session.slice";
 import type { BodyProfile } from "../model/bodyfit.types";
@@ -39,6 +40,7 @@ export function BodyfitVoiceFeedback({
 }: BodyfitVoiceFeedbackProps) {
   const dispatch = useAppDispatch();
   const pending = useAppSelector(selectPendingFeedback);
+  const context = useAppSelector(selectDriveContext);
   const listen = useVoiceSeatFeedback();
   const stopListening = useStopListening();
   const move = useMoveSeat();
@@ -74,7 +76,7 @@ export function BodyfitVoiceFeedback({
     const target = applyNudges(toSeatRatios(seat), pending.nudges);
     move.mutate(target, {
       onSuccess: () => {
-        record.mutate({ profile, source: "voice" });
+        record.mutate({ profile, source: "voice", context });
         dispatch(feedbackDismissed());
         setMessage("말씀하신 대로 조절했어요. 다음 추천에 반영할게요");
       },
