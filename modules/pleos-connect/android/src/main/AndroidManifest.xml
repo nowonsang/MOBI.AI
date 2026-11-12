@@ -12,6 +12,14 @@
        시트 열선·통풍(get/setHvacSeatTemperature, get/setHvacSeatVentilation)은 위의 CAR_SEATS·CONTROL_CAR_SEATS 를 쓴다. -->
   <uses-permission android:name="pleos.car.permission.CAR_CLIMATE" />
   <uses-permission android:name="pleos.car.permission.CONTROL_CAR_CLIMATE" />
+  <!-- 무드등(실내 간접 조명) 켜짐·밝기·색 읽기·맞추기 (get/setAmbientLightSwitch, get/setAmbientLightBrightness,
+       get/setAmbientLightBrightnessColor, checkAmbientLight*Capabilities). SDK 2.3.2 는 바꾸는 메서드에도 이 권한을 요구한다.
+       전조등·안개등 같은 주행 등화는 다루지 않는다. market 빌드에서는 뺀다 (app.plugin.js). -->
+  <uses-permission android:name="pleos.car.permission.CAR_LIGHTS" />
+  <!-- 사이드미러 열선 읽기 (getHvacSideMirrorHeatState, checkHvacSideMirrorHeatCapabilities) · 맞추기 (setHvacSideMirrorHeat).
+       market 빌드에서는 둘 다 뺀다 (app.plugin.js). -->
+  <uses-permission android:name="pleos.car.permission.CAR_MIRRORS" />
+  <uses-permission android:name="pleos.car.permission.CONTROL_CAR_MIRRORS" />
   <!-- 기어 상태 (Android Car API GEAR_SELECTION). 주차(P) 중에만 시트를 움직이기 위해 필요 -->
   <uses-permission android:name="android.car.permission.CAR_POWERTRAIN" />
   <!-- 음성 인식 · 음성 안내 (LLM SDK 는 2026-10-19 제공 종료되어 쓰지 않는다) -->
