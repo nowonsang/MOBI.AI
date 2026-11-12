@@ -38,18 +38,18 @@ import type { DriveContext, SeatAxis } from "../model/bodyfit.types";
 import { describeBodyfitError } from "./bodyfit-error-copy";
 import { BodyfitSeatImage } from "./bodyfit-seat-image";
 
-// 선택지 앞에 붙이는 방향 기호. 뜻은 옆 글자가 전한다.
+// 선택지 앞에 붙이는 방향 기호. 뜻은 옆 글자가 전한다. 모든 줄이 같은 가는 화살표를 쓴다.
 const CHOICE_GLYPH: Record<TouchFeedbackChoiceId, string> = {
   "backrest-increase": "↑",
   "backrest-decrease": "↓",
   "foreAft-increase": "→",
   "foreAft-decrease": "←",
-  "height-increase": "▲",
-  "height-decrease": "▼",
+  "height-increase": "↑",
+  "height-decrease": "↓",
 };
 
 // 선택지를 축별로 한 줄씩 묶는다 (한 축에는 한 방향만 고를 수 있다: toggleTouchChoice).
-// 줄 안의 순서는 화면 방향과 맞춘다: 뒤로 ← → 앞으로, 낮추기 ▼ ▲ 높이기.
+// 줄 안의 순서는 화면 방향과 맞춘다: 뒤로 ← → 앞으로, 낮추기 ↓ ↑ 높이기.
 const CHOICE_ROWS: readonly {
   axis: SeatAxis;
   ids: readonly [TouchFeedbackChoiceId, TouchFeedbackChoiceId];

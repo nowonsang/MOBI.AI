@@ -87,6 +87,8 @@ const RECENT_RECORDS = 3;
 
 // 왼쪽 요약 카드의 그림은 작게 둔다. 자세 값은 오른쪽 축 목록이 전한다.
 const SEAT_IMAGE_HEIGHT = 180;
+// 카드가 높아져도 그림이 지나치게 커지지 않게 한다.
+const SEAT_IMAGE_MAX_HEIGHT = 360;
 
 // 오른쪽 단은 한 번에 한 갈래만 보여 준다. 축·온도·기록을 한 줄로 쌓으면 스크롤이 너무 길어진다.
 type HubTab = "posture" | "comfort" | "records";
@@ -152,6 +154,8 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   const [confirming, setConfirming] = useState<"move" | "delete" | null>(null);
   // 어느 탭을 보고 있는지는 이 화면 안에서만 쓰는 상태다 (화면을 다시 열면 자세부터).
   const [tab, setTab] = useState<HubTab>("posture");
+  // 왼쪽 카드의 그림 무대 높이. 무대가 남는 높이를 채우면 그림도 그만큼 키운다.
+  const [stageHeight, setStageHeight] = useState(0);
 
   // 이 화면을 연 운전자를 이번 주행의 운전자로 본다 (주행 시작 자세·주행 후 질문에 쓴다).
   useEffect(() => {
@@ -272,6 +276,10 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   }
 
   const moveConfirm = auto.demo ? DEMO_MOVE_CONFIRM : MOVE_CONFIRM;
+  const seatImageHeight = Math.min(
+    SEAT_IMAGE_MAX_HEIGHT,
+    Math.max(SEAT_IMAGE_HEIGHT, stageHeight - spacing.md * 2),
+  );
 
   // 기어 상태는 제목 오른쪽에 크게 둔다. 시트를 움직일 수 있는지가 이 화면에서 가장 먼저 봐야 할 정보다.
   // 상태는 점 색과 글자로 함께 알린다.
@@ -294,6 +302,8 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
           : "체형으로 계산한 첫 추천이에요. 쓰실수록 몸에 맞춰져요")
       }
       aside={statusPill}
+      // 제목·탭·왼쪽 요약은 자리를 지키고 탭 내용만 스크롤한다 (목록을 내려도 다른 탭으로 갈 수 있게).
+      pinned
       footer={
         <>
           <Button
@@ -336,14 +346,13 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
         onCancel={() => setConfirming(null)}
       />
       <Columns
+        pinned
         left={
           <Card
             title="내 시트"
             count={learnedCount > 0 ? `기록 ${learnedCount}건 반영` : "첫 추천"}
+            fill
           >
-            <View style={styles.stage}>
-              <BodyfitSeatImage height={SEAT_IMAGE_HEIGHT} />
-            </View>
             {drivers.length > 1 ? (
               <ChipGroup
                 label="운전자 고르기"
@@ -408,6 +417,15 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                 Pleos Connect 에뮬레이터나 차량에서 열면 시트를 맞출 수 있어요
               </AppText>
             ) : null}
+            {/* 고르는 것을 위에 두고, 그림이 카드의 남는 높이를 채운다 (왼쪽 카드 바닥을 오른쪽 단과 맞춘다). */}
+            <View
+              style={styles.stage}
+              onLayout={(event) =>
+                setStageHeight(event.nativeEvent.layout.height)
+              }
+            >
+              <BodyfitSeatImage height={seatImageHeight} />
+            </View>
             {auto.canDemo && canControlSeat && vehicleConnected ? (
               // 자동 조절 시연 모드: 에뮬레이터는 시트 위치가 바뀌지 않아 모의 위치로 흐름을 보여 준다.
               // 자주 쓰는 것이 아니라 카드 맨 아래 조용한 한 줄로 둔다.
@@ -430,27 +448,28 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
             ) : null}
           </Card>
         }
+        rightHeader={
+          <SegmentedTabs
+            label="시트 화면 보기"
+            options={[
+              {
+                value: "posture",
+                label: "자세",
+                note: toAdjust > 0 ? `${toAdjust}곳` : undefined,
+              },
+              { value: "comfort", label: "온도·무드등" },
+              {
+                value: "records",
+                label: "기록",
+                note: `${adjustments.data.length}건`,
+              },
+            ]}
+            selected={tab}
+            onSelect={setTab}
+          />
+        }
         right={
           <>
-            <SegmentedTabs
-              label="시트 화면 보기"
-              options={[
-                {
-                  value: "posture",
-                  label: "자세",
-                  note: toAdjust > 0 ? `${toAdjust}곳` : undefined,
-                },
-                { value: "comfort", label: "온도·무드등" },
-                {
-                  value: "records",
-                  label: "기록",
-                  note: `${adjustments.data.length}건`,
-                },
-              ]}
-              selected={tab}
-              onSelect={setTab}
-            />
-
             {tab === "posture" ? (
               <>
                 <Card>
@@ -587,7 +606,9 @@ const useStyles = themedStyles((colors) => ({
   dotIdle: { backgroundColor: colors.inkDisabled },
   // 운전석 그림을 올려 두는 옅은 무대
   stage: {
+    flexGrow: 1,
     alignItems: "center",
+    justifyContent: "center",
     paddingVertical: spacing.md,
     borderRadius: radius.control,
     backgroundColor: colors.surfaceMuted,

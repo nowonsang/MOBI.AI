@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText } from "./app-text";
 import { layout, radius, sizes, spacing } from "./theme";
 import { useCompact } from "./use-compact";
+import { usePinnedLayout } from "./use-pinned-layout";
 import { themedStyles } from "./use-theme";
 
 type ScreenProps = {
@@ -23,6 +24,11 @@ type ScreenProps = {
   back?: boolean;
   /** 제목 오른쪽에 두는 짧은 상태 표시 (예: 기어 상태). 좁은 창에서는 제목 아래로 내려간다 */
   aside?: ReactNode;
+  /**
+   * 제목을 고정하고 본문이 남은 높이를 채운다. 본문은 스스로 스크롤해야 한다 (Columns 의 pinned).
+   * 넓고 높은 창에서만 켜지고, 그 밖에서는 화면 전체를 스크롤한다.
+   */
+  pinned?: boolean;
   children: ReactNode;
 };
 
@@ -35,69 +41,87 @@ export function Screen({
   footer,
   back = true,
   aside,
+  pinned,
   children,
 }: ScreenProps) {
   const router = useRouter();
   const compact = useCompact();
+  const pin = usePinnedLayout() && pinned;
   const styles = useStyles();
   const maxWidth = width === "narrow" ? layout.narrow : layout.content;
   const gutter = compact ? layout.gutterCompact : layout.gutter;
-  const goBack = () => (router.canGoBack() ? router.back() : router.replace("/"));
+  const goBack = () =>
+    router.canGoBack() ? router.back() : router.replace("/");
+
+  const header = (
+    <View style={styles.headerRow}>
+      {back ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="뒤로 가기"
+          onPress={goBack}
+          style={({ pressed }) => [styles.back, pressed && styles.backPressed]}
+        >
+          <AppText variant="heading">←</AppText>
+        </Pressable>
+      ) : null}
+      <View style={styles.header}>
+        <AppText
+          variant={compact ? "title" : "display"}
+          accessibilityRole="header"
+        >
+          {title}
+        </AppText>
+        {description ? (
+          <AppText variant="secondary" tone="tertiary">
+            {description}
+          </AppText>
+        ) : null}
+        {aside && compact ? aside : null}
+      </View>
+      {aside && !compact ? aside : null}
+    </View>
+  );
 
   return (
     <SafeAreaView
       style={styles.safe}
       edges={["top", "bottom", "left", "right"]}
     >
-      <ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          {
-            paddingHorizontal: gutter,
-            paddingVertical: compact ? spacing.md : spacing.lg,
-          },
-        ]}
-        keyboardShouldPersistTaps="handled"
-      >
+      {pin ? (
         <View
           style={[
-            styles.body,
-            { maxWidth, gap: compact ? spacing.md : spacing.lg },
+            styles.pinned,
+            { paddingHorizontal: gutter, paddingTop: spacing.lg },
           ]}
         >
-          <View style={styles.headerRow}>
-            {back ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="뒤로 가기"
-                onPress={goBack}
-                style={({ pressed }) => [
-                  styles.back,
-                  pressed && styles.backPressed,
-                ]}
-              >
-                <AppText variant="heading">←</AppText>
-              </Pressable>
-            ) : null}
-            <View style={styles.header}>
-              <AppText
-                variant={compact ? "title" : "display"}
-                accessibilityRole="header"
-              >
-                {title}
-              </AppText>
-              {description ? (
-                <AppText variant="secondary" tone="tertiary">
-                  {description}
-                </AppText>
-              ) : null}
-              {aside && compact ? aside : null}
-            </View>
-            {aside && !compact ? aside : null}
+          <View style={[styles.body, styles.pinnedBody, { maxWidth }]}>
+            {header}
+            {children}
           </View>
-          {children}
         </View>
-      </ScrollView>
+      ) : (
+        <ScrollView
+          contentContainerStyle={[
+            styles.scroll,
+            {
+              paddingHorizontal: gutter,
+              paddingVertical: compact ? spacing.md : spacing.lg,
+            },
+          ]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View
+            style={[
+              styles.body,
+              { maxWidth, gap: compact ? spacing.md : spacing.lg },
+            ]}
+          >
+            {header}
+            {children}
+          </View>
+        </ScrollView>
+      )}
       {footer ? (
         <View style={[styles.footer, { paddingHorizontal: gutter }]}>
           <View
@@ -119,7 +143,13 @@ const useStyles = themedStyles((colors) => ({
   safe: { flex: 1, backgroundColor: colors.surfaceMuted },
   scroll: { alignItems: "center" },
   body: { width: "100%" },
-  headerRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
+  pinned: { flex: 1, alignItems: "center" },
+  pinnedBody: { flex: 1, gap: spacing.lg },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.md,
+  },
   back: {
     width: sizes.touchTarget,
     height: sizes.touchTarget,

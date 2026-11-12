@@ -14,6 +14,8 @@ type CardProps = {
   /** 누르면 다른 화면으로 가는 카드. 제목 오른쪽에 › 를 그린다 */
   onPress?: () => void;
   accessibilityLabel?: string;
+  /** 남는 높이를 채운다 (단마다 스크롤하는 Columns 에서 카드 바닥을 단 바닥에 맞출 때) */
+  fill?: boolean;
   children?: ReactNode;
 };
 
@@ -23,6 +25,7 @@ export function Card({
   count,
   onPress,
   accessibilityLabel,
+  fill,
   children,
 }: CardProps) {
   const compact = useCompact();
@@ -50,7 +53,11 @@ export function Card({
     </View>
   ) : null;
 
-  const boxStyle = [styles.box, { padding: compact ? spacing.md : spacing.lg }];
+  const boxStyle = [
+    styles.box,
+    { padding: compact ? spacing.md : spacing.lg },
+    fill && styles.fill,
+  ];
 
   if (onPress) {
     return (
@@ -144,6 +151,7 @@ const useStyles = themedStyles((colors) => ({
     backgroundColor: colors.surface,
     ...shadows.card,
   },
+  fill: { flexGrow: 1 },
   // Pleos 인터랙션 가이드: 눌린 요소는 줄이고 배경색을 바꾼다. 큰 면은 95% 면 너무 출렁여 98% 로 둔다.
   pressed: {
     backgroundColor: colors.surfaceMuted,

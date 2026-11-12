@@ -238,6 +238,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
               : "todo",
       };
     });
+    const headline = focus ? describeAxis(focus) : "추천 자세에 다 맞췄어요";
     return (
       <Columns
         left={
@@ -247,22 +248,38 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
               style={[styles.focus, done && styles.focusDone]}
               accessibilityLiveRegion="polite"
             >
+              {/* 기호는 라벨 줄에 두어 큰 문구가 카드 폭을 다 쓰게 한다. */}
               <View style={styles.focusHead}>
-                <View style={styles.focusText}>
-                  <AppText variant="secondary" tone="inverse">
-                    {focus
-                      ? `지금 맞출 곳 · ${AXIS_COPY[focus.axis].label}`
-                      : "완료"}
-                  </AppText>
-                  <AppText variant="display" tone="inverse">
-                    {focus ? describeAxis(focus) : "추천 자세에 다 맞췄어요"}
-                  </AppText>
-                </View>
                 <View style={styles.focusGlyph} accessible={false}>
-                  <AppText variant="title" tone="inverse">
+                  <AppText variant="bodyStrong" tone="inverse">
                     {focus ? AXIS_COPY[focus.axis].glyph : "✓"}
                   </AppText>
                 </View>
+                <AppText
+                  variant="secondary"
+                  tone="inverse"
+                  style={styles.focusLabel}
+                >
+                  {focus
+                    ? `지금 맞출 곳 · ${AXIS_COPY[focus.axis].label}`
+                    : "완료"}
+                </AppText>
+              </View>
+              {/* 낱말 단위로 줄을 바꾼다 (한 글자만 다음 줄로 넘어가지 않게). */}
+              <View
+                style={styles.focusWords}
+                accessible
+                accessibilityLabel={headline}
+              >
+                {headline.split(" ").map((word, index) => (
+                  <AppText
+                    key={`${index}-${word}`}
+                    variant="display"
+                    tone="inverse"
+                  >
+                    {word}
+                  </AppText>
+                ))}
               </View>
               {focus ? (
                 // 실시간 막대: 흰 점이 지금 위치, 밝은 띠가 목표 구간(맞춘 것으로 보는 범위).
@@ -382,6 +399,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
 
 const GAUGE_TRACK = 12;
 const GAUGE_DOT = 32;
+const FOCUS_GLYPH = 56;
 
 const useStyles = themedStyles((colors) => ({
   skeleton: {
@@ -398,19 +416,24 @@ const useStyles = themedStyles((colors) => ({
   focusDone: { backgroundColor: colors.success },
   focusHead: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing.md,
+    alignItems: "center",
+    gap: spacing.sm,
   },
-  focusText: { flex: 1, gap: spacing.xs },
+  focusLabel: { flex: 1 },
   // 지금 맞출 축의 기호. 파란 면 위 흰 원이 너무 밝지 않게 테두리만 둔다.
   focusGlyph: {
-    width: sizes.primaryButton,
-    height: sizes.primaryButton,
+    width: FOCUS_GLYPH,
+    height: FOCUS_GLYPH,
     borderRadius: radius.pill,
     borderWidth: 2,
     borderColor: colors.onPrimary,
     alignItems: "center",
     justifyContent: "center",
+  },
+  focusWords: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    columnGap: spacing.sm,
   },
   gauge: { gap: spacing.xs, paddingTop: spacing.xs },
   gaugeTrack: {

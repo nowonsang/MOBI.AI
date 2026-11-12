@@ -135,4 +135,6 @@ export const layout = {
   gutterCompact: 24,
   // 이 폭 이상이면 화면을 2단(왼쪽 요약·그림, 오른쪽 목록)으로 나눈다.
   twoColumnWidth: 1000,
+  // 2단이고 창 높이가 이 값 이상이면 제목·탭을 고정하고 단 안에서만 스크롤할 수 있다 (usePinnedLayout).
+  pinnedMinHeight: 600,
 } as const;
