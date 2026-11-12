@@ -62,6 +62,8 @@ const ROWS: { key: ComfortKey; label: string }[] = [
 const isFanRow = (key: ComfortKey) =>
   key === "fanSpeed" || key === "fanDirection";
 
+const COMFORT_REREAD_MS = 5000;
+
 // 타일 최소 폭. 오른쪽 단(60%) 카드에서는 한 줄에 세 칸, 좁은 창에서는 한두 칸씩 놓인다.
 const TILE_MIN_WIDTH = 220;
 
@@ -140,11 +142,14 @@ export function BodyfitComfortCard({
   const comfort = useQuery({
     ...bodyfitQueries.comfort(),
     enabled: vehicleConnected,
+    // 열선·공조는 바뀔 때 알려 주는 차량 알림이 없다. 주차 중 카드가 떠 있는 동안에는 운전자가 차량 버튼으로
+    // 바꾼 값이 "지금"에 보이도록 가끔 다시 읽는다 (주행 중에는 맞출 수 없으니 읽지 않는다).
+    refetchInterval: parked ? COMFORT_REREAD_MS : false,
   });
   const apply = useApplyComfort();
   const [notice, setNotice] = useState<string | null>(null);
 
-  // 열선·공조는 바뀔 때 알려 주는 차량 알림이 없다. 주행을 마치고 주차로 돌아오면 다시 읽어 "지금" 값을 맞춘다.
+  // 주행을 마치고 주차로 돌아오면 기다리지 않고 바로 다시 읽는다.
   const { refetch: rereadComfort } = comfort;
   useEffect(() => {
     if (vehicleConnected && parked) void rereadComfort();
