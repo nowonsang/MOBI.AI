@@ -26,6 +26,7 @@ const TEXT_ON: [ColorToken, ColorToken][] = [
   ["inkTertiary", "surface"],
   ["inkTertiary", "surfaceMuted"],
   ["inkTertiary", "fill"],
+  ["inkTertiary", "primaryTint"], // 바뀔 설정 타일(primaryTint) 안의 "지금 …" 줄
   ["primary", "surface"],
   ["success", "surface"],
   ["danger", "surface"],

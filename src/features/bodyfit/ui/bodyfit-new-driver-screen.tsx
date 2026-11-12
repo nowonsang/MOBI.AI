@@ -6,6 +6,7 @@ import { z } from "zod";
 import { canUseVoice } from "@/shared/config/app-variant";
 import { AppText } from "@/shared/ui/app-text";
 import { Button } from "@/shared/ui/button";
+import { Card } from "@/shared/ui/card";
 import { Screen } from "@/shared/ui/screen";
 import { TextField, type TextFieldHandle } from "@/shared/ui/text-field";
 import { spacing } from "@/shared/ui/theme";
@@ -68,10 +69,12 @@ export function BodyfitNewDriverScreen() {
     });
   };
 
+  const createError = create.isError ? describeBodyfitError(create.error) : null;
+
   return (
     <Screen
       title="운전자 등록"
-      description="체형 정보는 이 차량 안에만 암호화해 저장해요"
+      description="키와 몸무게만 알려 주시면 첫 자세를 바로 추천해 드려요"
       width="narrow"
       footer={
         <>
@@ -88,7 +91,7 @@ export function BodyfitNewDriverScreen() {
         </>
       }
     >
-      <View style={styles.form}>
+      <Card title="체형 정보">
         <TextField
           label="이름"
           value={values.name}
@@ -99,28 +102,35 @@ export function BodyfitNewDriverScreen() {
           submitBehavior="submit"
           onSubmitEditing={() => heightRef.current?.focus()}
         />
-        <TextField
-          label="키 (cm)"
-          value={values.heightCm}
-          onChangeText={change("heightCm")}
-          error={errors.heightCm}
-          keyboardType="decimal-pad"
-          ref={heightRef}
-          returnKeyType="next"
-          submitBehavior="submit"
-          onSubmitEditing={() => weightRef.current?.focus()}
-        />
-        <TextField
-          label="몸무게 (kg)"
-          value={values.weightKg}
-          onChangeText={change("weightKg")}
-          error={errors.weightKg}
-          keyboardType="decimal-pad"
-          ref={weightRef}
-          returnKeyType="next"
-          submitBehavior="submit"
-          onSubmitEditing={() => sittingRef.current?.focus()}
-        />
+        {/* 키·몸무게는 한 줄에 두어 스크롤을 줄인다. 좁은 창에서는 줄바꿈되어 위아래로 쌓인다. */}
+        <View style={styles.pair}>
+          <View style={styles.pairItem}>
+            <TextField
+              label="키 (cm)"
+              value={values.heightCm}
+              onChangeText={change("heightCm")}
+              error={errors.heightCm}
+              keyboardType="decimal-pad"
+              ref={heightRef}
+              returnKeyType="next"
+              submitBehavior="submit"
+              onSubmitEditing={() => weightRef.current?.focus()}
+            />
+          </View>
+          <View style={styles.pairItem}>
+            <TextField
+              label="몸무게 (kg)"
+              value={values.weightKg}
+              onChangeText={change("weightKg")}
+              error={errors.weightKg}
+              keyboardType="decimal-pad"
+              ref={weightRef}
+              returnKeyType="next"
+              submitBehavior="submit"
+              onSubmitEditing={() => sittingRef.current?.focus()}
+            />
+          </View>
+        </View>
         <TextField
           label="앉은키 (cm, 선택)"
           hint="모르면 비워 두세요. 키로 추정해요"
@@ -131,21 +141,30 @@ export function BodyfitNewDriverScreen() {
           ref={sittingRef}
           returnKeyType="done"
         />
-        <BodyfitConsentNotice
-          askVoice={canUseVoice}
-          voiceConsent={voiceConsent}
-          onVoiceConsentChange={setVoiceConsent}
-        />
-        {create.isError ? (
-          <AppText variant="caption" tone="danger">
-            {describeBodyfitError(create.error).title}
+      </Card>
+      <BodyfitConsentNotice
+        askVoice={canUseVoice}
+        voiceConsent={voiceConsent}
+        onVoiceConsentChange={setVoiceConsent}
+      />
+      {/* 저장 실패는 하단 버튼 바로 위에 이유와 다음 행동을 함께 알린다. */}
+      {createError ? (
+        <View accessibilityLiveRegion="polite" style={styles.error}>
+          <AppText variant="secondary" tone="danger">
+            {createError.title}
           </AppText>
-        ) : null}
-      </View>
+          <AppText variant="caption" tone="tertiary">
+            {createError.description}
+          </AppText>
+        </View>
+      ) : null}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  form: { gap: spacing.lg },
+  pair: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
+  // 두 칸이 나란히 들어가지 않는 좁은 창에서는 한 칸씩 쌓인다.
+  pairItem: { flex: 1, minWidth: 280 },
+  error: { gap: spacing.xs },
 });

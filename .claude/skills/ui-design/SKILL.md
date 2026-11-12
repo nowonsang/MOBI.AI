@@ -17,7 +17,7 @@ description: MOBI.AI 차량 앱 디자인 규칙(현대자동차 공모전, Pleo
 | 공모전 | **디자인 규정 없음** | 공모전 사이트(appdevchallenge.auto-hmg.io) 접수·심사·FAQ·유의사항 확인 (2026-11-10). 심사 항목 중 차량특화성("주행·정차 맥락 및 차량 기능과 유기적으로 결합")과 기술 활용성("핵심 기능과 사용 경험에 적절히 활용")이 디자인과 관련된다. 2차 PT 심사 기준은 아직 공개되지 않았다 |
 
 **토큰은 `src/shared/ui/theme.ts` 에 있다.** 컴포넌트에서 색·크기를 직접 정하지 말고 토큰(`colors.*`, `typography.*`, `spacing.*`, `sizes.*`, `radius.*`, `layout.*`)만 쓴다. 이 파일 밖의 임의 색상(`"#..."`, `"rgb(...)"`)은 ESLint 에러다.
-공용 컴포넌트(`src/shared/ui/`): `AppText`, `Button`, `TextField`, `Screen`, `Columns`, `StatusView`, `Card`·`SummaryCard`, `InfoRow`, `IconBadge`, `ChipGroup`·`ToggleChip`, `ConfirmDialog`. 새 화면은 이것부터 쓴다. 색은 주간·야간 두 세트라 `themedStyles`·`useColors` 로 읽는다 (1-3장).
+공용 컴포넌트(`src/shared/ui/`): `AppText`, `Button`, `TextField`, `Screen`, `Columns`, `StatusView`, `Card`·`SummaryCard`, `InfoRow`, `IconBadge`, `Divider`, `ChipGroup`·`ToggleChip`, `ConfirmDialog`. 새 화면은 이것부터 쓴다. 색은 주간·야간 두 세트라 `themedStyles`·`useColors` 로 읽는다 (1-3장).
 
 ## 1. 차량 화면 크기와 배치
 
@@ -165,7 +165,7 @@ description: MOBI.AI 차량 앱 디자인 규칙(현대자동차 공모전, Pleo
 - **카드**: `Card` (흰 면 + 연한 그림자, 제목·개수 표시·구분선·› 포함). 화면 바탕은 `Screen` 이 옅은 회색으로 깐다.
 - **요약 카드**: `SummaryCard` (파란 면에 라벨 + 값 + ›). 화면에서 가장 중요한 한 줄에만, 화면당 1개.
 - **2단 구성**: `Columns` (왼쪽: 요약 카드·그림, 오른쪽: 목록·선택지).
-- **정보 행**: `InfoRow` (아이콘 원 `IconBadge` + 라벨 + 값 + 보조 설명). 아이콘은 뜻을 혼자 전하지 않고 항상 글자와 함께 쓴다.
+- **정보 행**: `InfoRow` (아이콘 원 `IconBadge` + 라벨 + 값 + 보조 설명). 아이콘은 뜻을 혼자 전하지 않고 항상 글자와 함께 쓴다. 행 자체가 행동이면(예: 목록 끝 "운전자 추가하기") `valueTone="accent"`. 카드 안 행 사이는 `Divider`.
 - **고르기**: 하나만 고르면 `ChipGroup`, 여러 개면 `ToggleChip`(격자에 놓을 때는 `shape="tile"`). 고른 칩은 색과 ✓ 를 함께 표시한다.
 - **그림**: 운전석 그림은 `bodyfit-seat-image.tsx` (`assets/images/seat.png`, 투명 배경). 꾸밈용이므로 자세 값은 옆의 숫자·글자로 함께 전한다.
 - **로딩**: 0.25초 안에 끝나지 않을 수 있으면 실제 레이아웃과 같은 모양의 스켈레톤. 스피너만 띄우지 않는다 (버튼 안 `loading` 은 예외).
