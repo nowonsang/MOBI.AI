@@ -23,6 +23,46 @@ describe("toComfortSettings", () => {
       }),
     ).toEqual({ seatHeat: 2, cabinTarget: 22.5 });
   });
+
+  it("통풍은 열선과 따로, 풍량과 바람 방향도 함께 꺼낸다", () => {
+    expect(
+      toComfortSettings({
+        seatHeat: { value: 0, min: 0, max: 3 },
+        seatVent: { value: 2, min: 0, max: 3 },
+        fanSpeed: { value: 4, min: 1, max: 8 },
+        fanDirection: { value: "faceFloor", options: ["face", "faceFloor"] },
+        fanMode: "manual",
+      }),
+    ).toEqual({
+      seatHeat: 0,
+      seatVent: 2,
+      fanSpeed: 4,
+      fanDirection: "faceFloor",
+    });
+  });
+
+  it("자동 공조이거나 공조가 꺼져 있으면 풍량과 바람 방향은 취향으로 남기지 않는다", () => {
+    const fan = {
+      seatVent: { value: 1, min: 0, max: 3 },
+      fanSpeed: { value: 6, min: 1, max: 8 },
+      fanDirection: { value: "face" as const, options: ["face" as const] },
+    };
+    expect(toComfortSettings({ ...fan, fanMode: "auto" })).toEqual({
+      seatVent: 1,
+    });
+    expect(toComfortSettings({ ...fan, fanMode: "off" })).toEqual({
+      seatVent: 1,
+    });
+  });
+
+  it("차량 범위 밖 풍량(꺼짐을 0 으로 알려 주는 차)은 남기지 않는다", () => {
+    expect(
+      toComfortSettings({ fanSpeed: { value: 0, min: 1, max: 8 } }),
+    ).toEqual({});
+    expect(
+      toComfortSettings({ fanSpeed: { value: 0, min: 0, max: 8 } }),
+    ).toEqual({ fanSpeed: 0 });
+  });
 });
 
 describe("toComfortRecord", () => {
@@ -59,6 +99,47 @@ describe("toComfortRecord", () => {
 
   it("기록할 항목이 없으면 남기지 않는다", () => {
     expect(toComfortRecord("a", 1, { cabinCurrent: 10 })).toBeNull();
+  });
+
+  it("통풍·풍량·바람 방향이 든 기록도 저장 형식 검증을 통과한다", () => {
+    const record = toComfortRecord("a", 1, {
+      seatVent: { value: 3, min: 0, max: 3 },
+      fanSpeed: { value: 8, min: 1, max: 8 },
+      fanDirection: { value: "floorDefrost", options: ["floorDefrost"] },
+      cabinCurrent: 31,
+    });
+    expect(record?.settings).toEqual({
+      seatVent: 3,
+      fanSpeed: 8,
+      fanDirection: "floorDefrost",
+    });
+    expect(comfortRecordSchema.safeParse(record).success).toBe(true);
+  });
+});
+
+describe("comfortRecordSchema", () => {
+  it("통풍·풍량이 없는 예전 기록도 그대로 읽는다", () => {
+    const old = {
+      profileId: "a",
+      at: 1,
+      cabinTemp: 8,
+      settings: { seatHeat: 2, steeringHeat: 1, cabinTarget: 23 },
+    };
+    expect(comfortRecordSchema.parse(old)).toEqual(old);
+  });
+
+  it("모르는 바람 방향이나 음수 통풍은 받지 않는다", () => {
+    const base = { profileId: "a", at: 1, cabinTemp: null };
+    expect(
+      comfortRecordSchema.safeParse({
+        ...base,
+        settings: { fanDirection: "ceiling" },
+      }).success,
+    ).toBe(false);
+    expect(
+      comfortRecordSchema.safeParse({ ...base, settings: { seatVent: -1 } })
+        .success,
+    ).toBe(false);
   });
 });
 
@@ -118,6 +199,71 @@ describe("recommendComfort", () => {
       3,
     );
   });
+
+  it("더운 날에는 통풍과 풍량을, 바람 방향은 가장 자주 고른 쪽을 추천한다", () => {
+    const records = [
+      record(1, 33, { seatVent: 3, fanSpeed: 6, fanDirection: "face" }),
+      record(2, 31, { seatVent: 2, fanSpeed: 5, fanDirection: "faceFloor" }),
+      record(3, 32, { seatVent: 2, fanSpeed: 7, fanDirection: "face" }),
+      record(4, 6, { seatHeat: 2, fanSpeed: 2, fanDirection: "floor" }),
+    ];
+    expect(recommendComfort(records, 32)?.settings).toEqual({
+      seatVent: 2,
+      fanSpeed: 6,
+      fanDirection: "face",
+    });
+  });
+
+  it("바람 방향을 고른 횟수가 같으면 최근에 고른 쪽을 추천한다", () => {
+    const records = [
+      record(1, 20, { fanDirection: "floor" }),
+      record(2, 20, { fanDirection: "face" }),
+    ];
+    expect(recommendComfort(records, 20)?.settings.fanDirection).toBe("face");
+  });
+
+  it("자동 공조로 달린 날(풍량 기록 없음)은 빼고 직접 맞춘 날의 풍량만 본다", () => {
+    const records = [
+      record(1, 20, { cabinTarget: 22, fanSpeed: 3, fanDirection: "face" }),
+      record(2, 20, { cabinTarget: 22 }),
+      record(3, 20, { cabinTarget: 23 }),
+    ];
+    expect(recommendComfort(records, 20)?.settings).toEqual({
+      cabinTarget: 22,
+      fanSpeed: 3,
+      fanDirection: "face",
+    });
+  });
+
+  it("예전 기록(통풍·풍량 없음)만 있으면 그 항목은 추천하지 않는다", () => {
+    const records = [
+      record(1, 10, { seatHeat: 2, cabinTarget: 23 }),
+      record(2, 10, { seatHeat: 2, cabinTarget: 24 }),
+    ];
+    expect(recommendComfort(records, 10)?.settings).toEqual({
+      seatHeat: 2,
+      cabinTarget: 23.5,
+    });
+  });
+
+  it("열선과 통풍을 함께 추천하지 않는다: 켠 날이 섞이면 최근에 켠 쪽만 남긴다", () => {
+    const heatThenVent = [
+      record(1, 18, { seatHeat: 2, seatVent: 0 }),
+      record(2, 18, { seatHeat: 0, seatVent: 2 }),
+    ];
+    expect(recommendComfort(heatThenVent, 18)?.settings).toEqual({
+      seatHeat: 0,
+      seatVent: 1,
+    });
+    const ventThenHeat = [
+      record(1, 18, { seatHeat: 0, seatVent: 2 }),
+      record(2, 18, { seatHeat: 2, seatVent: 0 }),
+    ];
+    expect(recommendComfort(ventThenHeat, 18)?.settings).toEqual({
+      seatHeat: 1,
+      seatVent: 0,
+    });
+  });
 });
 
 describe("comfortChanges", () => {
@@ -136,6 +282,56 @@ describe("comfortChanges", () => {
   it("차량이 지원하지 않는 항목은 뺀다", () => {
     expect(
       comfortChanges({ cabinTarget: state.cabinTarget }, { seatHeat: 2 }),
+    ).toEqual({});
+  });
+
+  const fanState = {
+    seatHeat: { value: 2, min: 0, max: 3 },
+    seatVent: { value: 0, min: 0, max: 3 },
+    fanSpeed: { value: 2, min: 1, max: 8 },
+    fanDirection: {
+      value: "floor" as const,
+      options: ["face" as const, "floor" as const, "faceFloor" as const],
+    },
+  };
+  const summer = {
+    seatHeat: 0,
+    seatVent: 5,
+    fanSpeed: 12,
+    fanDirection: "face" as const,
+  };
+
+  it("통풍·풍량·바람 방향도 지금과 다른 항목만 범위 안 값으로 남긴다", () => {
+    expect(comfortChanges({ ...fanState, fanMode: "manual" }, summer)).toEqual({
+      seatHeat: 0,
+      seatVent: 3,
+      fanSpeed: 8,
+      fanDirection: "face",
+    });
+    expect(
+      comfortChanges(fanState, {
+        seatHeat: 2,
+        seatVent: 0,
+        fanSpeed: 2,
+        fanDirection: "floor",
+      }),
+    ).toEqual({});
+  });
+
+  it("자동 공조이거나 공조가 꺼져 있으면 풍량과 바람 방향은 덮어쓰지 않는다", () => {
+    expect(comfortChanges({ ...fanState, fanMode: "auto" }, summer)).toEqual({
+      seatHeat: 0,
+      seatVent: 3,
+    });
+    expect(comfortChanges({ ...fanState, fanMode: "off" }, summer)).toEqual({
+      seatHeat: 0,
+      seatVent: 3,
+    });
+  });
+
+  it("이 차량에 없는 바람 방향은 보내지 않는다", () => {
+    expect(
+      comfortChanges(fanState, { fanDirection: "faceFloorDefrost" }),
     ).toEqual({});
   });
 });

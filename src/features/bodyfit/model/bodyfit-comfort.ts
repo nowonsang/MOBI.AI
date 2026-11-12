@@ -3,15 +3,34 @@ import type {
   DriverComfortState,
 } from "@/shared/pleos/pleos.types";
 
-import type { ComfortRecord, ComfortSettings } from "./bodyfit.types";
+import type {
+  ComfortRecord,
+  ComfortSettings,
+  FanDirection,
+} from "./bodyfit.types";
 
 // 저장할 수 있는 값의 범위. 차가 알려 준 값이라도 이 밖이면 그 항목만 빼고 기록한다.
-/** 열선·통풍 단계 (차종마다 다르지만 이보다 넓은 차는 없다고 본다) */
+/** 열선 단계 (차종마다 다르지만 이보다 넓은 차는 없다고 본다). 음수는 냉각이다. */
 export const HEAT_LEVEL_RANGE = { min: -10, max: 10 };
+/** 시트 통풍 단계 (0 = 꺼짐) */
+export const VENT_LEVEL_RANGE = { min: 0, max: 10 };
+/** 풍량 단계 */
+export const FAN_SPEED_RANGE = { min: 0, max: 20 };
 /** 공조 설정 온도(섭씨) */
 export const CABIN_TARGET_RANGE = { min: 10, max: 40 };
 /** 탈 때 실내 온도(섭씨). 한여름 햇볕 아래 세운 차 안은 80℃ 를 넘기도 한다. */
 export const CABIN_TEMP_RANGE = { min: -40, max: 100 };
+
+/** 기록·추천할 수 있는 바람 방향 */
+export const FAN_DIRECTIONS = [
+  "face",
+  "floor",
+  "faceFloor",
+  "defrost",
+  "faceDefrost",
+  "floorDefrost",
+  "faceFloorDefrost",
+] as const satisfies readonly FanDirection[];
 
 const within = (value: number, range: { min: number; max: number }) =>
   Number.isFinite(value) && value >= range.min && value <= range.max;
@@ -22,25 +41,44 @@ export const SIMILAR_CABIN_GAP = 5;
 /** 추천에 쓰는 최근 기록 수. 계절이 바뀌면 취향도 바뀌므로 최근 것만 본다. */
 const RECENT_LIMIT = 5;
 
-type ComfortKey = keyof ComfortSettings;
-const COMFORT_KEYS: readonly ComfortKey[] = [
-  "seatHeat",
-  "steeringHeat",
-  "cabinTarget",
-];
+// 숫자 항목의 저장 범위와 단위: 열선·통풍·풍량은 정수 단계, 온도는 0.5도.
+const LEVELS = {
+  seatHeat: { range: HEAT_LEVEL_RANGE, step: 1 },
+  seatVent: { range: VENT_LEVEL_RANGE, step: 1 },
+  steeringHeat: { range: HEAT_LEVEL_RANGE, step: 1 },
+  cabinTarget: { range: CABIN_TARGET_RANGE, step: 0.5 },
+  fanSpeed: { range: FAN_SPEED_RANGE, step: 1 },
+} as const;
+type LevelKey = keyof typeof LEVELS;
+const LEVEL_KEYS = Object.keys(LEVELS) as LevelKey[];
+
+/**
+ * 풍량·바람 방향을 운전자가 직접 정하고 있는지.
+ * 자동 공조이거나 공조가 꺼져 있으면 차가 정한 값이라 취향으로 기록하지 않고, 맞출 때도 건드리지 않는다
+ * (수동 값을 보내면 자동이 풀리거나 공조가 켜진다).
+ */
+export const isFanManual = (state: DriverComfortState): boolean =>
+  (state.fanMode ?? "manual") === "manual";
+
+const isFanKey = (key: LevelKey) => key === "fanSpeed";
 
 /** 차량에서 읽은 상태 → 기록할 설정 값. 지원하지 않거나 범위를 벗어난 항목은 뺀다. */
 export function toComfortSettings(state: DriverComfortState): ComfortSettings {
   const settings: ComfortSettings = {};
-  for (const key of COMFORT_KEYS) {
-    const value = state[key]?.value;
-    if (value === undefined) continue;
+  const fanManual = isFanManual(state);
+  for (const key of LEVEL_KEYS) {
+    const item = state[key];
+    if (!item || (isFanKey(key) && !fanManual)) continue;
+    const { range, step } = LEVELS[key];
     const valid =
-      key === "cabinTarget"
-        ? within(value, CABIN_TARGET_RANGE)
-        : Number.isInteger(value) && within(value, HEAT_LEVEL_RANGE);
-    if (valid) settings[key] = value;
+      within(item.value, range) && (step !== 1 || Number.isInteger(item.value));
+    // 풍량은 차량 범위 밖 값(공조가 꺼져 0 으로 읽히는 차)을 취향으로 남기지 않는다. 맞출 때 가장 약한 바람으로 켜지기 때문이다.
+    const inVehicleRange = !isFanKey(key) || within(item.value, item);
+    if (valid && inVehicleRange) settings[key] = item.value;
   }
+  const direction = state.fanDirection?.value;
+  if (fanManual && direction && FAN_DIRECTIONS.includes(direction))
+    settings.fanDirection = direction;
   return settings;
 }
 
@@ -70,6 +108,16 @@ const median = (values: readonly number[]): number => {
     : (sorted[middle - 1] + sorted[middle]) / 2;
 };
 
+/** 가장 자주 고른 값. 횟수가 같으면 앞에 있는(최근) 값. */
+const mostFrequent = <T>(values: readonly T[]): T | undefined => {
+  const counts = new Map<T, number>();
+  for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
+  let best: T | undefined;
+  for (const [value, count] of counts)
+    if (best === undefined || count > (counts.get(best) ?? 0)) best = value;
+  return best;
+};
+
 export type ComfortRecommendation = {
   settings: ComfortSettings;
   /** 추천에 쓴 기록 수 */
@@ -81,7 +129,8 @@ export type ComfortRecommendation = {
 /**
  * 이 운전자의 출발 기록에서 지금 상황에 맞는 온도 취향을 고른다.
  * 지금 실내 온도를 알면 탈 때 온도가 비슷했던(±SIMILAR_CABIN_GAP) 기록만 보고, 없거나 모르면 최근 기록을 본다.
- * 항목마다 최근 기록의 가운데 값(중앙값)을 쓴다: 한 번 다르게 켠 날에 흔들리지 않게 한다.
+ * 숫자 항목은 최근 기록의 가운데 값(중앙값)을 쓴다: 한 번 다르게 켠 날에 흔들리지 않게 한다.
+ * 바람 방향은 가장 자주 고른 방향을 쓴다.
  */
 export function recommendComfort(
   records: readonly ComfortRecord[],
@@ -100,15 +149,28 @@ export function recommendComfort(
   const picked = (similar.length > 0 ? similar : recent).slice(0, RECENT_LIMIT);
 
   const settings: ComfortSettings = {};
-  for (const key of COMFORT_KEYS) {
+  for (const key of LEVEL_KEYS) {
     const values = picked
       .map((record) => record.settings[key])
       .filter((value): value is number => value !== undefined);
     if (values.length === 0) continue;
-    const middle = median(values);
-    // 열선은 정수 단계, 온도는 0.5도 단위로 맞춘다.
-    settings[key] =
-      key === "cabinTarget" ? Math.round(middle * 2) / 2 : Math.round(middle);
+    const { step } = LEVELS[key];
+    settings[key] = Math.round(median(values) / step) * step;
+  }
+  const direction = mostFrequent(
+    picked
+      .map((record) => record.settings.fanDirection)
+      .filter((value): value is FanDirection => value !== undefined),
+  );
+  if (direction) settings.fanDirection = direction;
+
+  // 열선과 통풍은 함께 켜지 않는다. 켠 날이 섞여 둘 다 추천되면 가장 최근에 켰던 쪽만 남긴다.
+  if ((settings.seatHeat ?? 0) > 0 && (settings.seatVent ?? 0) > 0) {
+    const latest = picked.find(
+      ({ settings: s }) => (s.seatHeat ?? 0) > 0 || (s.seatVent ?? 0) > 0,
+    );
+    if ((latest?.settings.seatVent ?? 0) > 0) settings.seatHeat = 0;
+    else settings.seatVent = 0;
   }
   return {
     settings,
@@ -117,18 +179,33 @@ export function recommendComfort(
   };
 }
 
-/** 지금 차량 상태와 추천이 다른 항목만 남긴다. 다 같으면 빈 객체. 차량이 지원하지 않는 항목은 뺀다. */
+/**
+ * 지금 차량 상태와 추천이 다른 항목만 남긴다. 다 같으면 빈 객체. 차량이 지원하지 않는 항목은 뺀다.
+ * 풍량·바람 방향은 운전자가 직접 정하고 있을 때만 바꾼다 (isFanManual).
+ */
 export function comfortChanges(
   state: DriverComfortState,
   wanted: ComfortSettings,
 ): DriverComfortSettings {
   const changes: DriverComfortSettings = {};
-  for (const key of COMFORT_KEYS) {
+  const fanManual = isFanManual(state);
+  for (const key of LEVEL_KEYS) {
     const target = wanted[key];
     const item = state[key];
     if (target === undefined || !item) continue;
+    if (isFanKey(key) && !fanManual) continue;
     const clamped = Math.min(item.max, Math.max(item.min, target));
     if (Math.abs(clamped - item.value) > 0.01) changes[key] = clamped;
   }
+  const direction = wanted.fanDirection;
+  const now = state.fanDirection;
+  if (
+    fanManual &&
+    direction &&
+    now &&
+    direction !== now.value &&
+    now.options.includes(direction)
+  )
+    changes.fanDirection = direction;
   return changes;
 }
