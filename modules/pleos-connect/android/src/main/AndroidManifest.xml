@@ -7,6 +7,10 @@
   <uses-permission android:name="pleos.car.permission.CAR_SEATS" />
   <!-- 시트 이동 (moveSeat*) -->
   <uses-permission android:name="pleos.car.permission.CONTROL_CAR_SEATS" />
+  <!-- 운전석 온도 취향 읽기·맞추기: 핸들 열선(get/setHvacSteeringWheelHeat), 공조 설정 온도·실내 온도(get/setHvacTemperature, getHvacTemperatureCurrent).
+       시트 열선(get/setHvacSeatTemperature)은 위의 CAR_SEATS·CONTROL_CAR_SEATS 를 쓴다. -->
+  <uses-permission android:name="pleos.car.permission.CAR_CLIMATE" />
+  <uses-permission android:name="pleos.car.permission.CONTROL_CAR_CLIMATE" />
   <!-- 기어 상태 (Android Car API GEAR_SELECTION). 주차(P) 중에만 시트를 움직이기 위해 필요 -->
   <uses-permission android:name="android.car.permission.CAR_POWERTRAIN" />
   <!-- 음성 인식 · 음성 안내 (LLM SDK 는 2026-10-19 제공 종료되어 쓰지 않는다) -->

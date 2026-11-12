@@ -10,6 +10,7 @@ import { usePleosEvent } from "@/shared/pleos/use-pleos-event";
 
 import {
   useEndDriveSession,
+  useRecordComfort,
   useRecordSeatAdjustment,
   useStartDriveSession,
   useVoiceSeatFeedback,
@@ -45,6 +46,7 @@ export function BodyfitDriveMonitor() {
     enabled: driverId !== null,
   });
   const record = useRecordSeatAdjustment();
+  const recordComfort = useRecordComfort();
   const startDrive = useStartDriveSession();
   const endDrive = useEndDriveSession();
   const ask = useVoiceSeatFeedback();
@@ -127,6 +129,8 @@ export function BodyfitDriveMonitor() {
       startDrive.mutate({ profileId: driverId, startedAt: Date.now() });
       if (driver.data)
         record.mutate({ profile: driver.data, source: "drive-start" });
+      // 출발할 때의 열선·온도도 함께 기억한다 (다음에 탈 때 같은 취향으로 맞춘다).
+      recordComfort.mutate({ profileId: driverId });
     } else if (tracked.event === "parked") {
       finishDrive({ parked: true });
     }

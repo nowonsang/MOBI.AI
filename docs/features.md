@@ -99,6 +99,16 @@
 | D-4 | SDK 기능 | 음성 안내 | TTS가 열리면: 질문과 결과를 음성으로 읽어주기 |
 | D-5 | P2 | 차량 음성 AI(Gleo) 연동 | 자유 문장 이해는 Gleo에 맡기고 결과만 받기 |
 
+### E. 온도 취향 ("내 운전석 통째로")
+
+시트 자세뿐 아니라 운전석 온도 취향까지 사람별로 기억한다. 현대차그룹 스마트 자세제어(위치만 제안)와의 차별점이다. Vehicle SDK 에는 외부 온도 API 가 없어, **탈 때 실내 온도**를 기준으로 비슷한 날의 설정을 고른다.
+
+| ID | 우선 | 기능 | 설명 |
+| --- | --- | --- | --- |
+| E-1 | P0 | 온도 취향 기록 | 출발할 때(P 해제) 시트 열선·통풍, 핸들 열선, 운전석 공조 설정 온도와 탈 때 실내 온도를 기록 (`getHvacSeatTemperature`, `getHvacSteeringWheelHeatState`, `getHvacTemperature`, `getHvacTemperatureCurrent`) |
+| E-2 | P0 | 온도 취향 추천 | 지금 실내 온도와 ±5℃ 안이었던 최근 기록 5건의 가운데 값. 비슷한 날이 없으면 최근 기록 기준 |
+| E-3 | P0 | 평소 온도로 맞추기 | 맞춤 자세 화면의 "내 운전석 온도" 카드. 주차(P) 중 운전자가 누르면 다른 항목만 바꾼다 (`setHvacSeatTemperature`, `setHvacSteeringWheelHeat`, `setHvacTemperature`). 네이티브에서도 기어 P 확인 |
+
 ## MVP 시연 시나리오 (Pleos 에뮬레이터)
 
 공지에 따라 2차 PT는 에뮬레이터 구동 화면으로 시연할 수 있다. 1차 개발 산출물은 화면 녹화·프로토타입도 인정된다.

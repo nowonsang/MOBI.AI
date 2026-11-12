@@ -1,6 +1,8 @@
 import { NativeModule, requireOptionalNativeModule } from "expo";
 
 import type {
+  DriverComfortSettings,
+  DriverComfortState,
   DriverSeatState,
   Gear,
   PleosConnectEvents,
@@ -18,6 +20,11 @@ declare class PleosConnectModule extends NativeModule<PleosConnectEvents> {
   moveDriverSeatAxis(axis: SeatAxis, target: number): Promise<number>;
   stopDriverSeat(): Promise<void>;
   isDriverSeatOccupied(): Promise<boolean>;
+  getDriverComfortState(): Promise<DriverComfortState>;
+  /** 기어 P 에서만 바꾸고, 바꾼 뒤의 상태를 돌려준다. */
+  applyDriverComfort(
+    settings: DriverComfortSettings,
+  ): Promise<DriverComfortState>;
   /** 한 문장을 듣고 최종 인식 결과를 돌려준다. 중간 결과는 onSpeechPartial 이벤트로 온다. */
   listen(): Promise<string>;
   stopListening(): Promise<void>;

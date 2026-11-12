@@ -7,6 +7,7 @@ import { shouldRereadSeat } from "../model/bodyfit-seat";
 import {
   findBodyProfile,
   findBodyProfiles,
+  findComfortRecords,
   findSeatAdjustments,
 } from "./bodyfit.storage";
 
@@ -20,6 +21,9 @@ export const bodyfitKeys = {
   seat: () => [...bodyfitKeys.all, "seat"] as const,
   /** 시트 이동 뮤테이션. 화면 밖에서도 "움직이는 중"인지 알 수 있게 (useIsMutating) */
   seatMove: () => [...bodyfitKeys.all, "seat-move"] as const,
+  comfortRecords: (profileId: string) =>
+    [...bodyfitKeys.all, "comfort-records", profileId] as const,
+  comfort: () => [...bodyfitKeys.all, "comfort"] as const,
 };
 
 export const bodyfitQueries = {
@@ -37,6 +41,18 @@ export const bodyfitQueries = {
     queryOptions({
       queryKey: bodyfitKeys.adjustments(profileId),
       queryFn: () => findSeatAdjustments(profileId),
+    }),
+  comfortRecords: (profileId: string) =>
+    queryOptions({
+      queryKey: bodyfitKeys.comfortRecords(profileId),
+      queryFn: () => findComfortRecords(profileId),
+    }),
+  /** 운전석 열선·공조 상태와 지금 실내 온도. 운전자가 버튼으로 바꿀 수 있어 항상 다시 읽는다. */
+  comfort: () =>
+    queryOptions({
+      queryKey: bodyfitKeys.comfort(),
+      queryFn: () => pleos().getDriverComfortState(),
+      staleTime: 0,
     }),
   /** 운전석의 현재 위치와 지원 범위. 운전자가 버튼으로 바꿀 수 있어 항상 다시 읽는다. */
   seat: () =>

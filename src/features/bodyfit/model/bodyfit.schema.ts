@@ -54,3 +54,20 @@ export const seatAdjustmentSchema = z.object({
   final: seatRatiosSchema,
   source: z.enum(["drive-start", "voice", "saved", "touch"]),
 });
+
+// 차량 단계 값은 차종마다 범위가 달라 정수인지만 확인한다. 온도는 사람이 쓰는 범위로 막는다.
+const heatLevel = z.number().int().min(-10).max(10);
+const celsius = z.number().min(-40).max(60);
+
+export const comfortSettingsSchema = z.object({
+  seatHeat: heatLevel.optional(),
+  steeringHeat: heatLevel.optional(),
+  cabinTarget: celsius.optional(),
+});
+
+export const comfortRecordSchema = z.object({
+  profileId: z.string().min(1),
+  at: z.number(),
+  cabinTemp: celsius.nullable(),
+  settings: comfortSettingsSchema,
+});

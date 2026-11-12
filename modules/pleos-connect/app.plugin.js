@@ -7,6 +7,7 @@ const { AndroidConfig, withAndroidManifest } = require("expo/config-plugins");
 // market 빌드는 모듈 매니페스트에서 합쳐지는 이 권한들을 앱 매니페스트에서 지운다 (tools:node="remove").
 const UNAPPROVED_PERMISSIONS = [
   "pleos.car.permission.CONTROL_CAR_SEATS",
+  "pleos.car.permission.CONTROL_CAR_CLIMATE",
   "pleos.car.permission.STT_SERVICE",
   "pleos.car.permission.TTS_SERVICE",
 ];

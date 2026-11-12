@@ -33,6 +33,7 @@ import { recommendSeat } from "../model/bodyfit-recommend";
 import { toSeatRatios } from "../model/bodyfit-seat";
 import { driverSelected } from "../model/bodyfit-session.slice";
 import type { SeatAdjustmentSource } from "../model/bodyfit.types";
+import { BodyfitComfortCard } from "./bodyfit-comfort-card";
 import { describeBodyfitError } from "./bodyfit-error-copy";
 import { BodyfitSeatAxes } from "./bodyfit-seat-axes";
 import { BodyfitSeatImage } from "./bodyfit-seat-image";
@@ -43,13 +44,15 @@ const MOVE_CONFIRM = {
   description: "시트 주변에 물건이나 사람이 끼지 않았는지 확인해 주세요",
 };
 
-const SOURCE_COPY: Record<SeatAdjustmentSource, { glyph: string; label: string }> =
-  {
-    "drive-start": { glyph: "→", label: "출발할 때 자세" },
-    saved: { glyph: "✓", label: "직접 기억한 자세" },
-    touch: { glyph: "↔", label: "주행 후 피드백" },
-    voice: { glyph: "♪", label: "음성 피드백" },
-  };
+const SOURCE_COPY: Record<
+  SeatAdjustmentSource,
+  { glyph: string; label: string }
+> = {
+  "drive-start": { glyph: "→", label: "출발할 때 자세" },
+  saved: { glyph: "✓", label: "직접 기억한 자세" },
+  touch: { glyph: "↔", label: "주행 후 피드백" },
+  voice: { glyph: "♪", label: "음성 피드백" },
+};
 
 const RECENT_RECORDS = 3;
 
@@ -171,7 +174,10 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
     ? { label: "차량에 연결되어 있지 않아요", style: styles.statusIdle }
     : parked
       ? { label: "P · 주차 중이에요", style: styles.statusParked }
-      : { label: "주행 중에는 시트를 맞추지 않아요", style: styles.statusBlocked };
+      : {
+          label: "주행 중에는 시트를 맞추지 않아요",
+          style: styles.statusBlocked,
+        };
 
   return (
     <Screen
@@ -274,7 +280,11 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                 </AppText>
               </View>
               {!vehicleConnected ? (
-                <AppText variant="caption" tone="tertiary" style={styles.center}>
+                <AppText
+                  variant="caption"
+                  tone="tertiary"
+                  style={styles.center}
+                >
                   Pleos Connect 에뮬레이터나 차량에서 열면 시트를 맞출 수 있어요
                 </AppText>
               ) : null}
@@ -286,6 +296,12 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
             <Card title="축별 추천">
               <BodyfitSeatAxes recommended={recommended} current={current} />
             </Card>
+
+            <BodyfitComfortCard
+              profileId={driver.id}
+              vehicleConnected={vehicleConnected}
+              parked={parked}
+            />
 
             {notice ? (
               <AppText

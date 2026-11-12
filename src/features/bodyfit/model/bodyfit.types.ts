@@ -16,7 +16,10 @@ export type BodyProfile = {
   consentedAt: number;
 };
 
-export type BodyProfileInput = Omit<BodyProfile, "id" | "createdAt" | "consentedAt">;
+export type BodyProfileInput = Omit<
+  BodyProfile,
+  "id" | "createdAt" | "consentedAt"
+>;
 
 /**
  * 축별 위치를 차량이 지원하는 범위 안의 비율(0 = 최소, 1 = 최대)로 나타낸다.
@@ -60,4 +63,20 @@ export type FeedbackInterpretation = {
   nudges: SeatNudge[];
   /** 운전자에게 보여 주고 들려줄 해요체 한 문장 */
   reply: string;
+};
+
+/** 운전석 온도 취향 (시트 열선·핸들 열선은 차량 단계 값, 공조 설정 온도는 섭씨). 차량이 지원하는 항목만 있다. */
+export type ComfortSettings = {
+  seatHeat?: number;
+  steeringHeat?: number;
+  cabinTarget?: number;
+};
+
+/** 출발할 때의 온도 취향 기록. cabinTemp(탈 때 실내 온도)가 비슷한 기록끼리 묶어 다음 추천에 쓴다. */
+export type ComfortRecord = {
+  profileId: string;
+  at: number;
+  /** 탈 때 실내 온도(섭씨). 차량이 알려 주지 않으면 null */
+  cabinTemp: number | null;
+  settings: ComfortSettings;
 };

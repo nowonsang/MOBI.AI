@@ -8,12 +8,14 @@ import {
 
 import {
   bodyProfileSchema,
+  comfortRecordSchema,
   driveSessionSchema,
   seatAdjustmentSchema,
 } from "../model/bodyfit.schema";
 import type {
   BodyProfile,
   BodyProfileInput,
+  ComfortRecord,
   DriveSession,
   SeatAdjustment,
 } from "../model/bodyfit.types";
@@ -22,11 +24,13 @@ import type {
 const PROFILES_KEY = "bodyfit:profiles";
 const ADJUSTMENTS_KEY = "bodyfit:adjustments";
 const DRIVE_SESSION_KEY = "bodyfit:drive-session";
+const COMFORT_KEY = "bodyfit:comfort";
 // 학습에는 최근 기록만 쓰므로 운전자별로 이 개수만 남긴다.
 const MAX_ADJUSTMENTS_PER_PROFILE = 50;
 
 const profilesSchema = z.array(bodyProfileSchema);
 const adjustmentsSchema = z.array(seatAdjustmentSchema);
+const comfortRecordsSchema = z.array(comfortRecordSchema);
 
 // 저장된 값도 앱 버전이 바뀌면 형식이 다를 수 있다. 검증에 실패하면 빈 목록으로 본다.
 async function readList<T>(key: string, schema: z.ZodType<T[]>): Promise<T[]> {
@@ -68,11 +72,12 @@ export async function createBodyProfile(
   return profile;
 }
 
-/** 프로필과 그 운전자의 자세 기록, 진행 중이던 주행을 함께 지운다. */
+/** 프로필과 그 운전자의 자세·온도 기록, 진행 중이던 주행을 함께 지운다. */
 export async function deleteBodyProfile(id: string): Promise<void> {
-  const [profiles, adjustments, session] = await Promise.all([
+  const [profiles, adjustments, comfort, session] = await Promise.all([
     findBodyProfiles(),
     readList(ADJUSTMENTS_KEY, adjustmentsSchema),
+    readList(COMFORT_KEY, comfortRecordsSchema),
     findDriveSession(),
   ]);
   await writeList(
@@ -82,6 +87,10 @@ export async function deleteBodyProfile(id: string): Promise<void> {
   await writeList(
     ADJUSTMENTS_KEY,
     adjustments.filter((record) => record.profileId !== id),
+  );
+  await writeList(
+    COMFORT_KEY,
+    comfort.filter((record) => record.profileId !== id),
   );
   if (session?.profileId === id) await deleteDriveSession();
 }
@@ -126,4 +135,23 @@ export async function createSeatAdjustment(
     (item) => item.profileId !== record.profileId,
   );
   await writeList(ADJUSTMENTS_KEY, [...others, ...mine]);
+}
+
+export async function findComfortRecords(
+  profileId: string,
+): Promise<ComfortRecord[]> {
+  const records = await readList(COMFORT_KEY, comfortRecordsSchema);
+  return records.filter((record) => record.profileId === profileId);
+}
+
+export async function createComfortRecord(
+  record: ComfortRecord,
+): Promise<void> {
+  const records = await readList(COMFORT_KEY, comfortRecordsSchema);
+  const mine = records
+    .filter((item) => item.profileId === record.profileId)
+    .concat(record)
+    .slice(-MAX_ADJUSTMENTS_PER_PROFILE);
+  const others = records.filter((item) => item.profileId !== record.profileId);
+  await writeList(COMFORT_KEY, [...others, ...mine]);
 }

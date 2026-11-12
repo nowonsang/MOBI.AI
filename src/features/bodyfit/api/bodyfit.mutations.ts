@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { pleos } from "@/shared/pleos/pleos";
 
+import { toComfortSettings } from "../model/bodyfit-comfort";
 import { interpretByRules } from "../model/bodyfit-feedback";
 import { recommendBaseline } from "../model/bodyfit-recommend";
 import {
@@ -12,6 +13,7 @@ import {
 import type {
   BodyProfile,
   BodyProfileInput,
+  ComfortSettings,
   DriveSession,
   SeatAdjustmentSource,
   SeatNudge,
@@ -20,6 +22,7 @@ import type {
 import { bodyfitKeys } from "./bodyfit.queries";
 import {
   createBodyProfile,
+  createComfortRecord,
   createDriveSession,
   createSeatAdjustment,
   deleteBodyProfile,
@@ -47,6 +50,9 @@ export function useDeleteBodyProfile() {
         queryClient.invalidateQueries({
           queryKey: bodyfitKeys.adjustments(id),
         }),
+        queryClient.invalidateQueries({
+          queryKey: bodyfitKeys.comfortRecords(id),
+        }),
       ]),
   });
 }
@@ -58,15 +64,11 @@ export function useMoveSeat() {
     mutationKey: bodyfitKeys.seatMove(),
     mutationFn: async (ratios: SeatRatios) => {
       const vehicle = pleos();
-      const targets = toSeatTargets(
-        ratios,
-        await vehicle.getDriverSeatState(),
-      );
+      const targets = toSeatTargets(ratios, await vehicle.getDriverSeatState());
       if (targets.length === 0) {
-        throw Object.assign(
-          new Error("움직일 수 있는 시트 축이 없습니다"),
-          { code: "ERR_SEAT_UNSUPPORTED" },
-        );
+        throw Object.assign(new Error("움직일 수 있는 시트 축이 없습니다"), {
+          code: "ERR_SEAT_UNSUPPORTED",
+        });
       }
       // 한 번에 한 축씩 움직인다 (동시에 움직이면 전류 제한으로 멈추는 차량이 있다).
       for (const { axis, target } of targets) {
@@ -116,6 +118,42 @@ export function useRecordSeatAdjustment() {
       queryClient.invalidateQueries({
         queryKey: bodyfitKeys.adjustments(profile.id),
       }),
+  });
+}
+
+/**
+ * 출발할 때의 열선·공조 설정을 이 운전자의 온도 취향 기록으로 남긴다.
+ * 차량이 지원하는 항목이 하나도 없으면 남기지 않는다.
+ */
+export function useRecordComfort() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ profileId }: { profileId: string }) => {
+      const state = await pleos().getDriverComfortState();
+      const settings = toComfortSettings(state);
+      if (Object.keys(settings).length === 0) return;
+      await createComfortRecord({
+        profileId,
+        at: Date.now(),
+        cabinTemp: state.cabinCurrent ?? null,
+        settings,
+      });
+    },
+    onSettled: (_data, _error, { profileId }) =>
+      queryClient.invalidateQueries({
+        queryKey: bodyfitKeys.comfortRecords(profileId),
+      }),
+  });
+}
+
+/** 운전석 열선·공조를 맞춘다. 네이티브 쪽에서 기어 P 를 다시 확인한다. */
+export function useApplyComfort() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (settings: ComfortSettings) =>
+      pleos().applyDriverComfort(settings),
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: bodyfitKeys.comfort() }),
   });
 }
 
