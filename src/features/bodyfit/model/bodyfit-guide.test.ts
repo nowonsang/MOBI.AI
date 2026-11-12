@@ -61,6 +61,39 @@ describe("guideSeat", () => {
     expect(guide.focus).toBe("backrest");
   });
 
+  it("자세 네 축을 다 맞춘 뒤에 좌판 길이 → 헤드레스트 → 안전벨트를 안내한다", () => {
+    const target = {
+      foreAft: 0.5,
+      height: 0.5,
+      backrest: 0.6,
+      tilt: 0.5,
+      depth: 0.5,
+      headrestHeight: 0.6,
+      beltHeight: 0.5,
+    };
+    const seated = { ...target, depth: 0.3, headrestHeight: 0.2, beltHeight: 0.9 };
+    expect(guideSeat(seated, target).focus).toBe("depth");
+    expect(guideSeat({ ...seated, depth: 0.5 }, target).focus).toBe(
+      "headrestHeight",
+    );
+    const last = guideSeat(
+      { ...seated, depth: 0.5, headrestHeight: 0.6 },
+      target,
+    );
+    expect(last.focus).toBe("beltHeight");
+    expect(last.axes).toHaveLength(7);
+    expect(last.done).toBe(false);
+  });
+
+  it("차량이 알려 주지 않는 새 축은 추천이 있어도 안내하지 않고, 나머지를 맞추면 완료다", () => {
+    const guide = guideSeat(
+      { foreAft: 0.5, height: 0.5 },
+      { foreAft: 0.5, height: 0.5, depth: 0.4, headrestHeight: 0.6, beltHeight: 0.5 },
+    );
+    expect(guide.axes.map((axis) => axis.axis)).toEqual(["foreAft", "height"]);
+    expect(guide.done).toBe(true);
+  });
+
   it("현재 값이나 목표가 없는 축은 건너뛴다", () => {
     const guide = guideSeat(
       { foreAft: 0.5, tilt: 0.2 },

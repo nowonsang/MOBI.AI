@@ -174,6 +174,48 @@ describe("learningBasis", () => {
       usedCount: 1,
     });
   });
+
+  it("네 축만 있는 예전 기록과 새 축이 있는 기록을 함께 학습한다", () => {
+    const legacy: SeatAdjustment = {
+      profileId: "p1",
+      at: 1,
+      baseline: { foreAft: 0.5, height: 0.5, backrest: 0.6, tilt: 0.5 },
+      final: { foreAft: 0.4, height: 0.5, backrest: 0.6, tilt: 0.5 },
+      source: "drive-start",
+      context: "usual",
+    };
+    const current: SeatAdjustment = {
+      profileId: "p1",
+      at: 2,
+      baseline: { ...legacy.baseline, depth: 0.5, headrestHeight: 0.5 },
+      final: { ...legacy.final, depth: 0.6, headrestHeight: 0.45 },
+      source: "saved",
+      context: "usual",
+    };
+    const offsets = learnOffsets([legacy, current], "usual");
+    // 앞뒤는 두 기록 모두, 새 축은 값이 있는 기록만 반영한다.
+    expect(offsets.foreAft).toBeCloseTo(-0.1);
+    expect(offsets.depth).toBeCloseTo(0.1);
+    expect(offsets.headrestHeight).toBeCloseTo(-0.05);
+    expect(offsets.beltHeight).toBeUndefined();
+  });
+
+  it("차량이 알려 주지 않은 축(추천만 있고 실제 자세가 없음)은 보정하지 않는다", () => {
+    const offsets = learnOffsets(
+      [
+        {
+          profileId: "p1",
+          at: 1,
+          baseline: { foreAft: 0.5, depth: 0.5, beltHeight: 0.5 },
+          final: { foreAft: 0.55 },
+          source: "drive-start",
+          context: "usual",
+        },
+      ],
+      "usual",
+    );
+    expect(offsets).toEqual({ foreAft: expect.closeTo(0.05) });
+  });
 });
 
 describe("explainOffsets", () => {
@@ -206,6 +248,22 @@ describe("explainOffsets", () => {
     ];
     expect(explainOffsets(history, "usual")).toBe(
       "지난번에 시트를 더 뒤로 미셔서 반영했어요",
+    );
+  });
+
+  it("새 축을 가장 크게 고쳤으면 그 축을 이유로 든다", () => {
+    const history: SeatAdjustment[] = [
+      {
+        profileId: "p1",
+        at: 1,
+        baseline: { backrest: 0.5, headrestHeight: 0.5, depth: 0.5 },
+        final: { backrest: 0.55, headrestHeight: 0.7, depth: 0.4 },
+        source: "saved",
+        context: "usual",
+      },
+    ];
+    expect(explainOffsets(history, "usual")).toBe(
+      "지난번에 헤드레스트를 더 높이셔서 반영했어요",
     );
   });
 

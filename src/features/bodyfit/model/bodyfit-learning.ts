@@ -110,7 +110,7 @@ const CONTEXT_WHEN: Record<DriveContext, string | null> = {
   city: "시내에서는",
 };
 
-// 축 방향은 SeatRatios 를 따른다 (1 = 가장 앞·높게·세움·좌판 앞쪽 높게).
+// 축 방향은 SeatRatios 를 따른다 (1 = 가장 앞·높게·세움·좌판 앞쪽 높게·좌판 길게).
 const ADJUSTED_PHRASE: Record<
   SeatAxis,
   { increase: string; decrease: string }
@@ -127,6 +127,15 @@ const ADJUSTED_PHRASE: Record<
   tilt: {
     increase: "좌판 앞쪽을 더 올리셔서",
     decrease: "좌판 앞쪽을 더 내리셔서",
+  },
+  depth: { increase: "좌판을 더 늘리셔서", decrease: "좌판을 더 줄이셔서" },
+  headrestHeight: {
+    increase: "헤드레스트를 더 높이셔서",
+    decrease: "헤드레스트를 더 낮추셔서",
+  },
+  beltHeight: {
+    increase: "안전벨트를 더 높이셔서",
+    decrease: "안전벨트를 더 낮추셔서",
   },
 };
 

@@ -18,6 +18,18 @@ describe("startDemoSeat", () => {
     expect(start.height).toBeCloseTo(0.83);
   });
 
+  it("새 축이 있는 차량이면 일곱 축 모두 어긋난 곳에서 시작한다", () => {
+    const full = { ...target, depth: 0.5, headrestHeight: 0.6, beltHeight: 0.5 };
+    const start = startDemoSeat(full);
+    const guide = guideSeat(start, full, start);
+    expect(guide.axes).toHaveLength(7);
+    expect(guide.axes.every((axis) => axis.status === "more")).toBe(true);
+    for (const value of Object.values(start)) {
+      expect(value).toBeGreaterThanOrEqual(0);
+      expect(value).toBeLessThanOrEqual(1);
+    }
+  });
+
   it("목표가 없는 축은 만들지 않는다", () => {
     expect(startDemoSeat({ foreAft: 0.5 })).toEqual({ foreAft: 0.3 });
   });
@@ -42,15 +54,21 @@ describe("pressDemoSeat", () => {
     expect(pressDemoSeat(seat, "height", "increase")).toBe(seat);
   });
 
-  it("안내대로 누르면 모든 축을 맞춰 완료된다", () => {
-    const start = startDemoSeat(target);
+  it.each([
+    ["기본 네 축", target],
+    [
+      "일곱 축",
+      { ...target, depth: 0.2, headrestHeight: 0.1, beltHeight: 0.95 },
+    ],
+  ])("안내대로 누르면 모든 축을 맞춰 완료된다 (%s)", (_name, goal) => {
+    const start = startDemoSeat(goal);
     let seat = start;
-    for (let i = 0; i < 50; i += 1) {
-      const guide = guideSeat(seat, target, start);
+    for (let i = 0; i < 80; i += 1) {
+      const guide = guideSeat(seat, goal, start);
       const focus = guide.axes.find((axis) => axis.axis === guide.focus);
       if (!focus?.direction) break;
       seat = pressDemoSeat(seat, focus.axis, focus.direction);
     }
-    expect(guideSeat(seat, target, start).done).toBe(true);
+    expect(guideSeat(seat, goal, start).done).toBe(true);
   });
 });

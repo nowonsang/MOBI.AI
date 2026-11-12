@@ -25,6 +25,7 @@ export type BodyProfileInput = Omit<
  * 축별 위치를 차량이 지원하는 범위 안의 비율(0 = 최소, 1 = 최대)로 나타낸다.
  * 차종마다 원시 값의 단위가 달라서 저장·학습은 비율로만 한다.
  * foreAft 1 = 가장 앞, height 1 = 가장 높게, backrest 1 = 가장 세움, tilt 1 = 좌판 앞쪽 가장 높게.
+ * depth 1 = 좌판 가장 길게, headrestHeight 1 = 가장 높게, beltHeight 1 = 가장 높게.
  */
 export type SeatRatios = Partial<Record<SeatAxis, number>>;
 
