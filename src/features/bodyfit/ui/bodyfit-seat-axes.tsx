@@ -1,9 +1,10 @@
-import { View } from "react-native";
+import { useState } from "react";
+import { Pressable, View } from "react-native";
 
 import { SEAT_AXES } from "@/shared/pleos/pleos.types";
 import { AppText } from "@/shared/ui/app-text";
 import { IconBadge } from "@/shared/ui/icon-badge";
-import { radius, spacing } from "@/shared/ui/theme";
+import { radius, sizes, spacing } from "@/shared/ui/theme";
 import { themedStyles } from "@/shared/ui/use-theme";
 
 import {
@@ -27,19 +28,32 @@ type BodyfitSeatAxesProps = {
 type AxisRowProps = { axis: SeatAxis; target: number; now: number | undefined };
 type AxisRowViewProps = AxisRowProps & { last: boolean };
 
+// 축이 이보다 많으면 이미 맞는 축을 한 줄로 접는다. 기본 네 축만 있는 차량에서는 접지 않는다.
+const FOLD_ABOVE = 4;
+
+// 가이드 조절과 같은 기준(범위의 3%)으로 맞았는지 본다.
+const isSettled = ({ now, target }: AxisRowProps) =>
+  now !== undefined && Math.abs(now - target) <= GUIDE_TOLERANCE;
+
 // 색만으로 구분하지 않도록 막대 옆에 "지금 → 추천" 숫자를 함께 쓴다.
 export function BodyfitSeatAxes({
   recommended,
   current,
 }: BodyfitSeatAxesProps) {
   const styles = useStyles();
+  const [settledOpen, setSettledOpen] = useState(false);
   // 좌판 길이·헤드레스트·안전벨트는 차량이 알려 줄 때만 보여 준다. 없는 차량에서는 기본 네 축 그대로다.
   const shown = recommendationForVehicle(recommended, current);
   const rows = SEAT_AXES.flatMap((axis): AxisRowProps[] => {
     const target = shown[axis];
     return target === undefined ? [] : [{ axis, target, now: current?.[axis] }];
   });
-  const groups = groupSeatAxes(rows);
+  // 조절할 곳을 먼저 보여 주고, 이미 맞는 곳은 "맞는 곳 N곳 보기" 한 줄로 접어 둔다 (아홉 축까지 늘어도 한 화면에 들어오게).
+  const fold = rows.length > FOLD_ABOVE && rows.some(isSettled);
+  const settled = fold ? rows.filter(isSettled) : [];
+  const groups = groupSeatAxes(
+    fold ? rows.filter((row) => !isSettled(row)) : rows,
+  );
   // 묶음이 하나뿐이면 제목 없이 죽 보여 준다.
   const titled = groups.length > 1;
   // 허리 지지대·헤드레스트 각도는 기록이 쌓이기 전에는 추천하지 않는다. 이 차량에 있으면 왜 안 보이는지 한 줄로 알린다.
@@ -69,6 +83,38 @@ export function BodyfitSeatAxes({
           </View>
         </View>
       ))}
+      {settled.length > 0 ? (
+        <View style={[styles.settled, groups.length > 0 && styles.divided]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: settledOpen }}
+            accessibilityLabel={`맞는 곳 ${settled.length}곳 ${settledOpen ? "접기" : "보기"}`}
+            onPress={() => setSettledOpen((open) => !open)}
+            style={({ pressed }) => [
+              styles.foldRow,
+              pressed && styles.foldPressed,
+            ]}
+          >
+            <AppText variant="secondary" style={styles.okText}>
+              {`✓ 맞는 곳 ${settled.length}곳 ${settledOpen ? "접기" : "보기"}`}
+            </AppText>
+            <AppText variant="heading" tone="tertiary">
+              {settledOpen ? "▴" : "▾"}
+            </AppText>
+          </Pressable>
+          {settledOpen ? (
+            <View style={styles.list}>
+              {settled.map((row, rowIndex) => (
+                <AxisRow
+                  key={row.axis}
+                  {...row}
+                  last={rowIndex === settled.length - 1}
+                />
+              ))}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
       {toRemember ? (
         <AppText variant="caption" tone="tertiary">
           {toRemember}
@@ -81,8 +127,7 @@ export function BodyfitSeatAxes({
 function AxisRow({ axis, target, now, last }: AxisRowViewProps) {
   const styles = useStyles();
   const copy = AXIS_COPY[axis];
-  // 가이드 조절과 같은 기준(범위의 3%)으로 맞았는지 본다.
-  const ok = now !== undefined && Math.abs(now - target) <= GUIDE_TOLERANCE;
+  const ok = isSettled({ axis, target, now });
   const value =
     now === undefined
       ? `추천 ${percent(target)}%`
@@ -185,18 +230,34 @@ const CURRENT_DOT = 20;
 const LEGEND_DOT = 16;
 
 const useStyles = themedStyles((colors) => ({
-  list: { gap: spacing.md },
+  list: { gap: spacing.sm },
   // 묶음 제목은 그 묶음의 첫 축에 붙여 둔다 (축 사이보다 좁게).
   group: { gap: spacing.sm },
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.line,
   },
   rowLast: { paddingBottom: 0, borderBottomWidth: 0 },
+  // 접힌 "맞는 곳" 줄. 위에 조절할 축이 있으면 선으로 나눈다.
+  settled: { gap: spacing.sm },
+  divided: { borderTopWidth: 1, borderTopColor: colors.line },
+  foldRow: {
+    minHeight: sizes.touchTarget,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+  },
+  // Pleos 인터랙션 가이드: 눌린 요소는 줄이고 배경색을 바꾼다.
+  foldPressed: {
+    borderRadius: radius.control,
+    backgroundColor: colors.surfaceMuted,
+    transform: [{ scale: 0.98 }],
+  },
   body: { flex: 1, gap: spacing.sm },
   heading: {
     flexDirection: "row",
