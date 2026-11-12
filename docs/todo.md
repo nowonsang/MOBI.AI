@@ -26,8 +26,9 @@
 
 - [x] Playground SDK 상태 확인 → Vehicle State·NaviHelper 사용 가능, Vehicle Control·TTS·STT·FusedLocation Coming Soon
 - [x] Vehicle Control 사전 신청 가능 여부 → 불가. "준비 중"에는 신청 버튼이 없고 "신청 필요"로 바뀐 뒤에만 신청 (11/10)
-- [ ] **공모전 측 문의** (appdevchallenge@hyundai-partners.com) — 기획
-  - Coming Soon SDK(시트 제어, TTS, STT)를 공모전 앱에서 써도 되는지 (11/15 계획은 SDK 없다고 가정하므로 답과 무관)
+- [~] **공모전 측 문의** (appdevchallenge@hyundai-partners.com) — 기획
+  - [x] Coming Soon SDK(시트 제어, TTS, STT)를 공모전 앱에서 써도 되는지 → **사용 가능** (11/12 운영사무국 최종 답변: 공모전 개발 범위는 Playground **개발 문서** 기준. 콘솔에 '준비 중'이라 신청할 수 없어도 개발 문서에 공개된 SDK 는 출품작에 사용 가능. Vehicle SDK 시트 제어 API 도 넣어 제출하고 에뮬레이터로 시연해도 되며, 개발 문서의 권한을 매니페스트에 선언하면 되고 별도 신청·승인 불필요. 시트 이동 등 제한 대상 제어는 P단이 아니면 동작하지 않으니 시연 때 확인. Pleos LLM SDK 와 개발 문서에 없는 SDK 는 사용 불가). 11/11 에 "사용 불가" → "TTS·STT 만 가능"으로 두 번 바뀐 뒤 최종 확정된 답이다. 답변 메일은 기획서 근거로 보관
+  - Pleos Fleet API(`Emergency.Crash` 웹훅) 사용 가능 여부 → 문의 (11/12). Fleet 개발자 가이드상 엔드포인트는 Pleos Fleet 사용 계약 후 제공되는 B2B 상품이라 공모전에서는 쓰기 어려움 → 기획서 확장 계획으로만
   - React Native 화면 + Kotlin SDK 연동 구조여도 되는지
   - 메일 초안 작성 (11/11). 발송은 기획
 - [ ] **Pleos 측 문의**: Vehicle SDK 2.3.2 착좌 값이 Android 표준과 반대인 문제 (A-4 참고). 메일 초안 작성 (11/11). 발송은 기획
