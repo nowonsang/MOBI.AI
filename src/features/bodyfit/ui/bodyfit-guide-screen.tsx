@@ -262,7 +262,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
                       label={PRESS_COPY[focus.axis][direction]}
                       variant="secondary"
                       onPress={() => press(focus.axis, direction)}
-                      accessibilityHint={`${AXIS_COPY[focus.axis].label}을 시트 버튼처럼 한 번 움직여요`}
+                      accessibilityHint={`${AXIS_COPY[focus.axis].label}를 시트 버튼처럼 한 번 움직여요`}
                     />
                   ))}
                 </View>

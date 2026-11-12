@@ -1,8 +1,10 @@
 import {
   comfortChanges,
   recommendComfort,
+  toComfortRecord,
   toComfortSettings,
 } from "./bodyfit-comfort";
+import { comfortRecordSchema } from "./bodyfit.schema";
 import type { ComfortRecord } from "./bodyfit.types";
 
 const record = (
@@ -20,6 +22,43 @@ describe("toComfortSettings", () => {
         cabinCurrent: 8,
       }),
     ).toEqual({ seatHeat: 2, cabinTarget: 22.5 });
+  });
+});
+
+describe("toComfortRecord", () => {
+  it("한여름 차 안처럼 뜨거운 실내 온도도 기록하고, 저장 형식 검증을 통과한다", () => {
+    const record = toComfortRecord("a", 1, {
+      seatHeat: { value: -2, min: -3, max: 3 },
+      cabinCurrent: 72,
+    });
+    expect(record).toEqual({
+      profileId: "a",
+      at: 1,
+      cabinTemp: 72,
+      settings: { seatHeat: -2 },
+    });
+    expect(comfortRecordSchema.safeParse(record).success).toBe(true);
+  });
+
+  it("범위를 벗어난 값은 그 항목만 빼서 저장한 목록이 통째로 버려지지 않게 한다", () => {
+    const record = toComfortRecord("a", 1, {
+      seatHeat: { value: 1.5, min: 0, max: 3 },
+      steeringHeat: { value: 1, min: 0, max: 1 },
+      // AAOS 는 LO/HI 를 범위 밖 특수 값으로 주기도 한다
+      cabinTarget: { value: 99, min: 16, max: 32 },
+      cabinCurrent: Number.NaN,
+    });
+    expect(record).toEqual({
+      profileId: "a",
+      at: 1,
+      cabinTemp: null,
+      settings: { steeringHeat: 1 },
+    });
+    expect(comfortRecordSchema.safeParse(record).success).toBe(true);
+  });
+
+  it("기록할 항목이 없으면 남기지 않는다", () => {
+    expect(toComfortRecord("a", 1, { cabinCurrent: 10 })).toBeNull();
   });
 });
 

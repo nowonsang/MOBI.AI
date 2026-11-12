@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { pleos } from "@/shared/pleos/pleos";
 
-import { toComfortSettings } from "../model/bodyfit-comfort";
+import { toComfortRecord } from "../model/bodyfit-comfort";
 import { interpretByRules } from "../model/bodyfit-feedback";
 import { recommendBaseline } from "../model/bodyfit-recommend";
 import {
@@ -130,14 +130,8 @@ export function useRecordComfort() {
   return useMutation({
     mutationFn: async ({ profileId }: { profileId: string }) => {
       const state = await pleos().getDriverComfortState();
-      const settings = toComfortSettings(state);
-      if (Object.keys(settings).length === 0) return;
-      await createComfortRecord({
-        profileId,
-        at: Date.now(),
-        cabinTemp: state.cabinCurrent ?? null,
-        settings,
-      });
+      const record = toComfortRecord(profileId, Date.now(), state);
+      if (record) await createComfortRecord(record);
     },
     onSettled: (_data, _error, { profileId }) =>
       queryClient.invalidateQueries({

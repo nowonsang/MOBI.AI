@@ -16,7 +16,7 @@ import { bodyfitQueries } from "../api/bodyfit.queries";
 import { speakQuietly } from "../api/bodyfit.voice";
 import { comfortChanges, recommendComfort } from "../model/bodyfit-comfort";
 import type { ComfortSettings } from "../model/bodyfit.types";
-import { describeBodyfitError } from "./bodyfit-error-copy";
+import { describeComfortError } from "./bodyfit-error-copy";
 
 type ComfortKey = keyof ComfortSettings;
 
@@ -158,7 +158,7 @@ export function BodyfitComfortCard({
         </AppText>
       ) : null}
       {apply.error ? (
-        <StatusView {...describeBodyfitError(apply.error)} />
+        <StatusView {...describeComfortError(apply.error)} />
       ) : null}
     </Card>
   );

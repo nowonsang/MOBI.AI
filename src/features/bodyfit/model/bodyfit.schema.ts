@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+import {
+  CABIN_TARGET_RANGE,
+  CABIN_TEMP_RANGE,
+  HEAT_LEVEL_RANGE,
+} from "./bodyfit-comfort";
+
 export const bodyProfileInputSchema = z.object({
   name: z
     .string()
@@ -55,19 +61,30 @@ export const seatAdjustmentSchema = z.object({
   source: z.enum(["drive-start", "voice", "saved", "touch"]),
 });
 
-// 차량 단계 값은 차종마다 범위가 달라 정수인지만 확인한다. 온도는 사람이 쓰는 범위로 막는다.
-const heatLevel = z.number().int().min(-10).max(10);
-const celsius = z.number().min(-40).max(60);
+// 범위는 기록할 때 쓰는 것과 같은 상수다 (bodyfit-comfort.ts). 기록할 때 범위 밖 값을 빼므로 읽을 때 목록 전체가 버려지지 않는다.
+const heatLevel = z
+  .number()
+  .int()
+  .min(HEAT_LEVEL_RANGE.min)
+  .max(HEAT_LEVEL_RANGE.max);
 
 export const comfortSettingsSchema = z.object({
   seatHeat: heatLevel.optional(),
   steeringHeat: heatLevel.optional(),
-  cabinTarget: celsius.optional(),
+  cabinTarget: z
+    .number()
+    .min(CABIN_TARGET_RANGE.min)
+    .max(CABIN_TARGET_RANGE.max)
+    .optional(),
 });
 
 export const comfortRecordSchema = z.object({
   profileId: z.string().min(1),
   at: z.number(),
-  cabinTemp: celsius.nullable(),
+  cabinTemp: z
+    .number()
+    .min(CABIN_TEMP_RANGE.min)
+    .max(CABIN_TEMP_RANGE.max)
+    .nullable(),
   settings: comfortSettingsSchema,
 });

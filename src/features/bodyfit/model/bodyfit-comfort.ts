@@ -5,6 +5,17 @@ import type {
 
 import type { ComfortRecord, ComfortSettings } from "./bodyfit.types";
 
+// 저장할 수 있는 값의 범위. 차가 알려 준 값이라도 이 밖이면 그 항목만 빼고 기록한다.
+/** 열선·통풍 단계 (차종마다 다르지만 이보다 넓은 차는 없다고 본다) */
+export const HEAT_LEVEL_RANGE = { min: -10, max: 10 };
+/** 공조 설정 온도(섭씨) */
+export const CABIN_TARGET_RANGE = { min: 10, max: 40 };
+/** 탈 때 실내 온도(섭씨). 한여름 햇볕 아래 세운 차 안은 80℃ 를 넘기도 한다. */
+export const CABIN_TEMP_RANGE = { min: -40, max: 100 };
+
+const within = (value: number, range: { min: number; max: number }) =>
+  Number.isFinite(value) && value >= range.min && value <= range.max;
+
 /** 탈 때 실내 온도가 이만큼(섭씨) 안이면 "비슷한 날"로 본다. */
 export const SIMILAR_CABIN_GAP = 5;
 
@@ -18,14 +29,37 @@ const COMFORT_KEYS: readonly ComfortKey[] = [
   "cabinTarget",
 ];
 
-/** 차량에서 읽은 상태 → 기록할 설정 값 (지원하는 항목만). */
+/** 차량에서 읽은 상태 → 기록할 설정 값. 지원하지 않거나 범위를 벗어난 항목은 뺀다. */
 export function toComfortSettings(state: DriverComfortState): ComfortSettings {
   const settings: ComfortSettings = {};
   for (const key of COMFORT_KEYS) {
-    const item = state[key];
-    if (item) settings[key] = item.value;
+    const value = state[key]?.value;
+    if (value === undefined) continue;
+    const valid =
+      key === "cabinTarget"
+        ? within(value, CABIN_TARGET_RANGE)
+        : Number.isInteger(value) && within(value, HEAT_LEVEL_RANGE);
+    if (valid) settings[key] = value;
   }
   return settings;
+}
+
+/** 출발할 때 읽은 상태 → 온도 취향 기록. 기록할 항목이 하나도 없으면 null. */
+export function toComfortRecord(
+  profileId: string,
+  at: number,
+  state: DriverComfortState,
+): ComfortRecord | null {
+  const settings = toComfortSettings(state);
+  if (Object.keys(settings).length === 0) return null;
+  const cabin = state.cabinCurrent;
+  return {
+    profileId,
+    at,
+    cabinTemp:
+      cabin !== undefined && within(cabin, CABIN_TEMP_RANGE) ? cabin : null,
+    settings,
+  };
 }
 
 const median = (values: readonly number[]): number => {
