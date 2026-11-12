@@ -335,6 +335,16 @@ describe("comfortChanges", () => {
       comfortChanges(fanState, { fanDirection: "faceFloorDefrost" }),
     ).toEqual({});
   });
+
+  it("차량이 고를 수 있는 방향을 알려 주지 않으면 바람 방향은 기억만 하고 바꾸지 않는다", () => {
+    // Pleos 에뮬레이터 v2.1.0 은 바람 방향의 선택지 목록을 비워서 알려 준다.
+    const unlisted = {
+      fanDirection: { value: "floor" as const, options: [] },
+      fanMode: "manual" as const,
+    };
+    expect(toComfortSettings(unlisted)).toEqual({ fanDirection: "floor" });
+    expect(comfortChanges(unlisted, { fanDirection: "face" })).toEqual({});
+  });
 });
 
 describe("사이드미러 열선·무드등", () => {

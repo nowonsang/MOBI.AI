@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, View } from "react-native";
 
 import { canControlComfort } from "@/shared/config/app-variant";
@@ -61,6 +61,8 @@ const ROWS: { key: ComfortKey; label: string }[] = [
 
 const isFanRow = (key: ComfortKey) =>
   key === "fanSpeed" || key === "fanDirection";
+
+const COMFORT_REREAD_MS = 5000;
 
 // 타일 최소 폭. 카드 폭을 재기 전(첫 그리기)에만 쓴다.
 const TILE_MIN_WIDTH = 200;
@@ -153,12 +155,21 @@ export function BodyfitComfortCard({
   const comfort = useQuery({
     ...bodyfitQueries.comfort(),
     enabled: vehicleConnected,
+    // 열선·공조는 바뀔 때 알려 주는 차량 알림이 없다. 주차 중 카드가 떠 있는 동안에는 운전자가 차량 버튼으로
+    // 바꾼 값이 "지금"에 보이도록 가끔 다시 읽는다 (주행 중에는 맞출 수 없으니 읽지 않는다).
+    refetchInterval: parked ? COMFORT_REREAD_MS : false,
   });
   const apply = useApplyComfort();
   const [notice, setNotice] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   // 타일을 같은 폭으로 나누려고 카드 안쪽 폭을 잰다 (넓으면 3칸, 좁으면 2칸).
   const [gridWidth, setGridWidth] = useState(0);
+
+  // 주행을 마치고 주차로 돌아오면 기다리지 않고 바로 다시 읽는다.
+  const { refetch: rereadComfort } = comfort;
+  useEffect(() => {
+    if (vehicleConnected && parked) void rereadComfort();
+  }, [vehicleConnected, parked, rereadComfort]);
 
   const state = comfort.data;
   const cabinNow = state?.cabinCurrent ?? null;
@@ -185,13 +196,20 @@ export function BodyfitComfortCard({
     recommendation?.settings.fanSpeed !== undefined ||
     recommendation?.settings.fanDirection !== undefined;
 
-  const applyComfort = () =>
-    apply.mutate(changes, {
+  // 화면이 떠 있는 동안 운전자가 차량 버튼으로 바꿨을 수 있다. 누른 순간의 차량 값을 다시 읽어 그때 다른 항목만 보낸다.
+  const applyComfort = async () => {
+    if (!recommendation) return;
+    const fresh = (await rereadComfort()).data;
+    if (!fresh) return;
+    const latest = comfortChanges(fresh, recommendation.settings);
+    if (Object.keys(latest).length === 0) return;
+    apply.mutate(latest, {
       onSuccess: () => {
         setNotice("평소 설정으로 맞췄어요");
         void speakQuietly("평소 좋아하시는 설정으로 맞췄어요");
       },
     });
+  };
 
   const tiles: Tile[] = [];
   if (recommendation) {
@@ -377,7 +395,7 @@ export function BodyfitComfortCard({
               <Button
                 label="평소 설정으로 맞추기"
                 variant="secondary"
-                onPress={applyComfort}
+                onPress={() => void applyComfort()}
                 disabled={!parked}
                 loading={apply.isPending}
                 accessibilityHint="열선과 통풍, 실내 온도, 바람, 무드등을 평소 설정으로 바꿔요"

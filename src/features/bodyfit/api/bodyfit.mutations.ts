@@ -167,9 +167,13 @@ export function useRecordComfort() {
       if (record) await createComfortRecord(record);
     },
     onSettled: (_data, _error, { profileId }) =>
-      queryClient.invalidateQueries({
-        queryKey: bodyfitKeys.comfortRecords(profileId),
-      }),
+      Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: bodyfitKeys.comfortRecords(profileId),
+        }),
+        // 방금 차량에서 다시 읽었으니 화면의 "지금" 값도 새로 읽게 한다.
+        queryClient.invalidateQueries({ queryKey: bodyfitKeys.comfort() }),
+      ]),
   });
 }
 

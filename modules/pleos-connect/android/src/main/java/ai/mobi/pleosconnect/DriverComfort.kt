@@ -452,7 +452,9 @@ class DriverComfort(
           val entry = areas?.entries?.firstOrNull { it.key.isDriver() } ?: areas?.entries?.firstOrNull()
           val area = entry?.key
           val options = entry?.value.orEmpty().mapNotNull { it.toFanDirection() }
-          resume(if (config.isReadable() && area != null && options.isNotEmpty()) area to options else null)
+          // 고를 수 있는 방향을 알려 주지 않는 차량(Pleos 에뮬레이터 v2.1.0)도 지금 방향은 읽는다.
+          // 목록이 비어 있으면 어떤 방향도 보내지 않으므로(apply 의 `wanted in options`) 읽기만 한다.
+          resume(if (config.isReadable() && area != null) area to options else null)
         },
         { e: Throwable? -> fail(e) },
       )
