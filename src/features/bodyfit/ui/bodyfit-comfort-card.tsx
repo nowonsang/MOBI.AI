@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 
 import { canControlComfort } from "@/shared/config/app-variant";
@@ -97,6 +97,12 @@ export function BodyfitComfortCard({
   const apply = useApplyComfort();
   const [notice, setNotice] = useState<string | null>(null);
 
+  // 열선·공조는 바뀔 때 알려 주는 차량 알림이 없다. 주행을 마치고 주차로 돌아오면 다시 읽어 "지금" 값을 맞춘다.
+  const { refetch: rereadComfort } = comfort;
+  useEffect(() => {
+    if (vehicleConnected && parked) void rereadComfort();
+  }, [vehicleConnected, parked, rereadComfort]);
+
   const state = comfort.data;
   const cabinNow = state?.cabinCurrent ?? null;
   const recommendation = records.data
@@ -124,13 +130,20 @@ export function BodyfitComfortCard({
     return now === undefined ? undefined : `지금 ${describe(key, now, state)}`;
   };
 
-  const applyComfort = () =>
-    apply.mutate(changes, {
+  // 화면이 떠 있는 동안 운전자가 차량 버튼으로 바꿨을 수 있다. 누른 순간의 차량 값을 다시 읽어 그때 다른 항목만 보낸다.
+  const applyComfort = async () => {
+    if (!recommendation) return;
+    const fresh = (await rereadComfort()).data;
+    if (!fresh) return;
+    const latest = comfortChanges(fresh, recommendation.settings);
+    if (Object.keys(latest).length === 0) return;
+    apply.mutate(latest, {
       onSuccess: () => {
         setNotice("평소 온도로 맞췄어요");
         void speakQuietly("평소 좋아하시는 온도로 맞췄어요");
       },
     });
+  };
 
   const basis = !recommendation
     ? null
@@ -230,7 +243,7 @@ export function BodyfitComfortCard({
             <Button
               label="평소 온도로 맞추기"
               variant="secondary"
-              onPress={applyComfort}
+              onPress={() => void applyComfort()}
               disabled={!parked}
               loading={apply.isPending}
               accessibilityHint="열선과 통풍, 실내 온도, 바람을 평소 설정으로 바꿔요"
