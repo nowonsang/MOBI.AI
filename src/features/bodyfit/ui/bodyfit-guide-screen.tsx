@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
+import { canUseDemoMode } from "@/shared/config/app-variant";
 import { isPleosAvailable } from "@/shared/pleos/pleos";
 import { useGear } from "@/shared/pleos/use-gear";
 import { useUxRestrictions } from "@/shared/pleos/use-ux-restrictions";
@@ -20,6 +21,7 @@ import { useRecordSeatAdjustment } from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
 import { useLiveDriverSeat } from "../api/bodyfit.seat-live";
 import { speakQuietly } from "../api/bodyfit.voice";
+import { pressDemoSeat, startDemoSeat } from "../model/bodyfit-demo-seat";
 import { guideSeat, type AxisGuide } from "../model/bodyfit-guide";
 import { learnOffsets } from "../model/bodyfit-learning";
 import { recommendSeat } from "../model/bodyfit-recommend";
@@ -50,6 +52,16 @@ const AXIS_COPY: Record<
   },
 };
 
+// 시연 모드에서 시트 버튼 대신 누르는 화면 버튼의 짧은 이름
+const PRESS_COPY: Record<SeatAxis, { increase: string; decrease: string }> = {
+  foreAft: { increase: "앞으로", decrease: "뒤로" },
+  height: { increase: "올리기", decrease: "내리기" },
+  backrest: { increase: "세우기", decrease: "눕히기" },
+  tilt: { increase: "앞쪽 올리기", decrease: "앞쪽 내리기" },
+};
+
+type DemoSeat = { start: SeatRatios; seat: SeatRatios };
+
 const percent = (ratio: number) => Math.round(ratio * 100);
 
 function describeAxis({ axis, status, direction, far }: AxisGuide): string {
@@ -73,18 +85,23 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
   const restrictions = useUxRestrictions();
   const record = useRecordSeatAdjustment();
   const [notice, setNotice] = useState<string | null>(null);
+  // 시연 모드: 에뮬레이터가 시트 위치를 0 으로만 돌려줄 때 화면 버튼으로 움직이는 모의 위치 (한 화면 안의 상태).
+  const [demo, setDemo] = useState<DemoSeat | null>(null);
 
-  const current = seat.data ? toSeatRatios(seat.data) : null;
+  const vehicleSeat = seat.data ? toSeatRatios(seat.data) : null;
+  const current = demo ? demo.seat : vehicleSeat;
   // 안내를 시작한 자세. 목표를 지나쳤는지 판단하는 기준이라 처음 읽은 값을 한 번만 남긴다 (차량 값 복사가 아니다).
   const [start, setStart] = useState<SeatRatios | null>(null);
-  if (start === null && current !== null) setStart(current);
+  if (start === null && vehicleSeat !== null) setStart(vehicleSeat);
 
   const recommended =
     profile.data && adjustments.data
       ? recommendSeat(profile.data, learnOffsets(adjustments.data))
       : null;
   const guide =
-    recommended && current ? guideSeat(current, recommended, start) : null;
+    recommended && current
+      ? guideSeat(current, recommended, demo ? demo.start : start)
+      : null;
   const done = guide?.done ?? false;
 
   useEffect(() => {
@@ -127,19 +144,51 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
       },
     );
 
-  const footer = (
+  const startDemo = () => {
+    if (!recommended) return;
+    const demoStart = startDemoSeat(recommended);
+    setNotice(null);
+    setDemo({ start: demoStart, seat: demoStart });
+  };
+
+  const press = (axis: SeatAxis, direction: "increase" | "decrease") =>
+    setDemo((prev) =>
+      prev
+        ? { ...prev, seat: pressDemoSeat(prev.seat, axis, direction) }
+        : prev,
+    );
+
+  // 시연 모드의 모의 위치는 학습 기록에 남기지 않는다 (기억하기 버튼을 두지 않는다).
+  const footer = demo ? (
     <Button
-      label="지금 자세 기억하기"
-      variant={done ? "primary" : "secondary"}
-      onPress={rememberCurrent}
-      disabled={!vehicleConnected || !seat.data}
-      loading={record.isPending}
-      accessibilityHint="목표와 달라도 지금 앉은 자세를 다음 추천에 반영해요"
+      label="시연 끝내기"
+      variant="secondary"
+      onPress={() => setDemo(null)}
     />
+  ) : (
+    <>
+      {canUseDemoMode ? (
+        <Button
+          label="시연 모드로 보기"
+          variant="secondary"
+          onPress={startDemo}
+          disabled={!recommended}
+          accessibilityHint="화면 버튼으로 시트를 움직이는 것처럼 안내를 보여 줘요. 기록에는 남지 않아요"
+        />
+      ) : null}
+      <Button
+        label="지금 자세 기억하기"
+        variant={done ? "primary" : "secondary"}
+        onPress={rememberCurrent}
+        disabled={!vehicleConnected || !seat.data}
+        loading={record.isPending}
+        accessibilityHint="목표와 달라도 지금 앉은 자세를 다음 추천에 반영해요"
+      />
+    </>
   );
 
   const body = (() => {
-    if (!vehicleConnected) {
+    if (!demo && !vehicleConnected) {
       return (
         <StatusView
           title="차량에 연결되어 있지 않아요"
@@ -155,7 +204,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
         />
       );
     }
-    if (seat.isError) {
+    if (!demo && seat.isError) {
       return (
         <StatusView
           {...describeBodyfitError(seat.error)}
@@ -166,7 +215,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
         />
       );
     }
-    if (!guide || gear === null) {
+    if (!guide || (!demo && gear === null)) {
       return <View style={styles.skeleton} accessibilityLabel="불러오는 중" />;
     }
     if (guide.axes.length === 0) {
@@ -205,9 +254,24 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
                   {matched}/{guide.axes.length} 맞춤
                 </AppText>
               </View>
+              {focus && demo ? (
+                <View style={styles.press}>
+                  {(["decrease", "increase"] as const).map((direction) => (
+                    <Button
+                      key={direction}
+                      label={PRESS_COPY[focus.axis][direction]}
+                      variant="secondary"
+                      onPress={() => press(focus.axis, direction)}
+                      accessibilityHint={`${AXIS_COPY[focus.axis].label}을 시트 버튼처럼 한 번 움직여요`}
+                    />
+                  ))}
+                </View>
+              ) : null}
               {done ? (
                 <AppText variant="secondary" tone="inverse">
-                  이 자세를 기억해 두면 다음 추천이 더 정확해져요
+                  {demo
+                    ? "시연 모드라 이 자세는 기록하지 않아요"
+                    : "이 자세를 기억해 두면 다음 추천이 더 정확해져요"}
                 </AppText>
               ) : null}
             </View>
@@ -257,8 +321,11 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
   return (
     <Screen
       title="시트 버튼으로 맞춰 주세요"
-      description="운전석 옆 시트 버튼을 움직이면 화면이 바로 알려 드려요"
-     
+      description={
+        demo
+          ? "시연 모드예요. 화면 버튼이 시트 버튼 대신 움직여요"
+          : "운전석 옆 시트 버튼을 움직이면 화면이 바로 알려 드려요"
+      }
       footer={footer}
     >
       {body}
@@ -300,6 +367,7 @@ const styles = StyleSheet.create({
   },
   progressText: { color: colors.primary, fontWeight: "700" },
   progressDone: { color: colors.success, fontWeight: "700" },
+  press: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   list: { gap: spacing.xs },
   step: {
     paddingHorizontal: spacing.sm,

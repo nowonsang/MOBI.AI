@@ -12,3 +12,6 @@ export const canUseVoice = variant !== "market";
 
 /** 시연용 빌드 (contest: 영상·GitHub APK·2차 PT). 실사용 기준을 그대로 쓰면 시연할 수 없는 값만 줄인다. */
 export const isDemoBuild = variant !== "market";
+
+/** 가이드 조절 시연 모드 (모의 시트 위치). 공모전 시연용이라 앱 마켓 빌드에는 넣지 않는다. */
+export const canUseDemoMode = variant !== "market";
