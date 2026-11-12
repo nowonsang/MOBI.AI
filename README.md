@@ -83,7 +83,7 @@ JS 에서 쓰는 API (`@/shared/pleos/pleos` 의 `pleos()` 로만 접근):
 - **SDK 사용 상태 (2026-11 기준)**: Vehicle State·NaviHelper 는 신청 없이 사용. **Vehicle Control(시트 이동)·SpeechToText·TextToSpeech 는 "준비 중"** 이라 아직 신청할 수 없다 → 에뮬레이터 개발은 가능하지만 배포 전 사용 승인을 다시 확인한다. 공모전 출품작에는 쓸 수 있다 (11/12 운영사무국 최종 답변: 개발 문서에 공개된 SDK 는 출품작에 넣고 에뮬레이터로 시연 가능).
 - **종료된 것**: LLM SDK, CRN(Emulator 2.1.0 부터 주입 불필요), 블루투스 동글 연동 (2026-10-19).
 - **앱에 넣은 Pleos 필수 설정**: `com.hmg.rotary.ROTARY_SUPPORTED=false` (CCP 미지원 앱, `app.plugin.js`), `allowBackup=false` (보안 가이드), `versionCode` (심사·배포마다 올림, `app.config.ts`), minSdk 28 (서명 키 로테이션·리니지).
-- **빌드 종류 (`MOBI_APP_VARIANT`)**: `contest`(기본, 공모전 시연: 시트 자동 조절·음성 포함) / `market`(앱 마켓 심사: 승인 전 권한 `CONTROL_CAR_SEATS`·`CONTROL_CAR_CLIMATE`·`STT_SERVICE`·`TTS_SERVICE` 를 매니페스트에서 `tools:node="remove"` 로 빼고, 화면에서도 자동 조절·온도 맞추기·음성을 숨긴다). Pleos 심사는 "승인되지 않은 퍼미션을 선언하거나 해당 API 를 호출"하면 통과할 수 없다. 권한이 승인되면 `app.plugin.js` 의 `UNAPPROVED_PERMISSIONS` 와 `src/shared/config/app-variant.ts` 에서 뺀다.
+- **빌드 종류 (`MOBI_APP_VARIANT`)**: `contest`(기본, 공모전 시연: 시트 자동 조절·음성 포함) / `market`(앱 마켓 심사: 승인 전 권한 `CONTROL_CAR_SEATS`·`CONTROL_CAR_CLIMATE`·`STT_SERVICE`·`TTS_SERVICE` 와 무드등·사이드미러 열선 권한 `CAR_LIGHTS`·`CAR_MIRRORS`·`CONTROL_CAR_MIRRORS` 를 매니페스트에서 `tools:node="remove"` 로 빼고, 화면에서도 자동 조절·온도 맞추기·음성을 숨긴다). Pleos 심사는 "승인되지 않은 퍼미션을 선언하거나 해당 API 를 호출"하면 통과할 수 없다. 권한이 승인되면 `app.plugin.js` 의 `UNAPPROVED_PERMISSIONS` 와 `src/shared/config/app-variant.ts` 에서 뺀다.
 - **제출 전 남은 일**: 배포 키로 서명한 **APK**(아래 'APK 서명'), 아이콘 512×512 PNG/JPEG(1MB 이하), IVI 스크린샷 2~8장, 개인정보처리방침 URL, IARC 연령 등급, 영어 앱 이름 태그.
 - 앱 마켓은 자동 업데이트를 지원하지 않는다. 업데이트 안내가 필요하면 `market://detail?package=ai.mobi.app` 로 연결한다.
 

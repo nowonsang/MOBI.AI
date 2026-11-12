@@ -86,6 +86,13 @@ export type ComfortSettings = {
   /** 풍량·바람 방향은 운전자가 직접 맞춘 날만 남긴다 (자동 공조·공조 꺼짐은 차가 정한 값이라 뺀다) */
   fanSpeed?: number;
   fanDirection?: FanDirection;
+  /** 사이드미러 열선 단계 (0 = 꺼짐) */
+  mirrorHeat?: number;
+  /** 무드등. 온도와 무관한 취향이라 실내 온도가 아닌 최근 기록으로 추천한다. 꺼 둔 날은 밝기·색을 남기지 않는다 */
+  ambientOn?: boolean;
+  ambientBrightness?: number;
+  /** 차량이 준 색 값 그대로 (뜻은 차종마다 다르다) */
+  ambientColor?: number;
 };
 
 /** 출발할 때의 온도 취향 기록. cabinTemp(탈 때 실내 온도)가 비슷한 기록끼리 묶어 다음 추천에 쓴다. */

@@ -54,7 +54,14 @@ class PleosConnectModule : Module() {
   // 운전석 온도 취향(열선·공조). 값을 바꾸는 것은 주차 중 화면 조작으로만 한다.
   private val comfortLazy = lazy {
     val vehicle = vehicleLazy.value
-    DriverComfort(vehicle.getSeat(), vehicle.getSteeringWheel(), vehicle.getHVAC(), gear)
+    DriverComfort(
+      vehicle.getSeat(),
+      vehicle.getSteeringWheel(),
+      vehicle.getHVAC(),
+      vehicle.getSideMirror(),
+      vehicle.getLight(),
+      gear,
+    )
   }
   private val comfort by comfortLazy
 

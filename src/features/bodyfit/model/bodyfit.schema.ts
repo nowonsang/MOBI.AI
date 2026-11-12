@@ -1,11 +1,14 @@
 import { z } from "zod";
 
 import {
+  AMBIENT_BRIGHTNESS_RANGE,
+  AMBIENT_COLOR_RANGE,
   CABIN_TARGET_RANGE,
   CABIN_TEMP_RANGE,
   FAN_DIRECTIONS,
   FAN_SPEED_RANGE,
   HEAT_LEVEL_RANGE,
+  MIRROR_HEAT_RANGE,
   VENT_LEVEL_RANGE,
 } from "./bodyfit-comfort";
 import { DEFAULT_DRIVE_CONTEXT, DRIVE_CONTEXTS } from "./bodyfit-drive-context";
@@ -102,6 +105,25 @@ export const comfortSettingsSchema = z.object({
     .max(FAN_SPEED_RANGE.max)
     .optional(),
   fanDirection: z.enum(FAN_DIRECTIONS).optional(),
+  mirrorHeat: z
+    .number()
+    .int()
+    .min(MIRROR_HEAT_RANGE.min)
+    .max(MIRROR_HEAT_RANGE.max)
+    .optional(),
+  ambientOn: z.boolean().optional(),
+  ambientBrightness: z
+    .number()
+    .int()
+    .min(AMBIENT_BRIGHTNESS_RANGE.min)
+    .max(AMBIENT_BRIGHTNESS_RANGE.max)
+    .optional(),
+  ambientColor: z
+    .number()
+    .int()
+    .min(AMBIENT_COLOR_RANGE.min)
+    .max(AMBIENT_COLOR_RANGE.max)
+    .optional(),
 });
 
 export const comfortRecordSchema = z.object({
