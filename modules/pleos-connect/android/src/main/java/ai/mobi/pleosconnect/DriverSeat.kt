@@ -11,8 +11,10 @@ import ai.pleos.playground.vehicle.listener.SeatBackrestAnglePositionListener
 import ai.pleos.playground.vehicle.listener.SeatBeltHeightPositionListener
 import ai.pleos.playground.vehicle.listener.SeatDepthPositionListener
 import ai.pleos.playground.vehicle.listener.SeatForeAftPositionListener
+import ai.pleos.playground.vehicle.listener.SeatHeadrestAnglePositionListener
 import ai.pleos.playground.vehicle.listener.SeatHeadrestHeightAftPositionListener
 import ai.pleos.playground.vehicle.listener.SeatHeightPositionListener
+import ai.pleos.playground.vehicle.listener.SeatLumbarForeAftPositionListener
 import ai.pleos.playground.vehicle.listener.SeatOccupancyListener
 import ai.pleos.playground.vehicle.listener.SeatTiltPositionListener
 import expo.modules.kotlin.types.Enumerable
@@ -42,10 +44,15 @@ enum class SeatAxis(val value: String) : Enumerable {
   TILT("tilt"),
 
   // 좌판 길이·헤드레스트 높이·안전벨트 높이. 전동이 아닌 차량이 많아 없는 축으로 나오는 일이 흔하다.
-  // 기본 자세(위 네 축)를 잡은 뒤에 맞추도록 순서를 뒤에 둔다. 헤드레스트 각도·앞뒤는 체형으로 정할 수 없어 다루지 않는다.
+  // 기본 자세(위 네 축)를 잡은 뒤에 맞추도록 순서를 뒤에 둔다.
   DEPTH("depth"),
   HEADREST_HEIGHT("headrestHeight"),
   BELT_HEIGHT("beltHeight"),
+
+  // 허리 지지대(앞뒤)·헤드레스트 각도. 체형으로 정할 수 없어 앱이 기본값을 추천하지 않고, 운전자가 맞춘 값을 기억해 그 값으로만 움직인다.
+  // 허리 옆 지지(LumbarSideSupport)와 헤드레스트 앞뒤(HeadrestForeAft)는 다루지 않는다.
+  LUMBAR("lumbar"),
+  HEADREST_ANGLE("headrestAngle"),
 }
 
 // 운전석(좌핸들 기준 1열 왼쪽). Pleos SDK 는 "앞/뒤로 움직이기·멈추기" 만 제공하므로
@@ -229,6 +236,8 @@ class DriverSeat(
         // SDK 2.3.2 의 헤드레스트 높이 조회·알림 이름에는 "HeightAft" 가 붙어 있다 (AAR 확인, 값은 SEAT_HEADREST_HEIGHT_POS_V2).
         SeatAxis.HEADREST_HEIGHT -> seat.getCurrentSeatHeadrestHeightAftPosition(driver, done, failed)
         SeatAxis.BELT_HEIGHT -> seat.getCurrentSeatBeltHeightPosition(driver, done, failed)
+        SeatAxis.LUMBAR -> seat.getCurrentSeatLumbarForeAftPosition(driver, done, failed)
+        SeatAxis.HEADREST_ANGLE -> seat.getCurrentSeatHeadrestAnglePosition(driver, done, failed)
       }
     }
 
@@ -246,6 +255,8 @@ class DriverSeat(
         SeatAxis.DEPTH -> seat.checkSeatDepthPositionCapabilities(done, failed)
         SeatAxis.HEADREST_HEIGHT -> seat.checkSeatHeadrestHeightPositionCapabilities(done, failed)
         SeatAxis.BELT_HEIGHT -> seat.checkSeatBeltHeightPositionCapabilities(done, failed)
+        SeatAxis.LUMBAR -> seat.checkSeatLumbarForeAftPositionCapabilities(done, failed)
+        SeatAxis.HEADREST_ANGLE -> seat.checkSeatHeadrestAnglePositionCapabilities(done, failed)
       }
     }
 
@@ -263,6 +274,8 @@ class DriverSeat(
         SeatAxis.DEPTH -> seat.checkMoveSeatDepthCapabilities(done, failed)
         SeatAxis.HEADREST_HEIGHT -> seat.checkMoveSeatHeadrestHeightCapabilities(done, failed)
         SeatAxis.BELT_HEIGHT -> seat.checkMoveSeatBeltHeightCapabilities(done, failed)
+        SeatAxis.LUMBAR -> seat.checkMoveSeatLumbarForeAftCapabilities(done, failed)
+        SeatAxis.HEADREST_ANGLE -> seat.checkMoveSeatHeadrestAngleCapabilities(done, failed)
       }
     }
 
@@ -285,6 +298,8 @@ class DriverSeat(
       SeatAxis.DEPTH -> seat.moveSeatDepth(driver, control, done, failed)
       SeatAxis.HEADREST_HEIGHT -> seat.moveSeatHeadrestHeight(driver, control, done, failed)
       SeatAxis.BELT_HEIGHT -> seat.moveSeatBeltHeight(driver, control, done, failed)
+      SeatAxis.LUMBAR -> seat.moveSeatLumbarForeAft(driver, control, done, failed)
+      SeatAxis.HEADREST_ANGLE -> seat.moveSeatHeadrestAngle(driver, control, done, failed)
     }
   }
 
@@ -392,6 +407,34 @@ class DriverSeat(
         Subscription(
           { seat.registerSeatBeltHeightPosition(driver, listener) },
           { seat.unregisterSeatBeltHeightPosition(driver, listener) },
+        )
+      }
+      SeatAxis.LUMBAR -> {
+        val listener =
+          object : SeatLumbarForeAftPositionListener {
+            override fun onSeatLumbarForeAftPositionUpdated(position: Int?) {
+              position?.let(onValue)
+            }
+
+            override fun onFailed(e: Exception) = onError(e)
+          }
+        Subscription(
+          { seat.registerSeatLumbarForeAftPosition(driver, listener) },
+          { seat.unregisterSeatLumbarForeAftPosition(driver, listener) },
+        )
+      }
+      SeatAxis.HEADREST_ANGLE -> {
+        val listener =
+          object : SeatHeadrestAnglePositionListener {
+            override fun onSeatHeadrestAnglePositionUpdated(position: Int?) {
+              position?.let(onValue)
+            }
+
+            override fun onFailed(e: Exception) = onError(e)
+          }
+        Subscription(
+          { seat.registerSeatHeadrestAnglePosition(driver, listener) },
+          { seat.unregisterSeatHeadrestAnglePosition(driver, listener) },
         )
       }
     }

@@ -1,5 +1,6 @@
 import {
   comfortChanges,
+  hasAmbient,
   recommendComfort,
   toComfortRecord,
   toComfortSettings,
@@ -343,5 +344,138 @@ describe("comfortChanges", () => {
     };
     expect(toComfortSettings(unlisted)).toEqual({ fanDirection: "floor" });
     expect(comfortChanges(unlisted, { fanDirection: "face" })).toEqual({});
+  });
+});
+
+describe("사이드미러 열선·무드등", () => {
+  const cabin = {
+    mirrorHeat: { value: 1, min: 0, max: 1 },
+    ambientOn: true,
+    ambientBrightness: { value: 3, min: 1, max: 5 },
+    ambientColor: 7,
+  };
+
+  it("출발할 때의 사이드미러 열선과 무드등 켜짐·밝기·색을 기록하고, 저장 형식 검증을 통과한다", () => {
+    const made = toComfortRecord("a", 1, { ...cabin, cabinCurrent: 2 });
+    expect(made?.settings).toEqual({
+      mirrorHeat: 1,
+      ambientOn: true,
+      ambientBrightness: 3,
+      ambientColor: 7,
+    });
+    expect(comfortRecordSchema.safeParse(made).success).toBe(true);
+  });
+
+  it("무드등을 꺼 둔 날은 밝기와 색을 취향으로 남기지 않는다", () => {
+    expect(toComfortSettings({ ...cabin, ambientOn: false })).toEqual({
+      mirrorHeat: 1,
+      ambientOn: false,
+    });
+  });
+
+  it("차량 범위 밖 밝기나 정수가 아닌 색은 그 항목만 뺀다", () => {
+    expect(
+      toComfortSettings({
+        ambientOn: true,
+        ambientBrightness: { value: 9, min: 1, max: 5 },
+        ambientColor: 1.5,
+      }),
+    ).toEqual({ ambientOn: true });
+  });
+
+  it("RGB 처럼 큰 색 값도 저장 형식 검증을 통과하고, 32비트를 넘는 값은 받지 않는다", () => {
+    const parse = (ambientColor: number) =>
+      comfortRecordSchema.safeParse(record(1, null, { ambientColor })).success;
+    expect(parse(0xff8800)).toBe(true);
+    expect(parse(-1)).toBe(true);
+    expect(parse(2 ** 31)).toBe(false);
+  });
+
+  it("사이드미러 열선은 실내 온도가 비슷한 날의 기록으로 추천한다", () => {
+    const records = [
+      record(1, 2, { mirrorHeat: 1 }),
+      record(2, 3, { mirrorHeat: 1 }),
+      record(3, 28, { mirrorHeat: 0 }),
+    ];
+    expect(recommendComfort(records, 1)?.settings.mirrorHeat).toBe(1);
+    expect(recommendComfort(records, 30)?.settings.mirrorHeat).toBe(0);
+  });
+
+  it("무드등은 실내 온도와 상관없이 최근 기록으로 추천한다", () => {
+    const records = [
+      record(1, 2, { seatHeat: 3 }),
+      record(2, 28, { ambientOn: true, ambientBrightness: 4, ambientColor: 7 }),
+      record(3, 30, { ambientOn: true, ambientBrightness: 2, ambientColor: 7 }),
+      record(4, 29, { ambientOn: true, ambientBrightness: 3, ambientColor: 5 }),
+    ];
+    // 지금은 추운 날: 온도 항목은 추운 날 기록 하나만 보지만 무드등은 더운 날의 기록에서 고른다.
+    const picked = recommendComfort(records, 1);
+    expect(picked?.similarCabin).toBe(true);
+    expect(picked?.settings).toEqual({
+      seatHeat: 3,
+      ambientOn: true,
+      ambientBrightness: 3,
+      ambientColor: 7,
+    });
+  });
+
+  it("평소 무드등을 꺼 두면 밝기와 색은 추천하지 않는다", () => {
+    const records = [
+      record(1, 20, { ambientOn: true, ambientBrightness: 4, ambientColor: 7 }),
+      record(2, 20, { ambientOn: false }),
+      record(3, 20, { ambientOn: false }),
+    ];
+    expect(recommendComfort(records, 20)?.settings).toEqual({
+      ambientOn: false,
+    });
+  });
+
+  it("무드등 기록이 없는 예전 기록만 있으면 무드등을 추천하지 않는다", () => {
+    const picked = recommendComfort([record(1, 20, { seatHeat: 1 })], 20);
+    expect(hasAmbient(picked?.settings ?? {})).toBe(false);
+  });
+
+  it("지금과 다른 항목만 바꾸고 밝기는 차량 범위 안으로 맞춘다", () => {
+    expect(
+      comfortChanges(cabin, {
+        mirrorHeat: 1,
+        ambientOn: true,
+        ambientBrightness: 8,
+        ambientColor: 7,
+      }),
+    ).toEqual({ ambientBrightness: 5 });
+    expect(comfortChanges(cabin, { mirrorHeat: 0, ambientColor: 2 })).toEqual({
+      mirrorHeat: 0,
+      ambientColor: 2,
+    });
+  });
+
+  it("무드등을 끄는 것으로 맞출 때와 꺼진 채 둘 때는 밝기와 색을 건드리지 않는다", () => {
+    const wanted = { ambientBrightness: 5, ambientColor: 2 };
+    expect(comfortChanges(cabin, { ...wanted, ambientOn: false })).toEqual({
+      ambientOn: false,
+    });
+    expect(comfortChanges({ ...cabin, ambientOn: false }, wanted)).toEqual({});
+    // 꺼져 있던 무드등을 켜면서 밝기·색도 함께 맞춘다.
+    expect(
+      comfortChanges(
+        { ...cabin, ambientOn: false },
+        { ...wanted, ambientOn: true },
+      ),
+    ).toEqual({ ambientOn: true, ambientBrightness: 5, ambientColor: 2 });
+  });
+
+  it("차량이 지원하지 않는 무드등·사이드미러 열선은 보내지 않는다", () => {
+    expect(
+      comfortChanges(
+        { seatHeat: { value: 0, min: 0, max: 3 } },
+        {
+          mirrorHeat: 1,
+          ambientOn: true,
+          ambientBrightness: 3,
+          ambientColor: 7,
+        },
+      ),
+    ).toEqual({});
   });
 });

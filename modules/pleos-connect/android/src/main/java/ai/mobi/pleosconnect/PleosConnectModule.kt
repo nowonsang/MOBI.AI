@@ -54,7 +54,14 @@ class PleosConnectModule : Module() {
   // 운전석 온도 취향(열선·공조). 값을 바꾸는 것은 주차 중 화면 조작으로만 한다.
   private val comfortLazy = lazy {
     val vehicle = vehicleLazy.value
-    DriverComfort(vehicle.getSeat(), vehicle.getSteeringWheel(), vehicle.getHVAC(), gear)
+    DriverComfort(
+      vehicle.getSeat(),
+      vehicle.getSteeringWheel(),
+      vehicle.getHVAC(),
+      vehicle.getSideMirror(),
+      vehicle.getLight(),
+      gear,
+    )
   }
   private val comfort by comfortLazy
 
@@ -100,6 +107,9 @@ class PleosConnectModule : Module() {
       AsyncFunction("getDriverComfortState") Coroutine { -> comfort.readState() }
 
       AsyncFunction("applyDriverComfort") Coroutine { settings: ComfortSettings -> comfort.apply(settings) }
+
+      // 목적지까지 남은 거리·시간만 넘긴다 (좌표·이름은 넘기지 않는다). 차량이 아니거나 목적지가 없으면 null.
+      AsyncFunction("getNaviRoute") Coroutine { -> if (isAutomotive) naviLazy.value.readRoute() else null }
 
       AsyncFunction("listen") Coroutine { ->
         voice.listen { partial -> sendEvent("onSpeechPartial", mapOf("text" to partial)) }

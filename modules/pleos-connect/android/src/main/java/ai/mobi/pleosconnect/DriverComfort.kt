@@ -1,15 +1,20 @@
 package ai.mobi.pleosconnect
 
 import ai.pleos.playground.vehicle.api.HVAC
+import ai.pleos.playground.vehicle.api.Light
 import ai.pleos.playground.vehicle.api.Seat
+import ai.pleos.playground.vehicle.api.SideMirror
 import ai.pleos.playground.vehicle.api.SteeringWheel
+import ai.pleos.playground.vehicle.api.model.area.MirrorArea
 import ai.pleos.playground.vehicle.api.model.area.SeatArea
 import ai.pleos.playground.vehicle.api.model.capability.AccessType
 import ai.pleos.playground.vehicle.api.model.capability.AreaBounds
 import ai.pleos.playground.vehicle.api.model.capability.CapabilityConfig
 import ai.pleos.playground.vehicle.api.model.capability.HvacTemperatureConfigArray
+import ai.pleos.playground.vehicle.constant.area.MirrorValue
 import ai.pleos.playground.vehicle.constant.area.SeatValue
 import ai.pleos.playground.vehicle.constant.control.FanDirectionType
+import ai.pleos.playground.vehicle.constant.control.LightSwitch
 import ai.pleos.playground.vehicle.constant.unit.TemperatureUnit
 import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record
@@ -43,6 +48,7 @@ private fun FanDirectionType?.toFanDirection(): FanDirection? =
   FAN_DIRECTION_TYPES.entries.firstOrNull { it.value == this }?.key
 
 // 운전석 온도 취향: 시트 열선·통풍, 핸들 열선, 운전석 공조 설정 온도, 풍량, 바람 방향, 지금 실내 온도.
+// 사이드미러 열선과 무드등(켜짐·밝기·색)도 함께 다룬다 ("내 운전석 통째로").
 // 값의 범위·단계는 차종마다 달라서 원시 값과 범위를 함께 넘기고, JS 는 범위 안에서만 다룬다.
 // 시트 열선 값은 AAOS 규약대로 음수 = 냉각, 0 = 꺼짐, 양수 = 열선 단계다. 통풍은 별도 값(HVAC_SEAT_VENTILATION, 0 = 꺼짐)이다.
 class ComfortSettings : Record {
@@ -57,12 +63,25 @@ class ComfortSettings : Record {
   @Field var fanSpeed: Int? = null
 
   @Field var fanDirection: FanDirection? = null
+
+  // 사이드미러 열선 단계 (0 = 꺼짐)
+  @Field var mirrorHeat: Int? = null
+
+  // 무드등(실내 간접 조명). 색은 차량이 주는 정수 값을 그대로 되돌려 보낸다 (뜻은 차종마다 다르다).
+  @Field var ambientOn: Boolean? = null
+
+  @Field var ambientBrightness: Int? = null
+
+  @Field var ambientColor: Int? = null
 }
 
 class DriverComfort(
   private val seat: Seat,
   private val steering: SteeringWheel,
   private val hvac: HVAC,
+  private val mirror: SideMirror,
+  // 무드등만 다룬다. 전조등·안개등 같은 주행 등화는 읽지도 바꾸지도 않는다.
+  private val light: Light,
   private val gear: GearMonitor,
 ) {
   private val driver = SeatArea(SeatValue.ROW_1_LEFT)
@@ -95,6 +114,24 @@ class DriverComfort(
       }
     }
     if ("fanSpeed" in state || "fanDirection" in state) state["fanMode"] = fanMode()
+    orNull { mirrorHeatAreas() }?.let { areas ->
+      val (area, range) = areas.first()
+      orNull { mirrorHeat(area) }?.let { state["mirrorHeat"] = level(it, range) }
+    }
+    orNull { ambientSwitchArea() }?.let { area ->
+      // 자동(AUTOMATIC) 같은 값은 켜짐·꺼짐 취향이 아니라서 뺀다.
+      when (orNull { ambientSwitch(area) }) {
+        LightSwitch.ON -> state["ambientOn"] = true
+        LightSwitch.OFF -> state["ambientOn"] = false
+        else -> Unit
+      }
+    }
+    orNull { ambientBrightnessRange() }?.let { (area, range) ->
+      orNull { ambientBrightness(area) }?.let { state["ambientBrightness"] = level(it, range) }
+    }
+    orNull { ambientColorArea() }?.let { area ->
+      orNull { ambientColor(area) }?.let { state["ambientColor"] = it }
+    }
     return state
   }
 
@@ -176,8 +213,134 @@ class DriverComfort(
         }
       }
     }
+    settings.mirrorHeat?.let { wanted ->
+      val areas = mirrorHeatAreas() ?: throw PleosServiceException("이 차량은 사이드미러 열선을 지원하지 않습니다")
+      // 왼쪽·오른쪽 거울이 따로 구역으로 오는 차량은 둘 다 같은 단계로 맞춘다.
+      for ((area, range) in areas) {
+        suspendPleos<Unit> { resume, fail ->
+          mirror.setHvacSideMirrorHeat(
+            area,
+            wanted.coerceIn(range),
+            { _: MirrorArea?, _: Int? -> resume(Unit) },
+            { e: Throwable? -> fail(e) },
+          )
+        }
+      }
+    }
+    settings.ambientOn?.let { wanted ->
+      val area = ambientSwitchArea() ?: throw PleosServiceException("이 차량은 무드등 켜기·끄기를 지원하지 않습니다")
+      suspendPleos<Unit> { resume, fail ->
+        light.setAmbientLightSwitch(
+          area,
+          if (wanted) LightSwitch.ON else LightSwitch.OFF,
+          { _: SeatArea?, _: LightSwitch? -> resume(Unit) },
+          { e: Throwable? -> fail(e) },
+        )
+      }
+    }
+    settings.ambientBrightness?.let { wanted ->
+      val (area, range) =
+        ambientBrightnessRange() ?: throw PleosServiceException("이 차량은 무드등 밝기 조절을 지원하지 않습니다")
+      suspendPleos<Unit> { resume, fail ->
+        light.setAmbientLightBrightness(
+          area,
+          wanted.coerceIn(range),
+          { _: SeatArea?, _: Int? -> resume(Unit) },
+          { e: Throwable? -> fail(e) },
+        )
+      }
+    }
+    settings.ambientColor?.let { wanted ->
+      val area = ambientColorArea() ?: throw PleosServiceException("이 차량은 무드등 색 변경을 지원하지 않습니다")
+      suspendPleos<Unit> { resume, fail ->
+        light.setAmbientLightBrightnessColor(
+          area,
+          wanted,
+          { _: SeatArea?, _: Int? -> resume(Unit) },
+          { e: Throwable? -> fail(e) },
+        )
+      }
+    }
     return readState()
   }
+
+  // 사이드미러 열선을 지원하는 구역과 단계 범위. 운전석 쪽 거울이 든 구역을 맨 앞에 둔다 (읽을 때 기준).
+  private suspend fun mirrorHeatAreas(): List<Pair<MirrorArea, IntRange>>? =
+    suspendPleos { resume, fail ->
+      mirror.checkHvacSideMirrorHeatCapabilities(
+        { config: CapabilityConfig?, areas: Map<out MirrorArea?, AreaBounds<*>?>? ->
+          val supported =
+            areas.orEmpty().entries
+              .mapNotNull { entry ->
+                val area = entry.key
+                val range = intRange(entry.value)
+                if (area != null && range != null) area to range else null
+              }
+              .sortedByDescending { it.first.values.contains(MirrorValue.DRIVER_LEFT) }
+          resume(if (config.isReadable() && supported.isNotEmpty()) supported else null)
+        },
+        { e: Throwable? -> fail(e) },
+      )
+    }
+
+  private suspend fun mirrorHeat(area: MirrorArea): Int? =
+    suspendPleos { resume, fail ->
+      mirror.getHvacSideMirrorHeatState(area, { value: Int? -> resume(value) }, { e: Throwable? -> fail(e) })
+    }
+
+  // 무드등 구역도 차종마다 다르다. 운전석이 든 구역, 없으면 첫 구역을 쓴다. 켜기·끄기를 둘 다 지원할 때만 다룬다.
+  private suspend fun ambientSwitchArea(): SeatArea? =
+    suspendPleos { resume, fail ->
+      light.checkAmbientLightSwitchCapabilities(
+        { config: CapabilityConfig?, areas: Map<out SeatArea?, List<LightSwitch?>?>? ->
+          val usable =
+            areas.orEmpty().entries.filter { entry ->
+              entry.value.orEmpty().containsAll(listOf(LightSwitch.ON, LightSwitch.OFF))
+            }
+          val entry = usable.firstOrNull { it.key.isDriver() } ?: usable.firstOrNull()
+          resume(if (config.isReadable()) entry?.key else null)
+        },
+        { e: Throwable? -> fail(e) },
+      )
+    }
+
+  private suspend fun ambientSwitch(area: SeatArea): LightSwitch? =
+    suspendPleos { resume, fail ->
+      light.getAmbientLightSwitch(area, { value: LightSwitch? -> resume(value) }, { e: Throwable? -> fail(e) })
+    }
+
+  private suspend fun ambientBrightnessRange(): Pair<SeatArea, IntRange>? =
+    suspendPleos { resume, fail ->
+      light.checkAmbientLightBrightnessCapabilities(
+        { config: CapabilityConfig?, areas: Map<out SeatArea?, AreaBounds<*>?>? ->
+          val entry = areas?.entries?.firstOrNull { it.key.isDriver() } ?: areas?.entries?.firstOrNull()
+          val area = entry?.key
+          val range = intRange(entry?.value)
+          resume(if (config.isReadable() && area != null && range != null) area to range else null)
+        },
+        { e: Throwable? -> fail(e) },
+      )
+    }
+
+  private suspend fun ambientBrightness(area: SeatArea): Int? =
+    suspendPleos { resume, fail ->
+      light.getAmbientLightBrightness(area, { value: Int? -> resume(value) }, { e: Throwable? -> fail(e) })
+    }
+
+  private suspend fun ambientColorArea(): SeatArea? =
+    suspendPleos { resume, fail ->
+      light.checkAmbientLightBrightnessColorCapabilities(
+        { config: CapabilityConfig?, areas: List<SeatArea?>? ->
+          resume(if (config.isReadable()) areas?.firstOrNull { it.isDriver() } ?: areas?.firstOrNull() else null)
+        },
+        { e: Throwable? -> fail(e) },
+      )
+    }
+
+  private suspend fun ambientColor(area: SeatArea): Int? =
+    suspendPleos { resume, fail ->
+      light.getAmbientLightBrightnessColor(area, { value: Int? -> resume(value) }, { e: Throwable? -> fail(e) })
+    }
 
   private suspend fun seatHeat(): Int? =
     suspendPleos { resume, fail ->

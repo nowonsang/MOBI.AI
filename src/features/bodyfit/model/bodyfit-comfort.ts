@@ -20,6 +20,12 @@ export const FAN_SPEED_RANGE = { min: 0, max: 20 };
 export const CABIN_TARGET_RANGE = { min: 10, max: 40 };
 /** 탈 때 실내 온도(섭씨). 한여름 햇볕 아래 세운 차 안은 80℃ 를 넘기도 한다. */
 export const CABIN_TEMP_RANGE = { min: -40, max: 100 };
+/** 사이드미러 열선 단계 (0 = 꺼짐) */
+export const MIRROR_HEAT_RANGE = { min: 0, max: 10 };
+/** 무드등 밝기. 단계(1~10)로 주는 차도, 0~255 로 주는 차도 있다고 보고 넓게 잡는다. */
+export const AMBIENT_BRIGHTNESS_RANGE = { min: 0, max: 255 };
+/** 무드등 색. 차량이 주는 32비트 정수(색 번호나 RGB)를 뜻을 풀지 않고 그대로 둔다. */
+export const AMBIENT_COLOR_RANGE = { min: -(2 ** 31), max: 2 ** 31 - 1 };
 
 /** 기록·추천할 수 있는 바람 방향 */
 export const FAN_DIRECTIONS = [
@@ -48,6 +54,8 @@ const LEVELS = {
   steeringHeat: { range: HEAT_LEVEL_RANGE, step: 1 },
   cabinTarget: { range: CABIN_TARGET_RANGE, step: 0.5 },
   fanSpeed: { range: FAN_SPEED_RANGE, step: 1 },
+  // 사이드미러 열선도 추운 날·습한 날에 켜는 것이라 온도 항목과 같은 기준(실내 온도가 비슷한 날)으로 다룬다.
+  mirrorHeat: { range: MIRROR_HEAT_RANGE, step: 1 },
 } as const;
 type LevelKey = keyof typeof LEVELS;
 const LEVEL_KEYS = Object.keys(LEVELS) as LevelKey[];
@@ -79,6 +87,26 @@ export function toComfortSettings(state: DriverComfortState): ComfortSettings {
   const direction = state.fanDirection?.value;
   if (fanManual && direction && FAN_DIRECTIONS.includes(direction))
     settings.fanDirection = direction;
+
+  if (state.ambientOn !== undefined) settings.ambientOn = state.ambientOn;
+  // 꺼 둔 날의 밝기·색은 고른 값이 아니라 남아 있던 값이라 취향으로 남기지 않는다.
+  if (state.ambientOn !== false) {
+    const brightness = state.ambientBrightness;
+    if (
+      brightness &&
+      Number.isInteger(brightness.value) &&
+      within(brightness.value, AMBIENT_BRIGHTNESS_RANGE) &&
+      within(brightness.value, brightness)
+    )
+      settings.ambientBrightness = brightness.value;
+    const color = state.ambientColor;
+    if (
+      color !== undefined &&
+      Number.isInteger(color) &&
+      within(color, AMBIENT_COLOR_RANGE)
+    )
+      settings.ambientColor = color;
+  }
   return settings;
 }
 
@@ -172,6 +200,22 @@ export function recommendComfort(
     if ((latest?.settings.seatVent ?? 0) > 0) settings.seatHeat = 0;
     else settings.seatVent = 0;
   }
+
+  // 무드등은 더위·추위와 상관없는 취향이다. 실내 온도로 거르면 계절이 바뀔 때마다 추천이 사라지므로 언제나 최근 기록에서 고른다.
+  // 켜짐·색은 숫자의 가운데 값이 뜻이 없어 가장 자주 고른 값을, 밝기는 가운데 값을 쓴다.
+  const lights = recent.slice(0, RECENT_LIMIT).map((record) => record.settings);
+  const defined = <T>(values: readonly (T | undefined)[]) =>
+    values.filter((value): value is T => value !== undefined);
+  const on = mostFrequent(defined(lights.map((s) => s.ambientOn)));
+  if (on !== undefined) settings.ambientOn = on;
+  // 평소 꺼 두는 운전자에게는 밝기·색을 추천하지 않는다.
+  if (on !== false) {
+    const brightness = defined(lights.map((s) => s.ambientBrightness));
+    if (brightness.length > 0)
+      settings.ambientBrightness = Math.round(median(brightness));
+    const color = mostFrequent(defined(lights.map((s) => s.ambientColor)));
+    if (color !== undefined) settings.ambientColor = color;
+  }
   return {
     settings,
     basedOn: picked.length,
@@ -207,5 +251,40 @@ export function comfortChanges(
     now.options.includes(direction)
   )
     changes.fanDirection = direction;
+
+  if (
+    wanted.ambientOn !== undefined &&
+    state.ambientOn !== undefined &&
+    wanted.ambientOn !== state.ambientOn
+  )
+    changes.ambientOn = wanted.ambientOn;
+  // 끄는 것으로 맞출 때와 꺼진 채 둘 때는 밝기·색을 건드리지 않는다.
+  if ((wanted.ambientOn ?? state.ambientOn) !== false) {
+    const brightness = state.ambientBrightness;
+    if (wanted.ambientBrightness !== undefined && brightness) {
+      const clamped = Math.min(
+        brightness.max,
+        Math.max(brightness.min, wanted.ambientBrightness),
+      );
+      if (clamped !== brightness.value) changes.ambientBrightness = clamped;
+    }
+    if (
+      wanted.ambientColor !== undefined &&
+      state.ambientColor !== undefined &&
+      wanted.ambientColor !== state.ambientColor
+    )
+      changes.ambientColor = wanted.ambientColor;
+  }
   return changes;
 }
+
+/** 무드등 항목 (온도 항목과 추천 기준이 달라 화면에서 따로 묶는다) */
+export const AMBIENT_KEYS = [
+  "ambientOn",
+  "ambientBrightness",
+  "ambientColor",
+] as const satisfies readonly (keyof ComfortSettings)[];
+
+/** 무드등 추천이나 바꿀 항목이 하나라도 있는지 */
+export const hasAmbient = (settings: ComfortSettings): boolean =>
+  AMBIENT_KEYS.some((key) => settings[key] !== undefined);

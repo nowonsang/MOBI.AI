@@ -1,7 +1,30 @@
 import { SEAT_AXES } from "@/shared/pleos/pleos.types";
 
 import { clamp } from "./bodyfit-seat";
-import type { BodyProfile, SeatRatios } from "./bodyfit.types";
+import type { BodyProfile, SeatAxis, SeatRatios } from "./bodyfit.types";
+
+/**
+ * 기본 추천이 없는 축 (허리 지지대·헤드레스트 각도).
+ * 허리 지지대는 허리 곡선에, 헤드레스트 각도는 등받이 각도와 목 자세에 달려 있어 키·앉은키로 정할 근거가 없다.
+ * 근거 없이 추천하면 허리를 밀거나 머리를 앞으로 미는 자세가 될 수 있다.
+ * 그래서 처음에는 지금 위치를 그대로 두고, 운전자가 맞춘 값이 기록에 쌓이면 그 값을 추천한다
+ * (bodyfit-learning.ts 의 learnRemembered).
+ */
+export const LEARNED_ONLY_AXES = ["lumbar", "headrestAngle"] as const;
+
+export type LearnedOnlyAxis = (typeof LEARNED_ONLY_AXES)[number];
+
+/** 체형으로 기본 추천을 계산하는 축 */
+export type BaselineAxis = Exclude<SeatAxis, LearnedOnlyAxis>;
+
+export const isLearnedOnlyAxis = (axis: SeatAxis): axis is LearnedOnlyAxis =>
+  (LEARNED_ONLY_AXES as readonly SeatAxis[]).includes(axis);
+
+const isBaselineAxis = (axis: SeatAxis): axis is BaselineAxis =>
+  !isLearnedOnlyAxis(axis);
+
+export const BASELINE_AXES: readonly BaselineAxis[] =
+  SEAT_AXES.filter(isBaselineAxis);
 
 // 앉은키를 모를 때 쓰는 대략적인 성인 평균 비율 (앉은키 ≈ 키의 53%)
 const SITTING_HEIGHT_RATIO = 0.53;
@@ -17,10 +40,11 @@ const normalize = (value: number, range: { min: number; max: number }) =>
  * 체형만으로 계산한 첫 추천 자세. 운전 자세 일반 원칙(키가 클수록 뒤로, 상체가 길수록 낮게)을 단순화한 초깃값이며,
  * 정확도는 개인 학습 보정(offsets)으로 맞춘다. 계수를 바꾸면 bodyfit-recommend.test.ts 도 함께 고친다.
  *
- * 헤드레스트 각도·앞뒤는 넣지 않는다: 머리 뒤와의 간격은 등받이 각도와 목 자세가 정하고 키·앉은키로는 정할 수 없다.
- * 근거 없이 추천하면 머리를 앞으로 미는 자세가 될 수 있다.
+ * 허리 지지대·헤드레스트 각도는 넣지 않는다 (LEARNED_ONLY_AXES).
  */
-export function recommendBaseline(profile: BodyProfile): SeatRatios {
+export function recommendBaseline(
+  profile: BodyProfile,
+): Record<BaselineAxis, number> {
   const stature = normalize(profile.heightCm, STATURE_RANGE);
   const sittingCm =
     profile.sittingHeightCm ?? profile.heightCm * SITTING_HEIGHT_RATIO;
@@ -46,17 +70,24 @@ export function recommendBaseline(profile: BodyProfile): SeatRatios {
   };
 }
 
-/** 기본 추천에 개인 보정을 더한 최종 추천 */
+/**
+ * 기본 추천에 개인 보정을 더한 최종 추천.
+ * 기본 추천이 없는 축은 기억한 값(remembered)이 있을 때만 넣는다. 없으면 추천하지 않아 지금 위치를 그대로 둔다.
+ */
 export function recommendSeat(
   profile: BodyProfile,
   offsets: SeatRatios,
+  remembered: SeatRatios = {},
 ): SeatRatios {
   const baseline = recommendBaseline(profile);
   const recommended: SeatRatios = {};
   for (const axis of SEAT_AXES) {
-    const base = baseline[axis];
-    if (base === undefined) continue;
-    recommended[axis] = clamp(base + (offsets[axis] ?? 0), 0, 1);
+    if (isLearnedOnlyAxis(axis)) {
+      const kept = remembered[axis];
+      if (kept !== undefined) recommended[axis] = clamp(kept, 0, 1);
+      continue;
+    }
+    recommended[axis] = clamp(baseline[axis] + (offsets[axis] ?? 0), 0, 1);
   }
   return recommended;
 }

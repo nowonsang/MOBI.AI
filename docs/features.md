@@ -29,7 +29,7 @@
 | Vehicle 2.3.2 — Seat 조회 (Vehicle State) | `CAR_SEATS` | 시트 위치·범위 조회, 착좌 감지 | 사용 가능 | 권한 부여 · 조회 확인 |
 | Vehicle 2.3.2 — Seat 제어 (Vehicle Control) | `CONTROL_CAR_SEATS` | 시트 이동 (`moveSeat*`) | **Coming Soon (신청 불가)** | 권한 부여 · 기어 P 에서 이동 명령이 차량 계층(VHAL)까지 전달됨 (11/12). 위치 값은 0 으로만 읽힘 |
 | Android Car API — 기어 | `CAR_POWERTRAIN` | P단 확인 (Pleos Gear API deprecated) | Android 표준 | 권한 부여 |
-| NaviHelper 3.0.5 | `NAVI_ROUTE` | 목적지 도착 이벤트 | 사용 가능 | 권한 부여 |
+| NaviHelper 3.0.5 | `NAVI_ROUTE` | 목적지 도착 이벤트, 목적지까지 남은 거리·시간 (`getDestinationInfo`) | 사용 가능 | 권한 부여 |
 | SpeechToText 3.3.1 | `STT_SERVICE` | 음성 피드백 | **Coming Soon (신청 불가)** | 권한 부여 · 동작 미확인 |
 | TextToSpeech 3.3.1 | `TTS_SERVICE` | 음성 안내 | **Coming Soon (신청 불가)** | 권한 부여 · 동작 미확인 |
 
@@ -40,7 +40,9 @@
 - **전제 (11/12 확정): 자동 조절(시트 제어)과 음성(STT·TTS)은 출품작의 기능이다.** 운영사무국 최종 답변에 따라 contest 빌드에 넣고 에뮬레이터로 시연한다. 시트 이동 같은 제한 대상 제어는 기어 P 가 아니면 동작하지 않는다 (앱도 네이티브에서 P 를 확인한다, S-1).
 - **주 경로 (contest 빌드)**: 맞춤 자세 화면의 주 버튼은 자동 조절(B-4, B-7)이다. 가이드 조절(B-5)은 시트 버튼으로 직접 맞추고 싶을 때 쓰는 보조 버튼이다. 피드백은 주행 후 질문(D-1)과 터치 피드백(D-2)이 주 경로이고 음성(D-3, D-4)을 함께 보여 준다. **market 빌드**(앱 마켓 제출)는 콘솔 승인 전 권한을 빼므로 자동 조절·음성이 없고 가이드 조절이 주 경로다.
 - 에뮬레이터 v2.1.0 의 시트 (11/12 기어 P 에서 다시 확인): 이동 명령은 차량 계층까지 전달된다 (VHAL 로그 `control Row1Left seat's Slide type to Positive state`, Virtual Console 의 시트 값이 0.1초마다 5% 씩 움직이고 시스템이 "시트 위치 변경됨"을 띄운다). 하지만 Vehicle SDK 로 읽는 위치는 계속 0 이다. 에뮬레이터가 위치를 0~1 로 보내는데 VHAL 이 100 으로 나눈 뒤 정수로 바꾸기 때문이다 (로그 `Slide is 0.6, revised position: 0`). 그래서 실제 자동 조절은 목표에 닿았는지 알 수 없어 30초 뒤 "끝까지 맞추지 못했어요"로 끝난다. 에뮬레이터 시연은 **자동 조절 시연 모드**(B-4)로 한다.
+- 무드등·사이드미러 열선 (11/12 구현, E-5·E-6): 새 권한 `CAR_LIGHTS`(무드등 읽기·맞추기), `CAR_MIRRORS`(사이드미러 열선 읽기), `CONTROL_CAR_MIRRORS`(사이드미러 열선 맞추기)를 선언했다 (Vehicle SDK 2.3.2 AAR 의 `@RequiresPermission` 확인. 개발 문서 공개 여부 11/12 확인: 쓰는 메서드가 모두 Vehicle SDK API Reference 에 있다 — [Light](https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/Vehicle/vehicle/ai.pleos.playground.vehicle.api/light/entry) 의 `get`·`set`·`check…Capabilities` × `AmbientLightSwitch`·`AmbientLightBrightness`·`AmbientLightBrightnessColor`, [SideMirror](https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/Vehicle/vehicle/ai.pleos.playground.vehicle.api/side-mirror/entry) 의 `getHvacSideMirrorHeatState`·`setHvacSideMirrorHeat`·`checkHvacSideMirrorHeatCapabilities`. 권한은 [Declaring permission](https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/Vehicle/vehicle-permission) 에 `CAR_LIGHTS`(Light)·`CAR_MIRRORS`(SideMirror)와 제어용 `CONTROL_CAR_*` 규칙이 안내돼 있다). 앱 마켓과 협의한 권한이 아니므로 market 빌드는 세 권한을 모두 뺀다: 그 빌드에서는 값이 읽히지 않아 기록·추천에서도 빠진다.
 - 조절 축 확대 (11/12 구현): 좌판 길이(깊이, `moveSeatDepth`), 헤드레스트 높이(`moveSeatHeadrestHeight`), 안전벨트 높이(`moveSeatBeltHeight`)를 넣었다. 조회·알림·이동 모두 기존 권한(`CAR_SEATS`, `CONTROL_CAR_SEATS`)으로 된다 (Vehicle SDK 2.3.2 AAR 의 `@RequiresPermission` 확인). 헤드레스트 각도·앞뒤(`moveSeatHeadrestAngle`, `moveSeatHeadrestForeAft`)와 허리 지지대(`moveSeatLumbar*`)는 키·앉은키로 정할 근거가 없어 넣지 않았다.
+- 기억만 하는 축 (11/12 구현): 허리 지지대 앞뒤(`moveSeatLumbarForeAft`)와 헤드레스트 각도(`moveSeatHeadrestAngle`)를 "체형 추천 없이 운전자가 맞춘 값을 기억하는 축"으로 넣었다. 체형으로 정할 근거가 없으므로 기본 추천은 여전히 없다: 처음에는 추천하지 않고 지금 위치를 그대로 두며, 그 축의 위치가 든 기록(출발할 때·직접 저장·피드백)이 2건 쌓이면 운전자가 평소 두던 위치(최근 기록일수록 크게 반영한 평균, 상황별 반영은 다른 축과 같음)를 추천·가이드·자동 조절 대상으로 삼는다. 조회·알림·이동 모두 기존 권한으로 된다 (AAR 확인). 쓰는 API 는 모두 Pleos Playground 개발 문서의 Vehicle SDK API Reference(Seat)에 공개돼 있다 (11/12 확인, `https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/Vehicle/vehicle/ai.pleos.playground.vehicle.api/seat/` 아래 `move-seat-lumbar-fore-aft`, `move-seat-headrest-angle`, `get-current-seat-lumbar-fore-aft-position`, `get-current-seat-headrest-angle-position`, `check-seat-lumbar-fore-aft-position-capabilities`, `check-seat-headrest-angle-position-capabilities`, `check-move-seat-lumbar-fore-aft-capabilities`, `check-move-seat-headrest-angle-capabilities`, `register-seat-lumbar-fore-aft-position`, `register-seat-headrest-angle-position`). 허리 옆 지지(`moveSeatLumbarSideSupport`)와 헤드레스트 앞뒤(`moveSeatHeadrestForeAft`)는 넣지 않았다: 옆 지지는 자세보다 코너링 때 몸을 잡는 취향이고, 헤드레스트 앞뒤는 각도와 같은 간격(머리 뒤)을 바꾸는 축이라 둘을 함께 움직이면 기억한 값이 서로 어긋난다.
 
 ## 안전 원칙 (모든 기능에 적용)
 
@@ -68,7 +70,7 @@
 
 ### B. 추천·시트 조절
 
-시트 위치는 차종마다 단위가 달라서, 축별로 차량이 지원하는 범위 안의 비율(0~1)로 다룬다. 축은 일곱 개다. 자세: 앞뒤(foreAft), 높이(height), 등받이(backrest), 좌판 기울기(tilt), 좌판 길이(depth). 머리·벨트: 헤드레스트 높이(headrestHeight), 안전벨트 높이(beltHeight). 차량이 지원하지 않는 축은 건너뛴다. 좌판 길이·헤드레스트 높이·안전벨트 높이는 전동이 아닌 차량이 많아, 차량이 위치를 알려 줄 때만 추천·미리보기·안내·자동 조절에 넣는다 (없는 차량은 네 축 그대로). 순서는 앉은 자세를 먼저 잡고 머리·벨트를 나중에 맞춘다. 화면에서는 머리·벨트 축이 있을 때만 "자세 / 머리·벨트" 묶음으로 나눠 보여 준다.
+시트 위치는 차종마다 단위가 달라서, 축별로 차량이 지원하는 범위 안의 비율(0~1)로 다룬다. 축은 아홉 개다. 자세: 앞뒤(foreAft), 높이(height), 등받이(backrest), 좌판 기울기(tilt), 좌판 길이(depth). 머리·벨트: 헤드레스트 높이(headrestHeight), 안전벨트 높이(beltHeight). 기억한 위치: 허리 지지대(lumbar), 헤드레스트 각도(headrestAngle) — 기본 추천이 없고 기록이 쌓인 뒤에만 추천하는 축이다 (`LEARNED_ONLY_AXES`). 차량이 지원하지 않는 축은 건너뛴다. 좌판 길이·헤드레스트 높이·안전벨트 높이는 전동이 아닌 차량이 많아, 차량이 위치를 알려 줄 때만 추천·미리보기·안내·자동 조절에 넣는다 (없는 차량은 네 축 그대로). 순서는 앉은 자세를 먼저 잡고 머리·벨트를 나중에 맞춘다. 화면에서는 머리·벨트 축이 있을 때만 "자세 / 머리·벨트" 묶음으로 나눠 보여 준다. 허리 지지대·헤드레스트 각도도 차량이 위치를 알려 줄 때만 다루고, 기억한 값이 생기면 "기억한 위치" 묶음으로 맨 뒤에 나온다. 그 전에는 축별 추천 아래에 "편하게 맞춰 두면 기억했다가 다음부터 맞춰 드려요" 한 줄만 보인다 (지원하지 않는 차량에서는 아무것도 달라지지 않는다). 음성·터치 피드백으로는 바꾸지 않는다.
 
 | ID | 우선 | 기능 | 설명 |
 | --- | --- | --- | --- |
@@ -88,7 +90,7 @@
 | C-2 | P0 | 개인 보정 | 최근 10개 기록의 (final - baseline)을 최근일수록 크게(×0.7씩 감쇠) 평균. 축별 보정 폭은 ±0.3로 제한 |
 | C-3 | P0 | 주행 시작 자세 학습 | 주행을 시작할 때(P단 해제) 시트 위치를 읽어 자동 기록. 운전자가 직접 고친 자세가 저절로 학습된다 |
 | C-4 | P1 | 추천 근거 설명 | "지난번에 등받이를 더 세우셔서 반영했어요" |
-| C-5 | P1 | 상황별 자세 | 운전자가 맞춤 자세 화면에서 상황(평소 / 출퇴근 / 장거리 / 시내)을 고른다. 주차(P) 중에만 고를 수 있고, 고르지 않으면 평소다 (S-5). 자세 기록(C-1)과 진행 중인 주행에 상황을 함께 남기고, 추천은 고른 상황의 기록으로 보정한다: 그 상황의 기록이 3건 이상이면 그 기록만, 1~2건이면 (기록 수 ÷ 3)만큼만 반영하고 나머지는 전체 기록, 없으면 전체 기록. 추천 근거(C-4)도 상황을 말한다 ("장거리에서는 등받이를 더 눕히셔서 반영했어요"). 상황별 기본 차이는 넣지 않고 운전자 본인의 기록으로만 달라진다 (기본값으로 쓸 근거 자료가 없다). 다른 운전자를 고르거나 운전석 착좌가 바뀌면 평소로 돌아간다. 예전 기록(상황 없음)은 평소로 읽는다 |
+| C-5 | P1 | 상황별 자세 | 운전자가 맞춤 자세 화면에서 상황(평소 / 출퇴근 / 장거리 / 시내)을 고른다. 주차(P) 중에만 고를 수 있고, 고르지 않으면 평소다 (S-5). 자세 기록(C-1)과 진행 중인 주행에 상황을 함께 남기고, 추천은 고른 상황의 기록으로 보정한다: 그 상황의 기록이 3건 이상이면 그 기록만, 1~2건이면 (기록 수 ÷ 3)만큼만 반영하고 나머지는 전체 기록, 없으면 전체 기록. 추천 근거(C-4)도 상황을 말한다 ("장거리에서는 등받이를 더 눕히셔서 반영했어요"). 상황별 기본 차이는 넣지 않고 운전자 본인의 기록으로만 달라진다 (기본값으로 쓸 근거 자료가 없다). 다른 운전자를 고르거나 운전석 착좌가 바뀌면 평소로 돌아간다. 예전 기록(상황 없음)은 평소로 읽는다. **내비 경로로 상황 제안**: 주차(P) 중이고 아직 상황을 고르지 않았을 때(평소) 내비게이션 목적지가 있으면 남은 거리·시간으로 상황을 제안한다 ("목적지까지 120km, 1시간 30분쯤이에요. 장거리 자세로 볼까요?"). 예상 시간 60분 이상(D-1 과 같은 기준)이거나 80km 이상이면 장거리, 20km 이하면 시내, 그 사이는 제안하지 않는다. 출퇴근은 경로만으로 알 수 없어 제안하지 않는다. 제안만 하고 운전자가 눌러야 바뀐다. 거리·시간 값만 그 순간에 쓰고 저장하지 않으며, 좌표·목적지 이름은 읽지 않는다 (NaviHelper `getDestinationInfo`, 권한 `NAVI_ROUTE`) |
 
 ### D. 피드백
 
@@ -109,6 +111,9 @@
 | E-1 | P0 | 온도 취향 기록 | 출발할 때(P 해제) 시트 열선·통풍, 핸들 열선, 운전석 공조 설정 온도, 풍량, 바람 방향과 탈 때 실내 온도를 기록 (`getHvacSeatTemperature`, `getHvacSeatVentilationState`, `getHvacSteeringWheelHeatState`, `getHvacTemperature`, `getHvacFanSpeed`, `getHvacFanDirection`, `getHvacTemperatureCurrent`). 통풍은 열선과 별개 값이다. 풍량·바람 방향은 운전자가 직접 맞춘 날만 남긴다: 자동 공조(`getHvacAutoState`)이거나 공조가 꺼져 있으면(`getHvacPowerState`) 차가 정한 값이라 뺀다 |
 | E-2 | P0 | 온도 취향 추천 | 지금 실내 온도와 ±5℃ 안이었던 최근 기록 5건의 가운데 값. 바람 방향은 가장 자주 고른 방향. 열선과 통풍이 함께 추천되면 최근에 켠 쪽만 남긴다. 비슷한 날이 없으면 최근 기록 기준 |
 | E-3 | P0 | 평소 온도로 맞추기 | 맞춤 자세 화면의 "내 운전석 온도" 카드. 주차(P) 중 운전자가 누르면 다른 항목만 바꾼다 (`setHvacSeatTemperature`, `setHvacSeatVentilation`, `setHvacSteeringWheelHeat`, `setHvacTemperature`, `setHvacFanSpeed`, `setHvacFanDirection`). 자동 공조 중이거나 공조가 꺼져 있으면 풍량·바람 방향은 그대로 둔다 (자동을 풀거나 공조를 켜지 않는다). 바람 방향은 "얼굴 / 발 / 앞유리"로 보여 주고, 바뀔 항목에만 지금 값을 붙인다. 네이티브에서도 기어 P 확인 |
+| E-4 | SDK 기능 | 음성으로 온도 맞추기 | "말로 알려 주기"에서 온도 이야기도 듣는다: "추워요 / 더워요"(실내 온도 1℃, "너무"·"많이"면 2℃. 온도를 못 바꾸는 차는 시트 열선·통풍 1단), "핸들 열선 켜 줘", "시트 열선 꺼 줘", "통풍 틀어 줘", "바람 좀 줄여 줘"(풍량 1~2단), "평소 온도로 맞춰 줘"(E-2 추천 그대로). LLM 없이 규칙으로 해석한다. 열선·통풍은 한 번에 1단(끄기는 바로 0), 값은 차량 범위 안으로 자르고, 말로는 냉각 쪽으로 보내지 않으며, 열선을 켜면 켜져 있던 통풍을 끈다. 차량이 지원하지 않는 항목은 "이 차에서는 바꿀 수 없어요", 자동 공조·공조 꺼짐이면 풍량은 그대로. 바람 방향과 공조 전원은 말로 바꾸지 않는다. 시트 자세와 온도가 한 문장에 섞이면 어느 쪽도 만들지 않고 하나씩 말해 달라고 한다. 조절안("지금 → 바뀔 값")을 화면에 보여 주고 운전자가 "이대로 맞추기"를 누른 뒤에만, 주차(P) 중에만 `applyDriverComfort` 로 맞추고 결과를 음성으로 알린다 (S-4). 음성에 동의한 운전자, contest 빌드에서만 |
+| E-5 | P1 | 사이드미러 열선 | 온도 항목과 같은 흐름으로 기록·추천·적용한다 (`getHvacSideMirrorHeatState`, `checkHvacSideMirrorHeatCapabilities`, `setHvacSideMirrorHeat`). 추운 날·습한 날에 켜는 것이라 기준도 같다: 지금 실내 온도와 ±5℃ 안이었던 최근 기록 5건의 가운데 값. 좌우 거울이 따로 구역으로 오는 차량은 둘 다 같은 단계로 맞춘다. 권한 `CAR_MIRRORS`·`CONTROL_CAR_MIRRORS` |
+| E-6 | P1 | 무드등 취향 | 출발할 때 무드등 켜짐·밝기·색을 기록한다 (`getAmbientLightSwitch`, `getAmbientLightBrightness`, `getAmbientLightBrightnessColor`). 온도와 무관한 취향이라 **실내 온도로 거르지 않고 최근 기록 5건**에서 고른다 (실내 온도로 거르면 계절이 바뀔 때마다 추천이 사라진다): 켜짐·색은 가장 자주 고른 값, 밝기는 가운데 값. 꺼 둔 날은 밝기·색을 남기지 않고, 평소 꺼 두는 운전자에게는 끄기만 추천한다. 자동(AUTOMATIC)처럼 켜짐·꺼짐이 아닌 상태는 기록하지 않는다. 색은 차량이 준 정수 값을 그대로 되돌려 보내고 화면에서는 "평소 색"으로 부른다 (값의 뜻이 차종마다 다르다). 카드에서는 타일 하나("무드등: 켬 · 밝기 3단 · 평소 색")로 묶어 온도 항목 아래에 따로 둔다. 주차(P) 중 운전자가 누르면 다른 항목만 바꾼다 (`setAmbientLightSwitch`, `setAmbientLightBrightness`, `setAmbientLightBrightnessColor`), 네이티브에서도 기어 P 확인. 권한 `CAR_LIGHTS` (SDK 2.3.2 는 바꾸는 메서드에도 이 권한을 요구한다). 전조등·안개등 같은 주행 등화는 읽지도 바꾸지도 않는다 |
 
 ## MVP 시연 시나리오 (Pleos 에뮬레이터)
 

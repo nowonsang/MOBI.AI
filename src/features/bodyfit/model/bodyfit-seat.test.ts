@@ -123,3 +123,41 @@ describe("shouldRereadSeat", () => {
     expect(shouldRereadSeat({}, SEAT_REREAD_LIMIT)).toBe(false);
   });
 });
+
+describe("허리 지지대·헤드레스트 각도", () => {
+  const withSupport = {
+    ...state,
+    lumbar: { value: 20, min: 0, max: 80, movable: true },
+    headrestAngle: { value: 3, min: 0, max: 6, movable: false },
+  };
+
+  it("차량이 알려 주면 비율로 바꾼다", () => {
+    const ratios = toSeatRatios(withSupport);
+    expect(ratios.lumbar).toBe(0.25);
+    expect(ratios.headrestAngle).toBe(0.5);
+  });
+
+  it("추천에 없는 축(기록이 쌓이기 전)은 움직일 수 있어도 움직이지 않는다", () => {
+    expect(toSeatTargets({ foreAft: 0.5 }, withSupport)).toEqual([
+      { axis: "foreAft", target: 100 },
+    ]);
+  });
+
+  it("기억한 값이 있으면 자세 축 뒤에 움직이고, 움직일 수 없는 축은 뺀다", () => {
+    expect(
+      toSeatTargets(
+        { lumbar: 0.5, headrestAngle: 0.5, foreAft: 0.5 },
+        withSupport,
+      ),
+    ).toEqual([
+      { axis: "foreAft", target: 100 },
+      { axis: "lumbar", target: 40 },
+    ]);
+  });
+
+  it("범위를 벗어난 목표는 차량이 알려 준 범위로 자른다", () => {
+    expect(toSeatTargets({ lumbar: 1.5 }, withSupport)).toEqual([
+      { axis: "lumbar", target: 80 },
+    ]);
+  });
+});

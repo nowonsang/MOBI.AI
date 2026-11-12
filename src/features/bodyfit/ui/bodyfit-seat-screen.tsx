@@ -10,7 +10,7 @@ import { useGear } from "@/shared/pleos/use-gear";
 import { useUxRestrictions } from "@/shared/pleos/use-ux-restrictions";
 import { AppText } from "@/shared/ui/app-text";
 import { Button } from "@/shared/ui/button";
-import { Card, SummaryCard } from "@/shared/ui/card";
+import { Card } from "@/shared/ui/card";
 import { ChipGroup, ToggleChip } from "@/shared/ui/chip";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { Columns } from "@/shared/ui/columns";
@@ -18,7 +18,7 @@ import { IconBadge } from "@/shared/ui/icon-badge";
 import { InfoRow } from "@/shared/ui/info-row";
 import { Screen } from "@/shared/ui/screen";
 import { StatusView } from "@/shared/ui/status-view";
-import { radius, spacing } from "@/shared/ui/theme";
+import { radius, shadows, sizes, spacing } from "@/shared/ui/theme";
 import { themedStyles } from "@/shared/ui/use-theme";
 
 import { useAutoAdjust } from "../api/bodyfit.auto-adjust";
@@ -30,11 +30,16 @@ import {
   DRIVE_CONTEXT_LABEL,
   DRIVE_CONTEXTS,
 } from "../model/bodyfit-drive-context";
+import {
+  describeDriveSuggestion,
+  suggestDriveContext,
+} from "../model/bodyfit-drive-suggestion";
 import { guideSeat } from "../model/bodyfit-guide";
 import {
   explainOffsets,
   learningBasis,
   learnOffsets,
+  learnRemembered,
   type LearningBasis,
 } from "../model/bodyfit-learning";
 import { recommendSeat } from "../model/bodyfit-recommend";
@@ -51,7 +56,7 @@ import type {
 import { BodyfitComfortCard } from "./bodyfit-comfort-card";
 import { BodyfitAutoAdjustProgress } from "./bodyfit-auto-adjust-progress";
 import { describeBodyfitError } from "./bodyfit-error-copy";
-import { BodyfitSeatAxes } from "./bodyfit-seat-axes";
+import { BodyfitSeatAxes, BodyfitSeatAxesLegend } from "./bodyfit-seat-axes";
 import { BodyfitSeatImage } from "./bodyfit-seat-image";
 import { BodyfitVoiceFeedback } from "./bodyfit-voice-feedback";
 
@@ -126,6 +131,15 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   const auto = useAutoAdjust({
     parked: gear === "park" && !restrictions.noSetup,
   });
+  // C-5: 주차 중이고 아직 상황을 고르지 않았을 때만 내비 경로를 읽어 상황을 제안한다. 읽지 못하면 제안 없이 지나간다.
+  const naviRoute = useQuery({
+    ...bodyfitQueries.naviRoute(),
+    enabled:
+      vehicleConnected &&
+      gear === "park" &&
+      !restrictions.noSetup &&
+      context === DEFAULT_DRIVE_CONTEXT,
+  });
   const stop = useStopSeat();
   const remove = useDeleteBodyProfile();
   const [confirming, setConfirming] = useState<"move" | "delete" | null>(null);
@@ -162,6 +176,7 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   const recommended = recommendSeat(
     driver,
     learnOffsets(adjustments.data, context),
+    learnRemembered(adjustments.data, context),
   );
   const current = seat.data ? toSeatRatios(seat.data) : null;
   // 시트 조절은 플랫폼 제한(CarUxRestrictions NO_SETUP)이 없고 기어가 P 일 때만 연다.
@@ -176,6 +191,9 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
     .sort((a, b) => b.at - a.at)
     .slice(0, RECENT_RECORDS);
   const drivers = profiles.data ?? [];
+  const suggestion = parked
+    ? suggestDriveContext(naviRoute.data, context)
+    : null;
 
   // 시연 모드로 움직인 뒤에는 모의 위치를 "지금" 자세로 보여 준다 (기록·음성 조절은 차량 값만 쓴다).
   const shown = auto.demoSeat ?? current;
@@ -222,13 +240,10 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
 
   const error = seat.error;
   const status = !vehicleConnected
-    ? { label: "차량에 연결되어 있지 않아요", style: styles.statusIdle }
+    ? { label: "차량에 연결되어 있지 않아요", dot: styles.dotIdle }
     : parked
-      ? { label: "P · 주차 중이에요", style: styles.statusParked }
-      : {
-          label: "주행 중에는 시트를 맞추지 않아요",
-          style: styles.statusBlocked,
-        };
+      ? { label: "P · 주차 중이에요", dot: styles.dotParked }
+      : { label: "주행 중에는 시트를 맞추지 않아요", dot: styles.dotBlocked };
 
   // B-4·B-7: 자동 조절이 움직이는 동안과 끝난 직후에는 진행 화면만 보여 준다 (누를 수 있는 것은 멈추기뿐).
   if (auto.run) {
@@ -249,6 +264,17 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
 
   const moveConfirm = auto.demo ? DEMO_MOVE_CONFIRM : MOVE_CONFIRM;
 
+  // 기어 상태는 제목 오른쪽에 크게 둔다. 시트를 움직일 수 있는지가 이 화면에서 가장 먼저 봐야 할 정보다.
+  // 상태는 점 색과 글자로 함께 알린다.
+  const statusPill = (
+    <View style={styles.status} accessibilityLiveRegion="polite">
+      <View style={[styles.dot, status.dot]} />
+      <AppText variant="secondary" style={styles.statusText}>
+        {status.label}
+      </AppText>
+    </View>
+  );
+
   return (
     <Screen
       title={`${driver.name} 님`}
@@ -258,15 +284,9 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
           ? `체형과 지금까지의 자세 기록 ${learnedCount}건을 반영했어요`
           : "체형으로 계산한 첫 추천이에요. 쓰실수록 몸에 맞춰져요")
       }
+      aside={statusPill}
       footer={
         <>
-          <Button
-            label="주행 후 피드백"
-            variant="secondary"
-            onPress={openFeedback}
-            disabled={auto.seatMoving}
-            accessibilityHint="오늘 자세가 어땠는지 알려 주시면 다음 추천에 반영해요"
-          />
           <Button
             label="안내 받으며 맞추기"
             // 자동 조절을 쓰는 빌드(contest)에서는 보조 버튼으로 내린다.
@@ -309,18 +329,15 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
       <Columns
         left={
           <>
-            <SummaryCard
-              label="추천 자세"
-              value={summary}
-              onPress={vehicleConnected ? openGuide : undefined}
-              accessibilityHint="안내를 받으며 시트를 맞춰요"
-            />
             <Card
               title="내 시트"
               count={
                 learnedCount > 0 ? `기록 ${learnedCount}건 반영` : "첫 추천"
               }
             >
+              <View style={styles.stage}>
+                <BodyfitSeatImage height={300} />
+              </View>
               {drivers.length > 1 ? (
                 <ChipGroup
                   label="운전자 고르기"
@@ -349,6 +366,26 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                       onSelect={(next) => dispatch(driveContextSelected(next))}
                     />
                   ) : null}
+                  {suggestion ? (
+                    // 제안만 한다. 운전자가 눌러야 상황이 바뀐다.
+                    <View style={styles.suggestion}>
+                      <AppText
+                        variant="caption"
+                        tone="secondary"
+                        accessibilityLiveRegion="polite"
+                      >
+                        {describeDriveSuggestion(suggestion)}
+                      </AppText>
+                      <Button
+                        label={`${DRIVE_CONTEXT_LABEL[suggestion.context]} 자세로 보기`}
+                        variant="secondary"
+                        onPress={() =>
+                          dispatch(driveContextSelected(suggestion.context))
+                        }
+                        accessibilityHint="내비게이션 경로에 맞는 상황으로 추천을 바꿔요"
+                      />
+                    </View>
+                  ) : null}
                   <AppText
                     variant="caption"
                     tone="tertiary"
@@ -360,15 +397,6 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                   </AppText>
                 </View>
               ) : null}
-              <BodyfitSeatImage />
-              <View
-                style={[styles.status, status.style]}
-                accessibilityLiveRegion="polite"
-              >
-                <AppText variant="caption" tone="secondary">
-                  {status.label}
-                </AppText>
-              </View>
               {!vehicleConnected ? (
                 <AppText
                   variant="caption"
@@ -398,11 +426,22 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                 </View>
               ) : null}
             </Card>
+            {/* D-2: 주행 후 질문. 하단 버튼에서 내려 주 행동(맞추기)만 하단에 남긴다 */}
+            <Card
+              title="오늘 자세 알려 주기"
+              onPress={auto.seatMoving ? undefined : openFeedback}
+              accessibilityLabel="오늘 자세 알려 주기. 오늘 자세가 어땠는지 알려 주시면 다음 추천에 반영해요"
+            >
+              <AppText variant="caption" tone="tertiary">
+                다음 추천이 더 정확해져요
+              </AppText>
+            </Card>
           </>
         }
         right={
           <>
-            <Card title="축별 추천">
+            <Card title="축별 추천" count={summary}>
+              <BodyfitSeatAxesLegend />
               <BodyfitSeatAxes recommended={recommended} current={shown} />
             </Card>
 
@@ -469,25 +508,32 @@ const useStyles = themedStyles((colors) => ({
     borderRadius: radius.card,
     backgroundColor: colors.surface,
   },
-  // 상태는 색과 글자로 함께 알린다.
+  // 제목 오른쪽 기어 상태 (점 + 글자). 누를 수 없는 표시라 터치 크기는 필요 없지만 버튼과 높이를 맞춘다.
   status: {
-    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    minHeight: sizes.touchTarget,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
     borderRadius: radius.pill,
-    borderWidth: 2,
-  },
-  statusParked: {
-    borderColor: colors.success,
     backgroundColor: colors.surface,
+    ...shadows.card,
   },
-  statusBlocked: {
-    borderColor: colors.warning,
-    backgroundColor: colors.surface,
+  statusText: { fontWeight: "700" },
+  dot: { width: 16, height: 16, borderRadius: radius.pill },
+  dotParked: { backgroundColor: colors.success },
+  dotBlocked: { backgroundColor: colors.warning },
+  dotIdle: { backgroundColor: colors.inkDisabled },
+  // 운전석 그림을 올려 두는 옅은 무대
+  stage: {
+    alignItems: "center",
+    paddingVertical: spacing.md,
+    borderRadius: radius.control,
+    backgroundColor: colors.surfaceMuted,
   },
-  statusIdle: { borderColor: colors.fill, backgroundColor: colors.fill },
   center: { textAlign: "center" },
   context: { gap: spacing.xs },
+  suggestion: { alignItems: "flex-start", gap: spacing.xs },
   records: { gap: spacing.xs },
   demo: { alignItems: "center", gap: spacing.xs },
   manage: { alignItems: "flex-start" },

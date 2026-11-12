@@ -5,6 +5,7 @@ import type {
   DriverComfortState,
   DriverSeatState,
   Gear,
+  NaviRoute,
   PleosConnectEvents,
   SeatAxis,
   UxRestrictions,
@@ -25,6 +26,8 @@ declare class PleosConnectModule extends NativeModule<PleosConnectEvents> {
   applyDriverComfort(
     settings: DriverComfortSettings,
   ): Promise<DriverComfortState>;
+  /** 목적지까지 남은 거리·시간. 목적지가 없거나 내비 서비스가 답하지 않으면 null. */
+  getNaviRoute(): Promise<NaviRoute | null>;
   /** 한 문장을 듣고 최종 인식 결과를 돌려준다. 중간 결과는 onSpeechPartial 이벤트로 온다. */
   listen(): Promise<string>;
   stopListening(): Promise<void>;
