@@ -12,6 +12,7 @@ import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 import { ToggleChip } from "@/shared/ui/chip";
 import { Columns } from "@/shared/ui/columns";
+import { IconBadge } from "@/shared/ui/icon-badge";
 import { Screen } from "@/shared/ui/screen";
 import { StatusView } from "@/shared/ui/status-view";
 import { radius, spacing } from "@/shared/ui/theme";
@@ -34,7 +35,8 @@ import {
   toggleTouchChoice,
   type TouchFeedbackChoiceId,
 } from "../model/bodyfit-touch-feedback";
-import type { DriveContext } from "../model/bodyfit.types";
+import type { DriveContext, SeatAxis } from "../model/bodyfit.types";
+import { AXIS_COPY } from "./bodyfit-axis-copy";
 import { describeBodyfitError } from "./bodyfit-error-copy";
 import { BodyfitSeatImage } from "./bodyfit-seat-image";
 
@@ -51,12 +53,12 @@ const CHOICE_GLYPH: Record<TouchFeedbackChoiceId, string> = {
 // 선택지를 축별로 한 줄씩 묶는다 (한 축에는 한 방향만 고를 수 있다: toggleTouchChoice).
 // 줄 안의 순서는 화면 방향과 맞춘다: 뒤로 ← → 앞으로, 낮추기 ▼ ▲ 높이기.
 const CHOICE_ROWS: readonly {
-  label: string;
+  axis: SeatAxis;
   ids: readonly [TouchFeedbackChoiceId, TouchFeedbackChoiceId];
 }[] = [
-  { label: "등받이", ids: ["backrest-increase", "backrest-decrease"] },
-  { label: "앞뒤 위치", ids: ["foreAft-decrease", "foreAft-increase"] },
-  { label: "높이", ids: ["height-decrease", "height-increase"] },
+  { axis: "backrest", ids: ["backrest-increase", "backrest-decrease"] },
+  { axis: "foreAft", ids: ["foreAft-decrease", "foreAft-increase"] },
+  { axis: "height", ids: ["height-decrease", "height-increase"] },
 ];
 
 const choiceLabel = (id: TouchFeedbackChoiceId) =>
@@ -255,7 +257,9 @@ export function BodyfitFeedbackScreen({
                   </AppText>
                 </View>
               ) : null}
-              <BodyfitSeatImage />
+              <View style={styles.stage}>
+                <BodyfitSeatImage height={280} />
+              </View>
               <AppText
                 variant="secondary"
                 tone="secondary"
@@ -266,16 +270,20 @@ export function BodyfitFeedbackScreen({
             </Card>
           }
           right={
-            <Card title="바꾸고 싶은 곳">
+            <Card title="바꾸고 싶은 곳" count="한 줄에 하나">
               <View style={styles.rows}>
-                {CHOICE_ROWS.map(({ label, ids }, index) => (
+                {CHOICE_ROWS.map(({ axis, ids }, index) => (
                   <View
-                    key={label}
+                    key={axis}
                     style={[styles.row, index > 0 && styles.rowDivider]}
                   >
-                    <AppText variant="secondary" tone="secondary">
-                      {label}
-                    </AppText>
+                    {/* 축 이름 + 반대 방향 두 개를 한 줄에. 좁으면 아래로 내려간다 */}
+                    <View style={styles.axis}>
+                      <IconBadge glyph={AXIS_COPY[axis].glyph} tone="muted" />
+                      <AppText variant="bodyStrong">
+                        {AXIS_COPY[axis].label}
+                      </AppText>
+                    </View>
                     <View style={styles.pair}>
                       {ids.map((id) => (
                         <View key={id} style={styles.cell}>
@@ -322,15 +330,38 @@ const useStyles = themedStyles((colors) => ({
   choices: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   // 축마다 한 줄: 축 이름 아래에 반대 방향 두 개를 나란히 둔다.
   rows: { gap: spacing.md },
-  row: { gap: spacing.sm },
+  row: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  axis: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    minWidth: 260,
+  },
   rowDivider: {
     paddingTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.line,
   },
   // 넓으면 두 개를 나란히, 좁으면 한 줄에 하나씩 놓인다.
-  pair: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
-  cell: { flexGrow: 1, flexBasis: "40%", minWidth: 240 },
+  pair: {
+    flex: 1,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.md,
+    minWidth: 400,
+  },
+  cell: { flexGrow: 1, flexBasis: "40%", minWidth: 180 },
+  stage: {
+    alignItems: "center",
+    paddingVertical: spacing.md,
+    borderRadius: radius.control,
+    backgroundColor: colors.surfaceMuted,
+  },
   center: { textAlign: "center" },
   // 어느 상황의 기록으로 남는지 알려 주는 표시 (옅은 파랑 면 + ink 글자: theme.test 의 검사 조합)
   contextTag: {

@@ -6,6 +6,8 @@ type Directions = { increase: string; decrease: string };
 type AxisCopy = {
   /** 축 이름. 어느 화면에서나 같은 말로 부른다 */
   label: string;
+  /** 축 앞에 두는 아이콘 원의 기호 (뜻은 옆의 축 이름이 전한다) */
+  glyph: string;
   /** 막대 양 끝: 비율 0 쪽과 1 쪽 */
   min: string;
   max: string;
@@ -19,6 +21,7 @@ type AxisCopy = {
 export const AXIS_COPY: Record<SeatAxis, AxisCopy> = {
   foreAft: {
     label: "앞뒤 위치",
+    glyph: "↔",
     min: "뒤",
     max: "앞",
     guide: { increase: "앞으로 당겨 주세요", decrease: "뒤로 밀어 주세요" },
@@ -26,6 +29,7 @@ export const AXIS_COPY: Record<SeatAxis, AxisCopy> = {
   },
   height: {
     label: "높이",
+    glyph: "↕",
     min: "낮게",
     max: "높게",
     guide: { increase: "올려 주세요", decrease: "내려 주세요" },
@@ -33,6 +37,7 @@ export const AXIS_COPY: Record<SeatAxis, AxisCopy> = {
   },
   backrest: {
     label: "등받이",
+    glyph: "∠",
     min: "눕힘",
     max: "세움",
     guide: { increase: "세워 주세요", decrease: "눕혀 주세요" },
@@ -40,6 +45,7 @@ export const AXIS_COPY: Record<SeatAxis, AxisCopy> = {
   },
   tilt: {
     label: "좌판 기울기",
+    glyph: "⊿",
     min: "내림",
     max: "올림",
     guide: { increase: "앞쪽을 올려 주세요", decrease: "앞쪽을 내려 주세요" },
@@ -47,6 +53,7 @@ export const AXIS_COPY: Record<SeatAxis, AxisCopy> = {
   },
   depth: {
     label: "좌판 길이",
+    glyph: "⇔",
     min: "짧게",
     max: "길게",
     guide: { increase: "늘려 주세요", decrease: "줄여 주세요" },
@@ -54,6 +61,7 @@ export const AXIS_COPY: Record<SeatAxis, AxisCopy> = {
   },
   headrestHeight: {
     label: "헤드레스트 높이",
+    glyph: "⇡",
     min: "낮게",
     max: "높게",
     guide: { increase: "올려 주세요", decrease: "내려 주세요" },
@@ -61,6 +69,7 @@ export const AXIS_COPY: Record<SeatAxis, AxisCopy> = {
   },
   beltHeight: {
     label: "안전벨트 높이",
+    glyph: "⇡",
     min: "낮게",
     max: "높게",
     guide: { increase: "올려 주세요", decrease: "내려 주세요" },

@@ -21,6 +21,8 @@ type ScreenProps = {
    * (운전자 목록 → 맞춤 자세에서 버튼이 사라졌다).
    */
   back?: boolean;
+  /** 제목 오른쪽에 두는 짧은 상태 표시 (예: 기어 상태). 좁은 창에서는 제목 아래로 내려간다 */
+  aside?: ReactNode;
   children: ReactNode;
 };
 
@@ -32,6 +34,7 @@ export function Screen({
   width = "content",
   footer,
   back = true,
+  aside,
   children,
 }: ScreenProps) {
   const router = useRouter();
@@ -88,7 +91,9 @@ export function Screen({
                   {description}
                 </AppText>
               ) : null}
+              {aside && compact ? aside : null}
             </View>
+            {aside && !compact ? aside : null}
           </View>
           {children}
         </View>
