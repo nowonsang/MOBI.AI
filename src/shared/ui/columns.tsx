@@ -87,7 +87,18 @@ const styles = StyleSheet.create({
   column: { gap: spacing.md },
   left: { flex: 2 },
   right: { flex: 3 },
-  scroll: { flex: 1, margin: -BLEED },
+  // 아래쪽은 넓히지 않는다: 두 단의 아래 끝(왼쪽 카드 바닥, 오른쪽 목록이 잘리는 선)을 같은 줄에 맞춘다.
+  // 넓히면 오른쪽 목록만 아래로 더 내려와 왼쪽보다 길어 보이고 하단 버튼에 붙는다.
+  scroll: {
+    flex: 1,
+    marginTop: -BLEED,
+    marginHorizontal: -BLEED,
+  },
   // flexGrow: 내용이 짧으면 카드가 단 높이를 채울 수 있다 (Card 의 fill).
-  scrollContent: { flexGrow: 1, gap: spacing.md, padding: BLEED },
+  scrollContent: {
+    flexGrow: 1,
+    gap: spacing.md,
+    paddingTop: BLEED,
+    paddingHorizontal: BLEED,
+  },
 });

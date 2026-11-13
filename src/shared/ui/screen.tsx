@@ -171,7 +171,12 @@ const useStyles = themedStyles((colors) => ({
     transform: [{ scale: 0.95 }],
   },
   header: { flex: 1, gap: spacing.xs },
-  footer: { paddingVertical: spacing.md, alignItems: "center" },
+  // 위쪽은 본문 카드와 띄운다 (카드에 붙어 보였다)
+  footer: {
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+    alignItems: "center",
+  },
   // 터치 대상 사이는 최소 24dp (spacing.md).
   footerInner: { width: "100%", gap: spacing.md },
   // 넓은 창: 오른쪽에 나란히. 좁은 창: 화면 폭에 맞춰 세로로 쌓아 주 CTA 를 맨 아래(엄지 닿는 곳)에 둔다.
