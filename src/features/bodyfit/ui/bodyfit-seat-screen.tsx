@@ -416,6 +416,7 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                     options={CONTEXT_OPTIONS}
                     selected={context}
                     onSelect={(next) => dispatch(driveContextSelected(next))}
+                    layout="grid"
                   />
                 ) : null}
                 {suggestion ? (

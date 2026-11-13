@@ -12,6 +12,8 @@ type ChipGroupProps<T extends string> = {
   options: readonly ChipOption<T>[];
   selected: T | null;
   onSelect: (value: T) => void;
+  /** grid: 두 개씩 같은 폭으로 줄을 채운다 (좁은 카드에서 칩이 한쪽으로 쏠리지 않게) */
+  layout?: "wrap" | "grid";
 };
 
 // 여러 대상 중 하나를 고르는 칩 (마이현대 앱의 차량 선택 칩처럼). 고른 칩은 색과 ✓ 로 함께 표시한다.
@@ -20,6 +22,7 @@ export function ChipGroup<T extends string>({
   options,
   selected,
   onSelect,
+  layout = "wrap",
 }: ChipGroupProps<T>) {
   const styles = useStyles();
   return (
@@ -40,6 +43,7 @@ export function ChipGroup<T extends string>({
             hitSlop={spacing.xs}
             style={({ pressed }) => [
               styles.chip,
+              layout === "grid" && styles.gridChip,
               active ? styles.active : styles.idle,
               pressed && styles.pressed,
             ]}
@@ -111,6 +115,8 @@ const useStyles = themedStyles((colors) => ({
     alignItems: "center",
     justifyContent: "center",
   },
+  // 간격(gap)을 빼고 두 개가 한 줄을 나눠 갖는다
+  gridChip: { flexGrow: 1, flexBasis: "40%" },
   tile: {
     minHeight: sizes.primaryButton + spacing.md,
     paddingHorizontal: spacing.md,
