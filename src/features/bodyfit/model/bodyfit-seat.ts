@@ -80,3 +80,31 @@ export function applyNudges(
   }
   return next;
 }
+
+// 앞뒤·높이·등받이·좌판 기울기. 운전자가 늘 바꾸는 축이라 넷이 한꺼번에 가장 낮은 끝(0)에 있는 일은 실제로 거의 없다.
+const CORE_AXES = ["foreAft", "height", "backrest", "tilt"] as const;
+
+/**
+ * 시트 위치를 믿을 수 없는지. 주요 축이 둘 이상 읽혔는데 모두 정확히 0 이면 센서 값이 오지 않은 것으로 본다.
+ * Pleos Connect 에뮬레이터는 시트 위치를 늘 0 으로 준다 (features.md "에뮬레이터 v2.1.0 의 시트").
+ * 이 값을 "운전자가 받아들인 자세"로 학습하면 추천이 가장 낮은 끝으로 끌려간다.
+ */
+export function isSeatPositionUnknown(current: SeatRatios): boolean {
+  const read = CORE_AXES.filter((axis) => current[axis] !== undefined);
+  return read.length >= 2 && read.every((axis) => current[axis] === 0);
+}
+
+/**
+ * 학습 기록으로 남길 자세(final). 지금 자세에 고른 방향(nudges)을 더한다.
+ * 지금 자세를 믿을 수 없으면: 고른 방향이 없으면 남기지 않고(null), 있으면 체형 기본 추천에 그 방향만 더한다
+ * (기본 추천과의 차이가 곧 고른 방향이 되어, 위치 값 없이도 "등받이를 세워 달라"는 뜻만 학습된다).
+ */
+export function seatAdjustmentFinal(
+  current: SeatRatios,
+  baseline: SeatRatios,
+  nudges: readonly SeatNudge[],
+): SeatRatios | null {
+  if (!isSeatPositionUnknown(current)) return applyNudges(current, nudges);
+  if (nudges.length === 0) return null;
+  return applyNudges(baseline, nudges);
+}

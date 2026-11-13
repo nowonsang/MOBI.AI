@@ -5,6 +5,8 @@ import {
   shouldRereadSeat,
   toSeatRatios,
   toSeatTargets,
+  isSeatPositionUnknown,
+  seatAdjustmentFinal,
 } from "./bodyfit-seat";
 
 const state = {
@@ -26,7 +28,9 @@ describe("toSeatRatios", () => {
 
 describe("toSeatTargets", () => {
   it("움직일 수 있는 축만 원시 목표값으로 바꾼다", () => {
-    expect(toSeatTargets({ foreAft: 0.5, height: 1.4, tilt: 0.2 }, state)).toEqual([
+    expect(
+      toSeatTargets({ foreAft: 0.5, height: 1.4, tilt: 0.2 }, state),
+    ).toEqual([
       { axis: "foreAft", target: 100 },
       { axis: "height", target: 20 },
     ]);
@@ -159,5 +163,39 @@ describe("허리 지지대·헤드레스트 각도", () => {
     expect(toSeatTargets({ lumbar: 1.5 }, withSupport)).toEqual([
       { axis: "lumbar", target: 80 },
     ]);
+  });
+});
+
+describe("isSeatPositionUnknown / seatAdjustmentFinal", () => {
+  const baseline = { foreAft: 0.4, height: 0.5, backrest: 0.6, tilt: 0.5 };
+  const unknown = { foreAft: 0, height: 0, backrest: 0, tilt: 0, depth: 0.5 };
+  const nudge = {
+    axis: "backrest",
+    direction: "increase",
+    amount: "medium",
+  } as const;
+
+  it("주요 축이 모두 정확히 0 이면 위치를 믿지 않는다 (에뮬레이터)", () => {
+    expect(isSeatPositionUnknown(unknown)).toBe(true);
+    expect(isSeatPositionUnknown({ ...unknown, backrest: 0.01 })).toBe(false);
+    // 한 축만 읽혔으면 판단하지 않는다
+    expect(isSeatPositionUnknown({ foreAft: 0 })).toBe(false);
+  });
+
+  it("위치를 믿을 수 있으면 지금 자세에 고른 방향을 더한다", () => {
+    const current = { ...baseline, backrest: 0.3 };
+    expect(
+      seatAdjustmentFinal(current, baseline, [nudge])?.backrest,
+    ).toBeCloseTo(0.38);
+  });
+
+  it("위치를 믿을 수 없으면 고른 방향이 없을 때 남기지 않는다", () => {
+    expect(seatAdjustmentFinal(unknown, baseline, [])).toBeNull();
+  });
+
+  it("위치를 믿을 수 없어도 고른 방향은 기본 추천에 더해 남긴다", () => {
+    const final = seatAdjustmentFinal(unknown, baseline, [nudge]);
+    expect(final?.backrest).toBeCloseTo(0.68);
+    expect(final?.foreAft).toBe(0.4);
   });
 });

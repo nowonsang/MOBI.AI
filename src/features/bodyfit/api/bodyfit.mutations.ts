@@ -22,7 +22,7 @@ import {
   type VoiceComfortPlan,
 } from "../model/bodyfit-voice-comfort";
 import {
-  applyNudges,
+  seatAdjustmentFinal,
   toSeatRatios,
   toSeatTargets,
 } from "../model/bodyfit-seat";
@@ -157,11 +157,15 @@ export function useRecordSeatAdjustment() {
       nudges?: readonly SeatNudge[];
     }) => {
       const state = await pleos().getDriverSeatState();
+      const baseline = recommendBaseline(profile);
+      // 시트 위치를 믿을 수 없으면(에뮬레이터는 늘 0) 지금 자세를 학습하지 않는다 (seatAdjustmentFinal).
+      const final = seatAdjustmentFinal(toSeatRatios(state), baseline, nudges);
+      if (!final) return;
       await createSeatAdjustment({
         profileId: profile.id,
         at: Date.now(),
-        baseline: recommendBaseline(profile),
-        final: applyNudges(toSeatRatios(state), nudges),
+        baseline,
+        final,
         source,
         context,
       });
