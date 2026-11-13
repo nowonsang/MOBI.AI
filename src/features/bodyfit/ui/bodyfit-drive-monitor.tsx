@@ -64,7 +64,12 @@ export function BodyfitDriveMonitor() {
   // 추후 고도화: 마이크를 여는 질문은 음성 기능에 동의한 운전자에게만 한다.
   const voiceReady = canUseVoice && driver.data?.voiceConsent === true;
 
-  const askComfort = (session: DriveSession, parked: boolean) => {
+  /** postureAt: 이번 주행을 카메라로 살펴 남긴 기록의 출발 시각 (없으면 null). 주행 후 화면이 그 리포트로 이어 준다 */
+  const askComfort = (
+    session: DriveSession,
+    parked: boolean,
+    postureAt: number | null,
+  ) => {
     const prompt = comfortPromptFor({
       startedAt: session.startedAt,
       now: Date.now(),
@@ -80,7 +85,11 @@ export function BodyfitDriveMonitor() {
     const askOnScreen = () =>
       router.navigate({
         pathname: "/bodyfit/[profileId]/feedback",
-        params: { profileId: session.profileId, context: session.context },
+        params: {
+          profileId: session.profileId,
+          context: session.context,
+          ...(postureAt === null ? {} : { postureAt: String(postureAt) }),
+        },
       });
     if (prompt === "screen") {
       askOnScreen();
@@ -119,13 +128,19 @@ export function BodyfitDriveMonitor() {
       onSuccess: (session) => {
         if (!session) return;
         // 카메라로 살펴봤으면 그 주행의 자세 기록을 먼저 남겨 둔다 (C-7). 주행 후 질문 화면이 리포트로 이어 준다.
-        analyzePosture.mutate({
-          session,
-          endedAt: Date.now(),
-          // 에뮬레이터 카메라는 고정 사진이라 시연 빌드에서는 모의 표본으로 보여 준다 (기록에 "예시"로 표시).
-          demo: isDemoBuild && isEmulator,
-        });
-        askComfort(session, parked);
+        analyzePosture.mutate(
+          {
+            session,
+            endedAt: Date.now(),
+            // 에뮬레이터 카메라는 고정 사진이라 시연 빌드에서는 모의 표본으로 보여 준다 (기록에 "예시"로 표시).
+            demo: isDemoBuild && isEmulator,
+          },
+          {
+            // 기록을 남긴 뒤에 물어야 주행 후 화면이 "이번 주행" 리포트로 이어 줄 수 있다. 실패해도 질문은 한다.
+            onSettled: (drive) =>
+              askComfort(session, parked, drive?.startedAt ?? null),
+          },
+        );
       },
       onSettled: () => {
         endingDrive.current = false;

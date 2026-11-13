@@ -74,10 +74,13 @@ const choiceLabel = (id: TouchFeedbackChoiceId) =>
 export function BodyfitFeedbackScreen({
   profileId,
   drivenContext,
+  postureAt = null,
 }: {
   profileId: string;
   /** 주행이 끝나 뜬 질문이면 그 주행을 출발할 때의 상황. 운전자가 직접 열었으면 null */
   drivenContext: DriveContext | null;
+  /** 이번 주행을 카메라로 살펴 남긴 기록의 출발 시각 (C-7). 없으면 null */
+  postureAt?: number | null;
 }) {
   const styles = useStyles();
   const router = useRouter();
@@ -263,7 +266,13 @@ export function BodyfitFeedbackScreen({
         <Columns
           left={
             <View style={styles.leftStack}>
-              {canUseCamera ? <BodyfitPostureLink driver={driver} /> : null}
+              {canUseCamera ? (
+                <BodyfitPostureLink
+                  driver={driver}
+                  afterDrive={drivenContext !== null}
+                  postureAt={postureAt}
+                />
+              ) : null}
               <Card>
                 {context !== DEFAULT_DRIVE_CONTEXT ? (
                   <View style={styles.contextTag}>
