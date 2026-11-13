@@ -47,6 +47,7 @@ import {
   deleteBodyProfile,
   deleteDriveSession,
   findBodyProfile,
+  markPostureDriveApplied,
   findDriveSession,
   updateBodyProfile,
 } from "./bodyfit.storage";
@@ -368,6 +369,24 @@ export function useAnalyzeDrivePosture() {
     onSettled: (_data, _error, { session }) =>
       queryClient.invalidateQueries({
         queryKey: bodyfitKeys.postureDrives(session.profileId),
+      }),
+  });
+}
+
+/** 주행 자세 리포트의 제안을 반영했다고 그 주행에 남긴다. 같은 주행을 다시 열어도 두 번 반영하지 않는다. */
+export function useMarkPostureDriveApplied() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      profileId,
+      startedAt,
+    }: {
+      profileId: string;
+      startedAt: number;
+    }) => markPostureDriveApplied(profileId, startedAt, Date.now()),
+    onSettled: (_data, _error, { profileId }) =>
+      queryClient.invalidateQueries({
+        queryKey: bodyfitKeys.postureDrives(profileId),
       }),
   });
 }

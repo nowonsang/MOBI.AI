@@ -165,6 +165,8 @@ export const postureDriveSchema = z.object({
   // 1분에 한 번씩 남겨도 하루치를 넘지 않는다
   samples: z.array(postureSampleSchema).max(POSTURE_MAX_MINUTES),
   sample: z.boolean().default(false),
+  // 반영 표시가 생기기 전 기록은 반영하지 않은 것으로 읽는다
+  appliedAt: z.number().nullable().default(null),
 });
 
 // 카메라(네이티브)에서 온 관절 표본. 신뢰하지 않는 입력이라 형식과 범위를 검사한다 (C-7).

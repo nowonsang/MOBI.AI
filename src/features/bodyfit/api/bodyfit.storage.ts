@@ -221,6 +221,29 @@ export async function createPostureDrive(drive: PostureDrive): Promise<void> {
   ]);
 }
 
+/** 이 주행의 제안을 반영했다고 남긴다. 저장된 기록이 아니면(예시 기록) 아무것도 하지 않는다. */
+export async function markPostureDriveApplied(
+  profileId: string,
+  startedAt: number,
+  at: number,
+): Promise<void> {
+  const drives = await readList(POSTURE_DRIVES_KEY, postureDrivesSchema);
+  if (
+    !drives.some(
+      (drive) => drive.profileId === profileId && drive.startedAt === startedAt,
+    )
+  )
+    return;
+  await writeList(
+    POSTURE_DRIVES_KEY,
+    drives.map((drive) =>
+      drive.profileId === profileId && drive.startedAt === startedAt
+        ? { ...drive, appliedAt: at }
+        : drive,
+    ),
+  );
+}
+
 export async function deletePostureDrives(profileId: string): Promise<void> {
   const drives = await readList(POSTURE_DRIVES_KEY, postureDrivesSchema);
   const kept = drives.filter((drive) => drive.profileId !== profileId);

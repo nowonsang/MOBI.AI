@@ -140,6 +140,18 @@ describe("toPostureDrive", () => {
     expect(result?.samples.every((s) => s.headForwardCm === 0)).toBe(true);
   });
 
+  it("반영 표시가 없는 예전 기록은 반영하지 않은 것으로 읽는다", () => {
+    const parsed = postureDriveSchema.safeParse({
+      profileId: "p1",
+      startedAt: START,
+      context: "long",
+      durationMin: 10,
+      samples: [],
+      sample: false,
+    });
+    expect(parsed.success && parsed.data.appliedAt).toBeNull();
+  });
+
   it("기록은 저장 형식을 지킨다", () => {
     const result = toDrive(
       drive(60, (minute) => (minute >= 30 ? { earY: 230 } : {})),

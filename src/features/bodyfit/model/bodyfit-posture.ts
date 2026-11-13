@@ -26,6 +26,8 @@ export type PostureDrive = {
   samples: PostureSample[];
   /** 실제 주행이 아니라 화면을 보여 주기 위한 예시 기록 */
   sample: boolean;
+  /** 이 주행의 제안을 다음 추천에 반영한 시각. 같은 주행을 두 번 반영하지 않게 남긴다 */
+  appliedAt?: number | null;
 };
 
 // 이 값 이상 달라지면 "앞으로 쏠렸다"고 본다.

@@ -17,7 +17,10 @@ import { StatusView } from "@/shared/ui/status-view";
 import { radius, spacing } from "@/shared/ui/theme";
 import { themedStyles } from "@/shared/ui/use-theme";
 
-import { useRecordSeatAdjustment } from "../api/bodyfit.mutations";
+import {
+  useMarkPostureDriveApplied,
+  useRecordSeatAdjustment,
+} from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
 import {
   comparePostureDrives,
@@ -72,6 +75,7 @@ export function BodyfitPostureReportScreen({
   const gear = useGear();
   const restrictions = useUxRestrictions();
   const record = useRecordSeatAdjustment();
+  const markApplied = useMarkPostureDriveApplied();
   const [applied, setApplied] = useState(false);
   const windowHeight = useWindowDimensions().height;
 
@@ -117,7 +121,7 @@ export function BodyfitPostureReportScreen({
       <Screen title={TITLE} width="narrow">
         <StatusView
           title="아직 지켜본 주행이 없어요"
-          description="주행 중 자세 관찰이 연결되면, 도착했을 때 여기에서 알려 드려요"
+          description="주행 자세 관찰을 켜 두고 한 번 주행하면, 주차했을 때 여기에서 알려 드려요"
           action={{ label: "돌아가기", onPress: () => router.back() }}
         />
       </Screen>
@@ -132,6 +136,9 @@ export function BodyfitPostureReportScreen({
     : datedDrivePhrase(drive.startedAt, drive.context);
   // 제안은 가장 최근 주행에만 한다: 반영은 "지금 시트 자세"를 기준으로 남기기 때문이다.
   const nudge = isLatest ? suggestForPosture(report) : null;
+  // 이미 반영한 주행은 다시 반영하지 않는다 (나갔다 다시 열어도 같은 주행이 두 번 학습되지 않게).
+  const alreadyApplied = drive.appliedAt != null;
+  const offer = nudge !== null && !alreadyApplied;
   const comparison = isLatest ? comparePostureDrives(all, drive.context) : null;
   // 한 화면에 들어오게 그림은 창 높이에 맞춰 줄인다 (변화량은 옆의 숫자가 전한다).
   // 아래에 "지난번과 비교" 줄이 붙으면 그만큼 더 줄인다.
@@ -165,7 +172,7 @@ export function BodyfitPostureReportScreen({
       title={TITLE}
       description={`${driver.name}님, ${driveName} ${formatMinutes(report.durationMin)} 동안 지켜본 자세예요`}
       footer={
-        nudge ? (
+        offer ? (
           <>
             <Button
               label="이번엔 괜찮아요"
@@ -184,7 +191,15 @@ export function BodyfitPostureReportScreen({
                     context: drive.context,
                     nudges: [nudge],
                   },
-                  { onSuccess: () => setApplied(true) },
+                  {
+                    onSuccess: () => {
+                      setApplied(true);
+                      markApplied.mutate({
+                        profileId: driver.id,
+                        startedAt: drive.startedAt,
+                      });
+                    },
+                  },
                 )
               }
               disabled={!canApply}
@@ -274,18 +289,27 @@ export function BodyfitPostureReportScreen({
             </Card>
             {nudge ? (
               <Card>
-                <InfoRow
-                  icon={<IconBadge glyph="↑" tone="tint" />}
-                  label={nextDrivePhrase(drive.context)}
-                  value={nudgeQuestion(nudge)}
-                  detail={
-                    !vehicleConnected
-                      ? "Pleos Connect 에뮬레이터나 차량에서 열면 반영할 수 있어요"
-                      : gear !== null && !parked
-                        ? "차를 세우고 기어를 P로 바꾸면 반영할 수 있어요"
-                        : "반영해도 지금은 시트가 움직이지 않아요. 다음 추천에만 써요"
-                  }
-                />
+                {alreadyApplied ? (
+                  // 반영한 뒤에는 묻지 않고 반영한 내용을 완료 표시로 보여 준다.
+                  <InfoRow
+                    icon={<IconBadge glyph="✓" tone="success" />}
+                    label="다음 추천에 반영했어요"
+                    value={nudgeApplied(nudge, drive.context)}
+                  />
+                ) : (
+                  <InfoRow
+                    icon={<IconBadge glyph="↑" tone="tint" />}
+                    label={nextDrivePhrase(drive.context)}
+                    value={nudgeQuestion(nudge)}
+                    detail={
+                      !vehicleConnected
+                        ? "Pleos Connect 에뮬레이터나 차량에서 열면 반영할 수 있어요"
+                        : gear !== null && !parked
+                          ? "차를 세우고 기어를 P로 바꾸면 반영할 수 있어요"
+                          : "반영해도 지금은 시트가 움직이지 않아요. 다음 추천에만 써요"
+                    }
+                  />
+                )}
               </Card>
             ) : null}
           </>
