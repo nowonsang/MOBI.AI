@@ -205,7 +205,7 @@ export function BodyfitFeedbackScreen({
         description={
           answered === "adjusted"
             ? "시트는 그대로예요. 지금 바로 맞추려면 안내를 받아 보세요"
-            : "다음에도 지금 자세에 가깝게 추천해 드려요"
+            : "다음에도 지금 자세에 가깝게 추천할게요"
         }
         width="narrow"
         footer={
@@ -226,7 +226,7 @@ export function BodyfitFeedbackScreen({
                     params: { profileId: driver.id },
                   });
                 }}
-                accessibilityHint="시트 버튼을 움직이면 화면이 축별로 알려 드려요"
+                accessibilityHint="시트 버튼을 움직이면 화면에 축별로 보여 줘요"
               />
             </>
           ) : (

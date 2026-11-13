@@ -28,7 +28,7 @@ const WATCHED = ["머리 위치", "어깨", "등 기댄 각도"] as const;
 const STEPS = [
   { when: "출발할 때", what: "지금 자세를 기준으로 기억해요" },
   { when: "주행 중", what: "아무것도 묻지 않고 지켜보기만 해요" },
-  { when: "주차하면", what: "달라진 점을 알려 드려요" },
+  { when: "주차하면", what: "달라진 점을 보여 줘요" },
 ] as const;
 
 /**
@@ -80,7 +80,7 @@ export function BodyfitPostureBaselineScreen({
   return (
     <Screen
       title={TITLE}
-      description={`${driver.name}님이 출발할 때의 자세를 기억해 두고, 주행 중 달라진 점을 알려 드려요`}
+      description={`${driver.name}님이 출발할 때 자세를 기억해 두고, 주행 중 달라진 점을 보여 줘요`}
       footer={
         <Button
           label="최근 리포트 보기"

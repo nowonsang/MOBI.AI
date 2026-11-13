@@ -85,7 +85,7 @@ export function BodyfitDriverListScreen() {
     <View style={styles.stack}>
       <StatusView
         title="아직 등록된 운전자가 없어요"
-        description="키와 몸무게만 알려 주시면 첫 자세를 바로 추천해 드려요"
+        description="키와 몸무게만 있으면 첫 자세를 바로 추천해요"
         action={{ label: "운전자 등록하기", onPress: goToNew }}
       />
       {/* 등록이 주 행동이다. 가져오기는 다른 차에서 쓰던 사람만 쓰는 길이라 아래에 조용한 행으로 둔다. */}

@@ -329,7 +329,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
                 <AppText variant="secondary" tone="inverse">
                   {demo
                     ? "시연 모드라 이 자세는 기록하지 않아요"
-                    : "이 자세를 기억해 두면 다음 추천이 더 정확해져요"}
+                    : "이 자세를 기억해 두면 다음 추천에 써요"}
                 </AppText>
               ) : null}
             </View>
@@ -377,7 +377,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
       description={
         demo
           ? "시연 모드예요. 화면 버튼이 시트 버튼 대신 움직여요"
-          : "운전석 옆 시트 버튼을 움직이면 화면이 바로 알려 드려요"
+          : "운전석 옆 시트 버튼을 움직이면 화면에 바로 보여요"
       }
       footer={footer}
     >

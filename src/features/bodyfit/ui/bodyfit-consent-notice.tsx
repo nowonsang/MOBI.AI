@@ -95,7 +95,7 @@ export function BodyfitConsentNotice({
             onChange={onPostureConsentChange}
             label="주행 자세 관찰에 동의해요 (선택)"
             accessibilityLabel="주행 자세 관찰에 동의해요, 선택. 체크하면 카메라 권한을 물어요"
-            detail="주행 중 머리·어깨·등 위치를 살펴, 주차하면 자세가 언제부터 흐트러졌는지 알려 드려요. 언제든 끌 수 있어요"
+            detail="주행 중 머리·어깨·등 위치를 보고, 주차하면 자세가 언제부터 흐트러졌는지 보여 줘요. 언제든 끌 수 있어요"
           />
           {postureNote ? (
             <AppText

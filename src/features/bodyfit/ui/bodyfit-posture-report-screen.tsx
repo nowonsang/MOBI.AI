@@ -121,7 +121,7 @@ export function BodyfitPostureReportScreen({
       <Screen title={TITLE} width="narrow">
         <StatusView
           title="아직 지켜본 주행이 없어요"
-          description="주행 자세 관찰을 켜 두고 한 번 주행하면, 주차했을 때 여기에서 알려 드려요"
+          description="주행 자세 관찰을 켜고 한 번 주행하면, 주차할 때 여기에 결과가 나와요"
           action={{ label: "돌아가기", onPress: () => router.back() }}
         />
       </Screen>
@@ -160,7 +160,7 @@ export function BodyfitPostureReportScreen({
           <InfoRow
             icon={<IconBadge glyph="✓" tone="success" />}
             label={`${nextDrivePhrase(drive.context)} 다시 지켜볼게요`}
-            value="출발 자세를 더 오래 유지했는지 알려 드려요"
+            value="출발 자세를 더 오래 유지했는지 비교해요"
           />
         </Card>
       </Screen>

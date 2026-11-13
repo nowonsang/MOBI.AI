@@ -91,7 +91,7 @@ export function BodyfitPostureCompareScreen({
       <Screen title={TITLE} width="narrow">
         <StatusView
           title="아직 견줄 주행이 없어요"
-          description="같은 상황으로 두 번 달리면, 출발 자세를 얼마나 더 유지했는지 알려 드려요"
+          description="같은 상황으로 두 번 달리면 출발 자세를 얼마나 더 오래 유지했는지 비교해요"
           action={{ label: "돌아가기", onPress: () => router.back() }}
         />
       </Screen>

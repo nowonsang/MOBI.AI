@@ -199,9 +199,9 @@ export function learningBasis(
 // 평소는 상황을 고르지 않은 것이라 상황을 이유로 들지 않는다 ("지난번에", "그동안"으로 말한다).
 const CONTEXT_WHEN: Record<DriveContext, string | null> = {
   usual: null,
-  commute: "출퇴근할 때는",
-  long: "장거리에서는",
-  city: "시내에서는",
+  commute: "출퇴근 때 앉으신 대로",
+  long: "장거리에서 앉으신 대로",
+  city: "시내에서 앉으신 대로",
 };
 
 // 축 방향은 SeatRatios 를 따른다 (1 = 가장 앞·높게·세움·좌판 앞쪽 높게·좌판 길게).
@@ -211,26 +211,26 @@ const ADJUSTED_PHRASE: Record<
   { increase: string; decrease: string }
 > = {
   foreAft: {
-    increase: "시트를 더 앞으로 당기셔서",
-    decrease: "시트를 더 뒤로 미셔서",
+    increase: "시트를 조금 더 앞으로",
+    decrease: "시트를 조금 더 뒤로",
   },
-  height: { increase: "시트를 더 높이셔서", decrease: "시트를 더 낮추셔서" },
+  height: { increase: "시트를 조금 더 높게", decrease: "시트를 조금 더 낮게" },
   backrest: {
-    increase: "등받이를 더 세우셔서",
-    decrease: "등받이를 더 눕히셔서",
+    increase: "등받이를 조금 더 세워",
+    decrease: "등받이를 조금 더 눕혀",
   },
   tilt: {
-    increase: "좌판 앞쪽을 더 올리셔서",
-    decrease: "좌판 앞쪽을 더 내리셔서",
+    increase: "좌판 앞쪽을 조금 더 높게",
+    decrease: "좌판 앞쪽을 조금 더 낮게",
   },
-  depth: { increase: "좌판을 더 늘리셔서", decrease: "좌판을 더 줄이셔서" },
+  depth: { increase: "좌판을 조금 더 길게", decrease: "좌판을 조금 더 짧게" },
   headrestHeight: {
-    increase: "헤드레스트를 더 높이셔서",
-    decrease: "헤드레스트를 더 낮추셔서",
+    increase: "헤드레스트를 조금 더 높게",
+    decrease: "헤드레스트를 조금 더 낮게",
   },
   beltHeight: {
-    increase: "안전벨트를 더 높이셔서",
-    decrease: "안전벨트를 더 낮추셔서",
+    increase: "안전벨트를 조금 더 높게",
+    decrease: "안전벨트를 조금 더 낮게",
   },
 };
 
@@ -263,12 +263,12 @@ export function explainOffsets(
     Math.abs(own) >= GUIDE_TOLERANCE;
   const when =
     (fromContext ? CONTEXT_WHEN[context] : null) ??
-    (history.length === 1 ? "지난번에" : "그동안");
+    (history.length === 1 ? "지난번 앉으신 대로" : "그동안 앉으신 대로");
   const phrase =
     ADJUSTED_PHRASE[strongest.axis][
       strongest.offset > 0 ? "increase" : "decrease"
     ];
-  return `${when} ${phrase} 반영했어요`;
+  return `${when} ${phrase} 잡았어요`;
 }
 
 /**

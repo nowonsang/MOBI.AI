@@ -114,16 +114,16 @@ function describeContextBasis(
   basis: LearningBasis,
 ): string {
   if (context === DEFAULT_DRIVE_CONTEXT) {
-    return "상황을 고르면 그 상황에서 앉던 자세로 추천해요";
+    return "상황마다 그때 앉던 자세로 추천해요";
   }
   const label = DRIVE_CONTEXT_LABEL[context];
   if (basis.kind === "all") {
     return basis.usedCount > 0
-      ? `${label} 기록이 아직 없어 전체 기록으로 추천해요`
-      : `${label} 기록이 아직 없어요. 출발할 때 자세부터 기억해요`;
+      ? `${label} 기록이 없어 전체 기록으로 추천해요`
+      : `${label} 기록이 아직 없어요. 다음 출발부터 남겨요`;
   }
   return basis.kind === "mixed"
-    ? `${label} 기록 ${basis.contextCount}건을 전체 기록과 함께 반영했어요`
+    ? `${label} 기록 ${basis.contextCount}건과 전체 기록으로 추천해요`
     : `${label} 기록 ${basis.contextCount}건으로 추천해요`;
 }
 
@@ -337,8 +337,8 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
       description={
         reason ??
         (learnedCount > 0
-          ? `체형과 지금까지의 자세 기록 ${learnedCount}건을 반영했어요`
-          : "체형으로 계산한 첫 추천이에요. 쓰실수록 몸에 맞춰져요")
+          ? `체형과 자세 기록 ${learnedCount}건으로 추천해요`
+          : "체형으로 잡은 첫 추천이에요. 탈수록 더 잘 맞아요")
       }
       aside={
         // 운전자 이름 칩은 상황 칩과 모양이 같아 헷갈렸다. 운전자는 제목 옆 버튼 하나로 목록에서 바꾼다.
@@ -366,7 +366,7 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
             variant={canControlSeat ? "secondary" : "primary"}
             onPress={openGuide}
             disabled={!vehicleConnected || auto.seatMoving}
-            accessibilityHint="시트 버튼을 움직이면 화면이 축별로 알려 드려요"
+            accessibilityHint="시트 버튼을 움직이면 화면에 축별로 보여 줘요"
           />
           {!canControlSeat ? null : auto.seatMoving ? (
             // 음성 조절처럼 자동 조절 밖에서 시작한 이동도 여기서 멈출 수 있다.
@@ -472,8 +472,8 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                   style={styles.demoText}
                 >
                   {auto.demo
-                    ? "자동 조절이 화면에서만 움직여요. 기록에 남지 않아요"
-                    : "실제 시트를 움직이지 않고 흐름만 볼 수 있어요"}
+                    ? "화면에서만 움직여요. 기록은 남지 않아요"
+                    : "시트는 그대로 두고 화면으로만 보여 줘요"}
                 </AppText>
                 <ToggleChip
                   label="시연 모드"

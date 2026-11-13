@@ -170,7 +170,7 @@ export function BodyfitNewDriverScreen() {
   return (
     <Screen
       title="운전자 등록"
-      description="키와 몸무게만 알려 주시면 첫 자세를 바로 추천해 드려요"
+      description="키와 몸무게만 있으면 첫 자세를 바로 추천해요"
       width="narrow"
       footer={
         <>
