@@ -18,7 +18,10 @@ import { StatusView } from "@/shared/ui/status-view";
 import { radius, sizes, spacing } from "@/shared/ui/theme";
 import { themedStyles } from "@/shared/ui/use-theme";
 
-import { useRecordSeatAdjustment } from "../api/bodyfit.mutations";
+import {
+  useMarkPostureDriveApplied,
+  useRecordSeatAdjustment,
+} from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
 import { COMFORT_SCREEN_QUESTION } from "../model/bodyfit-drive";
 import {
@@ -35,6 +38,10 @@ import {
   toggleTouchChoice,
   type TouchFeedbackChoiceId,
 } from "../model/bodyfit-touch-feedback";
+import {
+  suggestForPosture,
+  summarizePostureDrive,
+} from "../model/bodyfit-posture";
 import type { DriveContext, SeatAxis } from "../model/bodyfit.types";
 import { describeBodyfitError } from "./bodyfit-error-copy";
 import { BodyfitPostureLink } from "./bodyfit-posture-link";
@@ -93,7 +100,30 @@ export function BodyfitFeedbackScreen({
   const gear = useGear();
   const restrictions = useUxRestrictions();
   const record = useRecordSeatAdjustment();
-  const [selected, setSelected] = useState<TouchFeedbackChoiceId[]>([]);
+  const markApplied = useMarkPostureDriveApplied();
+  // 이번 주행을 카메라로 살펴본 기록 (C-7). 그 제안을 선택지에 미리 골라 둬서 한 번만 답하게 한다.
+  const drives = useQuery({
+    ...bodyfitQueries.postureDrives(profileId),
+    enabled: postureAt !== null,
+  });
+  const postureDrive =
+    postureAt === null
+      ? null
+      : (drives.data?.find((drive) => drive.startedAt === postureAt) ?? null);
+  const cameraNudge =
+    postureDrive && postureDrive.appliedAt == null
+      ? suggestForPosture(summarizePostureDrive(postureDrive))
+      : null;
+  const suggested: TouchFeedbackChoiceId[] = TOUCH_FEEDBACK_CHOICES.filter(
+    ({ nudge }) =>
+      cameraNudge !== null &&
+      nudge.axis === cameraNudge.axis &&
+      nudge.direction === cameraNudge.direction,
+  ).map(({ id }) => id);
+  // 운전자가 아직 고르지 않았으면(null) 카메라 제안을 그대로 쓴다. 한 번이라도 고치면 운전자 선택을 따른다.
+  const [picked, setPicked] = useState<TouchFeedbackChoiceId[] | null>(null);
+  const selected = picked ?? suggested;
+  const fromCamera = picked === null && suggested.length > 0;
   // 답한 뒤의 화면: comfortable = 편했어요, adjusted = 바꿀 곳을 골랐어요
   const [answered, setAnswered] = useState<"comfortable" | "adjusted" | null>(
     null,
@@ -136,19 +166,33 @@ export function BodyfitFeedbackScreen({
   const parked = gear === "park" && !restrictions.noSetup;
   const canAnswer = vehicleConnected && parked;
 
-  const submit = (choices: readonly TouchFeedbackChoiceId[]) =>
+  const submit = (choices: readonly TouchFeedbackChoiceId[]) => {
+    // 반영하면 카메라 제안이 "이미 반영함"으로 바뀌어 사라지므로, 고른 것을 운전자 선택으로 고정해 둔다.
+    setPicked([...choices]);
     record.mutate(
       {
         profile: driver,
-        source: "touch",
+        // 카메라 제안을 그대로 받아들였으면 출처를 "카메라로 본 자세"로 남긴다.
+        source:
+          fromCamera && postureDrive && !postureDrive.sample
+            ? "camera"
+            : "touch",
         context,
         nudges: nudgesForTouchChoices(choices),
       },
       {
-        onSuccess: () =>
-          setAnswered(choices.length > 0 ? "adjusted" : "comfortable"),
+        onSuccess: () => {
+          setAnswered(choices.length > 0 ? "adjusted" : "comfortable");
+          // 이 주행의 카메라 제안에도 답한 것이다: 리포트에서 같은 주행을 다시 반영하지 않게 표시한다.
+          if (postureDrive)
+            markApplied.mutate({
+              profileId: driver.id,
+              startedAt: postureDrive.startedAt,
+            });
+        },
       },
     );
+  };
 
   if (answered) {
     return (
@@ -237,7 +281,7 @@ export function BodyfitFeedbackScreen({
             <Button
               label="다시 고르기"
               variant="secondary"
-              onPress={() => setSelected([])}
+              onPress={() => setPicked([])}
               disabled={record.isPending}
               accessibilityHint="고른 방향을 모두 지워요"
             />
@@ -296,6 +340,17 @@ export function BodyfitFeedbackScreen({
           }
           right={
             <Card title="바꾸고 싶은 곳" count="한 줄에 하나">
+              {fromCamera ? (
+                // 카메라 제안을 미리 골라 둔 상태임을 알린다. 그대로 반영하거나 바꿀 수 있다.
+                <AppText
+                  variant="caption"
+                  tone="secondary"
+                  accessibilityLiveRegion="polite"
+                >
+                  카메라로 본 이번 주행 자세에 맞춰 미리 골라 뒀어요. 바꿔도
+                  돼요
+                </AppText>
+              ) : null}
               <View style={styles.rows}>
                 {rows.map(({ axis, ids }) => (
                   // 축마다 한 줄: 반대 방향 두 개를 나란히. 축 이름은 선택지 글자에 들어 있다.
@@ -308,8 +363,8 @@ export function BodyfitFeedbackScreen({
                           label={choiceLabel(id)}
                           checked={selected.includes(id)}
                           onPress={() =>
-                            setSelected((current) =>
-                              toggleTouchChoice(current, id),
+                            setPicked((current) =>
+                              toggleTouchChoice(current ?? suggested, id),
                             )
                           }
                         />

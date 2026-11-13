@@ -18,7 +18,8 @@ import { bodyfitQueries } from "../api/bodyfit.queries";
 import { BodyfitPostureImage } from "./bodyfit-posture-image";
 import { BodyfitPostureWatchToggle } from "./bodyfit-posture-watch-toggle";
 
-const TITLE = "출발 자세 기억";
+// 들어오는 카드(시트 화면 "주행 자세 관찰")와 같은 이름을 쓴다. "출발 자세를 기억"은 설명이 맡는다.
+const TITLE = "주행 자세 관찰";
 
 // 출발할 때 기억하는 세 곳. 리포트의 변화 칸(postureChangeTiles)과 같은 말로 부른다.
 const WATCHED = ["머리 위치", "어깨", "등 기댄 각도"] as const;
@@ -79,7 +80,7 @@ export function BodyfitPostureBaselineScreen({
   return (
     <Screen
       title={TITLE}
-      description={`${driver.name}님이 출발할 때의 자세를 기준으로, 주행 중 달라진 점을 알려 드려요`}
+      description={`${driver.name}님이 출발할 때의 자세를 기억해 두고, 주행 중 달라진 점을 알려 드려요`}
       footer={
         <Button
           label="최근 리포트 보기"
