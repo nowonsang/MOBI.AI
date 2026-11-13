@@ -65,7 +65,10 @@ const imageStyles = StyleSheet.create({
 });
 
 const useStyles = themedStyles((colors) => ({
+  // 2단 높이 맞추기로 카드가 길어지면 늘어난 만큼을 그림 칸이 차지한다 (카드 아래에 빈 곳이 남지 않게).
   stage: {
+    flexGrow: 1,
+    justifyContent: "center",
     alignItems: "center",
     paddingVertical: spacing.sm,
     borderRadius: radius.control,

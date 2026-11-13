@@ -442,7 +442,10 @@ const useStyles = themedStyles((colors) => ({
     backgroundColor: colors.surfaceMuted,
     transform: [{ scale: 0.98 }],
   },
+  // 오른쪽 단과 높이를 맞춰 카드가 길어지면 늘어난 만큼을 그림 칸이 차지한다.
   stage: {
+    flexGrow: 1,
+    justifyContent: "center",
     alignItems: "center",
     paddingVertical: spacing.md,
     borderRadius: radius.control,

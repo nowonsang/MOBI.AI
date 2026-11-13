@@ -209,7 +209,10 @@ export function BodyfitDriverListScreen() {
 }
 
 const useStyles = themedStyles((colors) => ({
+  // 오른쪽 단과 높이를 맞춰 카드가 길어지면 늘어난 만큼을 그림 칸이 차지한다 (카드 아래에 빈 곳이 남지 않게).
   seat: {
+    flexGrow: 1,
+    justifyContent: "center",
     borderRadius: radius.control,
     backgroundColor: colors.surfaceMuted,
     padding: spacing.sm,
