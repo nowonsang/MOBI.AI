@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { View, useWindowDimensions } from "react-native";
 
@@ -13,7 +12,7 @@ import { Card } from "@/shared/ui/card";
 import { Columns } from "@/shared/ui/columns";
 import { Screen } from "@/shared/ui/screen";
 import { StatusView } from "@/shared/ui/status-view";
-import { radius, shadows, sizes, spacing } from "@/shared/ui/theme";
+import { radius, shadows, spacing } from "@/shared/ui/theme";
 import { themedStyles } from "@/shared/ui/use-theme";
 
 import { canDemoSeat } from "../api/bodyfit.auto-adjust";
@@ -37,6 +36,7 @@ import { AXIS_COPY } from "./bodyfit-axis-copy";
 import { describeBodyfitError } from "./bodyfit-error-copy";
 import { BodyfitSeatImage } from "./bodyfit-seat-image";
 import { BodyfitStepList, type BodyfitStep } from "./bodyfit-step-list";
+import { BodyfitMissingDriver } from "./bodyfit-missing-driver";
 
 type DemoSeat = { start: SeatRatios; seat: SeatRatios };
 
@@ -55,7 +55,6 @@ function describeAxis({ axis, status, direction, far }: AxisGuide): string {
  */
 export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
   const styles = useStyles();
-  const router = useRouter();
   const vehicleConnected = isPleosAvailable();
   const profile = useQuery(bodyfitQueries.profile(profileId));
   const adjustments = useQuery(bodyfitQueries.adjustments(profileId));
@@ -106,18 +105,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
   }
 
   if (profile.isError || adjustments.isError || !profile.data) {
-    return (
-      <Screen title="운전자 정보를 찾지 못했어요">
-        <StatusView
-          title="운전자 정보가 없어요"
-          description="목록에서 운전자를 다시 골라 주세요"
-          action={{
-            label: "운전자 목록으로",
-            onPress: () => router.replace("/bodyfit"),
-          }}
-        />
-      </Screen>
-    );
+    return <BodyfitMissingDriver />;
   }
 
   const driver = profile.data;
@@ -348,26 +336,9 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
     );
   })();
 
-  // 몇 곳을 맞췄는지는 제목 오른쪽에 둔다. 파란 안내 카드는 "지금 할 일" 하나만 보여 준다.
-  const progress =
-    guide && guide.axes.length > 0 ? (
-      <View style={styles.progress} accessibilityLiveRegion="polite">
-        <AppText
-          variant="secondary"
-          style={done ? styles.progressDone : styles.progressText}
-        >
-          {`${guide.axes.filter((axis) => axis.status === "ok").length}/${guide.axes.length}`}
-        </AppText>
-        <AppText variant="secondary" style={styles.strong}>
-          맞춤
-        </AppText>
-      </View>
-    ) : undefined;
-
   return (
     <Screen
       title="시트 버튼으로 맞춰 주세요"
-      aside={progress}
       description={
         demo
           ? "시연 모드예요. 화면 버튼이 시트 버튼 대신 움직여요"
@@ -454,19 +425,5 @@ const useStyles = themedStyles((colors) => ({
     backgroundColor: colors.surface,
     ...shadows.card,
   },
-  // 제목 오른쪽 "2/4 맞춤"
-  progress: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    minHeight: sizes.touchTarget,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surface,
-    ...shadows.card,
-  },
-  strong: { fontWeight: "700" },
-  progressText: { color: colors.primary, fontWeight: "700" },
-  progressDone: { color: colors.success, fontWeight: "700" },
   press: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
 }));

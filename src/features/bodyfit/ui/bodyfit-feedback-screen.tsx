@@ -46,6 +46,7 @@ import type { DriveContext, SeatAxis } from "../model/bodyfit.types";
 import { describeBodyfitError } from "./bodyfit-error-copy";
 import { BodyfitPostureLink } from "./bodyfit-posture-link";
 import { BodyfitSeatImage } from "./bodyfit-seat-image";
+import { BodyfitMissingDriver } from "./bodyfit-missing-driver";
 
 // 선택지 앞에 붙이는 방향 기호. 뜻은 옆 글자가 전한다. 모든 줄이 같은 가는 화살표를 쓴다.
 const CHOICE_GLYPH: Record<TouchFeedbackChoiceId, string> = {
@@ -147,18 +148,7 @@ export function BodyfitFeedbackScreen({
   }
 
   if (profile.isError || !profile.data) {
-    return (
-      <Screen title="운전자 정보를 찾지 못했어요" width="narrow">
-        <StatusView
-          title="운전자 정보가 없어요"
-          description="목록에서 운전자를 다시 골라 주세요"
-          action={{
-            label: "운전자 목록으로",
-            onPress: () => router.replace("/bodyfit"),
-          }}
-        />
-      </Screen>
-    );
+    return <BodyfitMissingDriver />;
   }
 
   const driver = profile.data;
@@ -320,13 +310,6 @@ export function BodyfitFeedbackScreen({
                 />
               ) : null}
               <Card fill>
-                {context !== DEFAULT_DRIVE_CONTEXT ? (
-                  <View style={styles.contextTag}>
-                    <AppText variant="caption">
-                      {DRIVE_CONTEXT_LABEL[context]} 기록으로 남겨요
-                    </AppText>
-                  </View>
-                ) : null}
                 <View style={styles.stage}>
                   <BodyfitSeatImage height={pictureHeight} />
                 </View>
@@ -341,7 +324,7 @@ export function BodyfitFeedbackScreen({
             </View>
           }
           right={
-            <Card fill title="바꾸고 싶은 곳" count="한 줄에 하나">
+            <Card fill title="바꾸고 싶은 곳">
               {fromCamera ? (
                 // 카메라 제안을 미리 골라 둔 상태임을 알린다. 그대로 반영하거나 바꿀 수 있다.
                 <AppText
@@ -452,14 +435,6 @@ const useStyles = themedStyles((colors) => ({
     backgroundColor: colors.surfaceMuted,
   },
   center: { textAlign: "center" },
-  // 어느 상황의 기록으로 남는지 알려 주는 표시 (옅은 파랑 면 + ink 글자: theme.test 의 검사 조합)
-  contextTag: {
-    alignSelf: "flex-start",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primaryTint,
-  },
   picked: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,

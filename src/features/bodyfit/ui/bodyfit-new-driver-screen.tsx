@@ -169,7 +169,7 @@ export function BodyfitNewDriverScreen() {
   return (
     <Screen
       title="운전자 등록"
-      description="키와 몸무게만 입력하면 돼요"
+      description="이름, 키, 몸무게만 있으면 돼요"
       width="narrow"
       footer={
         <>

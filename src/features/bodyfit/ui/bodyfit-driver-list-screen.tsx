@@ -8,7 +8,6 @@ import { canUseVoice } from "@/shared/config/app-variant";
 import { isPleosAvailable } from "@/shared/pleos/pleos";
 import { useGear } from "@/shared/pleos/use-gear";
 import { Card } from "@/shared/ui/card";
-import { Columns } from "@/shared/ui/columns";
 import { Divider } from "@/shared/ui/divider";
 import { IconBadge } from "@/shared/ui/icon-badge";
 import { InfoRow } from "@/shared/ui/info-row";
@@ -26,7 +25,6 @@ import {
 } from "../model/bodyfit-session.slice";
 import { BodyfitDriverGuess } from "./bodyfit-driver-guess";
 import { describeBodyfitError } from "./bodyfit-error-copy";
-import { BodyfitSeatImage } from "./bodyfit-seat-image";
 
 // 탑승 단계 (A-1·A-2): 운전자를 고르면 바로 맞춤 자세로 간다.
 export function BodyfitDriverListScreen() {
@@ -84,7 +82,7 @@ export function BodyfitDriverListScreen() {
     <View style={styles.stack}>
       <StatusView
         title="아직 등록된 운전자가 없어요"
-        description="키와 몸무게만 입력하면 돼요"
+        description="이름, 키, 몸무게만 있으면 돼요"
         action={{ label: "운전자 등록하기", onPress: goToNew }}
       />
       {/* 등록이 주 행동이다. 가져오기는 다른 차에서 쓰던 사람만 쓰는 길이라 아래에 조용한 행으로 둔다. */}
@@ -100,7 +98,7 @@ export function BodyfitDriverListScreen() {
       ) : null}
     </View>
   ) : (
-    <Card fill title="운전자" count={`${profiles.data.length}명`}>
+    <Card title="운전자" count={`${profiles.data.length}명`}>
       <View>
         {profiles.data.map((profile) => (
           <Fragment key={profile.id}>
@@ -144,62 +142,41 @@ export function BodyfitDriverListScreen() {
     </Card>
   );
 
+  // 첫 화면은 운전자를 고르는 한 가지 일만 한다. 꾸밈용 그림 칸 없이 목록을 가운데 한 단으로 둔다.
   return (
-    <Screen title="누가 운전하나요?" back={false}>
-      <Columns
-        stretch
-        left={
-          // 소개 문구 없이 그림만 둔다. 저장 방식은 등록할 때 동의 안내에서 알린다.
-          <Card fill>
-            <View style={styles.seat}>
-              <BodyfitSeatImage height={260} />
-            </View>
-          </Card>
-        }
-        right={
-          guess && guessed ? (
-            <View style={styles.stack}>
-              <BodyfitDriverGuess
-                key={guessed.id}
-                name={guessed.name}
-                reason={guess.reason}
-                confidence={guess.confidence}
-                // 주차(P) 중이고 확률이 충분히 높을 때만 저절로 넘어간다 (S-5). 낮으면 묻기만 한다.
-                autoStart={
-                  gear === "park" && guess.confidence >= AUTO_START_CONFIDENCE
-                }
-                // 음성은 Pleos 서버에서 처리될 수 있어, 추측한 운전자가 음성 기능에 동의했을 때만 묻는다.
-                askByVoice={
-                  canUseVoice &&
-                  isPleosAvailable() &&
-                  guessed.voiceConsent &&
-                  gear === "park"
-                }
-                onAccept={() => openDriver(guessed.id)}
-                onDismiss={() => dispatch(driverGuessDismissed())}
-              />
-              {drivers}
-            </View>
-          ) : (
-            drivers
-          )
-        }
-      />
+    <Screen title="누가 운전하나요?" back={false} width="narrow">
+      {guess && guessed ? (
+        <View style={styles.stack}>
+          <BodyfitDriverGuess
+            key={guessed.id}
+            name={guessed.name}
+            reason={guess.reason}
+            confidence={guess.confidence}
+            // 주차(P) 중이고 확률이 충분히 높을 때만 저절로 넘어간다 (S-5). 낮으면 묻기만 한다.
+            autoStart={
+              gear === "park" && guess.confidence >= AUTO_START_CONFIDENCE
+            }
+            // 음성은 Pleos 서버에서 처리될 수 있어, 추측한 운전자가 음성 기능에 동의했을 때만 묻는다.
+            askByVoice={
+              canUseVoice &&
+              isPleosAvailable() &&
+              guessed.voiceConsent &&
+              gear === "park"
+            }
+            onAccept={() => openDriver(guessed.id)}
+            onDismiss={() => dispatch(driverGuessDismissed())}
+          />
+          {drivers}
+        </View>
+      ) : (
+        drivers
+      )}
     </Screen>
   );
 }
 
 const useStyles = themedStyles((colors) => ({
-  // 오른쪽 단과 높이를 맞춰 카드가 길어지면 늘어난 만큼을 그림 칸이 차지한다 (카드 아래에 빈 곳이 남지 않게).
-  seat: {
-    flexGrow: 1,
-    justifyContent: "center",
-    borderRadius: radius.control,
-    backgroundColor: colors.surfaceMuted,
-    padding: spacing.sm,
-  },
-  // 왼쪽 단과 높이를 맞출 때 운전자 목록 카드가 남는 높이를 채우게 한다.
-  stack: { flexGrow: 1, gap: spacing.lg },
+  stack: { gap: spacing.lg },
   // 행 위아래 여백으로 터치 대상 사이 24dp 를 확보한다 (구분선 포함).
   row: { paddingVertical: spacing.xs },
   skeletonRow: {

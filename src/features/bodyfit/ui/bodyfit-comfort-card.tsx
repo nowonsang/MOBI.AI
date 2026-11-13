@@ -324,7 +324,7 @@ export function BodyfitComfortCard({
   );
 
   return (
-    <Card title="내 운전석 온도·무드등" count={count}>
+    <Card title="평소 설정" count={count}>
       <View
         style={styles.body}
         onLayout={(event) => setGridWidth(event.nativeEvent.layout.width)}

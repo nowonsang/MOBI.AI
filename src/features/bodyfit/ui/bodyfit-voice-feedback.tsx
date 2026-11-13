@@ -41,6 +41,7 @@ import {
   describeBodyfitError,
   describeComfortError,
 } from "./bodyfit-error-copy";
+import { SEAT_MOVE_CONFIRM } from "./bodyfit-confirm-copy";
 
 type BodyfitVoiceFeedbackProps = {
   profile: BodyProfile;
@@ -159,8 +160,8 @@ export function BodyfitVoiceFeedback({
     <View style={[styles.card, listening && styles.cardListening]}>
       <ConfirmDialog
         visible={confirming}
-        title="시트를 움직일게요"
-        description="시트 주변에 물건이나 사람이 끼지 않았는지 확인해 주세요"
+        title={SEAT_MOVE_CONFIRM.title}
+        description={SEAT_MOVE_CONFIRM.description}
         confirmLabel="조절하기"
         onConfirm={applyPending}
         onCancel={() => setConfirming(false)}

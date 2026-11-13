@@ -67,18 +67,11 @@ import { BodyfitPostureLink } from "./bodyfit-posture-link";
 import { BodyfitSeatAxes, BodyfitSeatAxesLegend } from "./bodyfit-seat-axes";
 import { BodyfitSeatImage } from "./bodyfit-seat-image";
 import { BodyfitVoiceFeedback } from "./bodyfit-voice-feedback";
-
-const MOVE_CONFIRM = {
-  title: "시트를 움직일게요",
-  description: "시트 주변에 물건이나 사람이 끼지 않았는지 확인해 주세요",
-};
-
-// 시연 모드도 같은 확인 창을 거친다. 실제 시트는 움직이지 않는다는 것을 먼저 알린다.
-const DEMO_MOVE_CONFIRM = {
-  title: "시연 모드로 움직일게요",
-  description:
-    "화면에서만 움직이고 실제 시트는 그대로예요. 기록에도 남지 않아요",
-};
+import { BodyfitMissingDriver } from "./bodyfit-missing-driver";
+import {
+  DEMO_SEAT_MOVE_CONFIRM,
+  SEAT_MOVE_CONFIRM,
+} from "./bodyfit-confirm-copy";
 
 const SOURCE_COPY: Record<SeatAdjustmentSource, string> = {
   "drive-start": "출발할 때 자세",
@@ -135,7 +128,6 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   const context = useAppSelector(selectDriveContext);
   const vehicleConnected = isPleosAvailable();
   const profile = useQuery(bodyfitQueries.profile(profileId));
-  const profiles = useQuery(bodyfitQueries.profiles());
   const adjustments = useQuery(bodyfitQueries.adjustments(profileId));
   const seat = useQuery({
     ...bodyfitQueries.seat(),
@@ -176,18 +168,7 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   }
 
   if (profile.isError || adjustments.isError || !profile.data) {
-    return (
-      <Screen title="운전자 정보를 찾지 못했어요">
-        <StatusView
-          title="운전자 정보가 없어요"
-          description="목록에서 운전자를 다시 골라 주세요"
-          action={{
-            label: "운전자 목록으로",
-            onPress: () => router.replace("/bodyfit"),
-          }}
-        />
-      </Screen>
-    );
+    return <BodyfitMissingDriver />;
   }
 
   const driver = profile.data;
@@ -208,7 +189,6 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   const recentRecords = [...adjustments.data]
     .sort((a, b) => b.at - a.at)
     .slice(0, RECENT_RECORDS);
-  const drivers = profiles.data ?? [];
   const suggestion = parked
     ? suggestDriveContext(naviRoute.data, context)
     : null;
@@ -292,7 +272,7 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
     );
   }
 
-  const moveConfirm = auto.demo ? DEMO_MOVE_CONFIRM : MOVE_CONFIRM;
+  const moveConfirm = auto.demo ? DEMO_SEAT_MOVE_CONFIRM : SEAT_MOVE_CONFIRM;
 
   // 기어 상태는 제목 오른쪽에 둔다. 시트를 움직일 수 있는지가 이 화면에서 가장 먼저 봐야 할 정보다.
   // 상태는 점 색과 글자로 함께 알린다. 누를 수 없는 표시라 면·그림자 없이 글자만 둔다 (버튼으로 보이지 않게).
@@ -326,28 +306,10 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   return (
     <Screen
       title={`${driver.name} 님`}
-      description={
-        reason ??
-        (learnedCount > 0
-          ? `체형과 자세 기록 ${learnedCount}건으로 추천해요`
-          : "체형으로 계산한 첫 추천이에요")
-      }
-      aside={
-        // 운전자 이름 칩은 상황 칩과 모양이 같아 헷갈렸다. 운전자는 제목 옆 버튼 하나로 목록에서 바꾼다.
-        <View style={styles.headerActions}>
-          {drivers.length > 1 ? (
-            <Button
-              label="운전자 바꾸기"
-              variant="secondary"
-              onPress={() => router.dismissTo("/bodyfit")}
-              // 시트가 움직이는 동안 화면을 떠나면 멈추기 버튼이 사라진다.
-              disabled={auto.seatMoving}
-              accessibilityHint="운전자 목록으로 가요"
-            />
-          ) : null}
-          {statusLine}
-        </View>
-      }
+      // 반영한 기록 수는 왼쪽 카드 제목 옆 한 곳에서만 알린다. 설명 줄은 기록이 추천을 바꾼 이유가 있을 때만 쓴다.
+      description={reason ?? undefined}
+      // 운전자는 뒤로 가기(운전자 목록)로 바꾼다. 같은 일을 하는 버튼을 제목 옆에 또 두지 않는다.
+      aside={statusLine}
       // 제목·탭·왼쪽 요약은 자리를 지키고 탭 내용만 스크롤한다 (목록을 내려도 다른 탭으로 갈 수 있게).
       pinned
       footer={
@@ -489,7 +451,6 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
               {
                 value: "records",
                 label: "기록",
-                note: `${adjustments.data.length}건`,
               },
             ]}
             selected={tab}
@@ -549,7 +510,14 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
 
             {tab === "records" ? (
               <>
-                <Card title="자세 기록" count={`${adjustments.data.length}건`}>
+                <Card
+                  title="최근 기록"
+                  count={
+                    adjustments.data.length > RECENT_RECORDS
+                      ? `전체 ${adjustments.data.length}건 중 ${RECENT_RECORDS}건`
+                      : `${adjustments.data.length}건`
+                  }
+                >
                   {recentRecords.length === 0 ? (
                     <AppText variant="secondary" tone="secondary">
                       아직 기록이 없어요. 출발하면 자세가 기록돼요
@@ -580,8 +548,9 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                     detail="답하면 다음 추천에 반영돼요"
                     onPress={auto.seatMoving ? undefined : openFeedback}
                   />
-                  {/* 주행 중 카메라 관찰이 연결되기 전에는 예시 기록뿐이라 시연용 빌드에서만 연다 */}
-                  {isDemoBuild ? (
+                  {/* 주행 중 카메라 관찰이 연결되기 전에는 예시 기록뿐이라 시연용 빌드에서만 연다.
+                      관찰을 켠 운전자는 자세 탭의 리포트 카드로 같은 화면에 가므로 여기서는 뺀다. */}
+                  {isDemoBuild && !observing ? (
                     <>
                       <Divider />
                       <InfoRow
@@ -643,12 +612,6 @@ const useStyles = themedStyles((colors) => ({
     backgroundColor: colors.surface,
   },
   // 제목 오른쪽 기어 상태 (점 + 글자). 누를 수 없는 표시라 터치 크기는 필요 없지만 버튼과 높이를 맞춘다.
-  headerActions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: spacing.md,
-  },
   status: {
     flexDirection: "row",
     flexWrap: "wrap",

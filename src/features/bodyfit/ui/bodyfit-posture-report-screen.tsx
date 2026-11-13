@@ -51,6 +51,7 @@ import {
   BodyfitPostureTimeline,
   BodyfitPostureTimelineLegend,
 } from "./bodyfit-posture-timeline";
+import { BodyfitMissingDriver } from "./bodyfit-missing-driver";
 
 const TITLE = "주행 자세 리포트";
 
@@ -94,18 +95,7 @@ export function BodyfitPostureReportScreen({
   }
 
   if (profile.isError || !profile.data) {
-    return (
-      <Screen title="운전자 정보를 찾지 못했어요" width="narrow">
-        <StatusView
-          title="운전자 정보가 없어요"
-          description="목록에서 운전자를 다시 골라 주세요"
-          action={{
-            label: "운전자 목록으로",
-            onPress: () => router.replace("/bodyfit"),
-          }}
-        />
-      </Screen>
-    );
+    return <BodyfitMissingDriver />;
   }
 
   const driver = profile.data;

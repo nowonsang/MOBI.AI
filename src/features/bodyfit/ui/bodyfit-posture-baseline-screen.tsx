@@ -7,13 +7,13 @@ import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 import { Columns } from "@/shared/ui/columns";
 import { Screen } from "@/shared/ui/screen";
-import { StatusView } from "@/shared/ui/status-view";
 import { radius, spacing } from "@/shared/ui/theme";
 import { themedStyles } from "@/shared/ui/use-theme";
 
 import { bodyfitQueries } from "../api/bodyfit.queries";
 import { BodyfitPostureImage } from "./bodyfit-posture-image";
 import { BodyfitPostureWatchToggle } from "./bodyfit-posture-watch-toggle";
+import { BodyfitMissingDriver } from "./bodyfit-missing-driver";
 
 // 들어오는 카드(시트 화면 "주행 자세 관찰")와 같은 이름을 쓴다. "출발 자세를 기억"은 설명이 맡는다.
 const TITLE = "주행 자세 관찰";
@@ -51,18 +51,7 @@ export function BodyfitPostureBaselineScreen({
   }
 
   if (profile.isError || !profile.data) {
-    return (
-      <Screen title="운전자 정보를 찾지 못했어요" width="narrow">
-        <StatusView
-          title="운전자 정보가 없어요"
-          description="목록에서 운전자를 다시 골라 주세요"
-          action={{
-            label: "운전자 목록으로",
-            onPress: () => router.replace("/bodyfit"),
-          }}
-        />
-      </Screen>
-    );
+    return <BodyfitMissingDriver />;
   }
 
   const driver = profile.data;
