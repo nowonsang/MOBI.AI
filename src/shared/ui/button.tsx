@@ -1,7 +1,7 @@
 import { ActivityIndicator, Pressable } from "react-native";
 
 import { AppText } from "./app-text";
-import { radius, sizes, spacing } from "./theme";
+import { radius, shadows, sizes, spacing } from "./theme";
 import { themedStyles, useColors } from "./use-theme";
 
 type ButtonProps = {
@@ -66,11 +66,11 @@ const useStyles = themedStyles((colors) => ({
   },
   // Pleos 인터랙션 가이드: 눌린 요소는 95% 로 줄이고 배경색을 바꾼다.
   pressed: { transform: [{ scale: 0.95 }] },
-  primary: { backgroundColor: colors.primary },
+  primary: { backgroundColor: colors.primary, ...shadows.primaryButton },
   primaryPressed: { backgroundColor: colors.primaryStrong },
-  // 테두리 없이 파랑 면으로 채운다. 흰 면 + 테두리는 옅은 회색 바탕(하단 버튼 줄) 위에서 낡아 보였고,
-  // 회색 면(fill)·primaryTint 는 바탕과 거의 같아 버튼으로 보이지 않았다. 글자는 ink (primary 글자는 대비가 모자란다).
-  secondary: { backgroundColor: colors.secondaryButton },
-  secondaryPressed: { backgroundColor: colors.primaryTint },
+  // 카드처럼 흰 면 + 연한 그림자 (마이현대 앱 모양, 2026-11-14 시안 B). 테두리는 낡아 보였고,
+  // 회색·연파랑 면은 회색 바탕과 거의 같아 버튼으로 보이지 않거나 밋밋했다.
+  secondary: { backgroundColor: colors.surface, ...shadows.card },
+  secondaryPressed: { backgroundColor: colors.fill },
   inactive: { opacity: 0.4 },
 }));

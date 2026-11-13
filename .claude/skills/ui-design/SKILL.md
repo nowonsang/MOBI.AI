@@ -152,13 +152,13 @@ description: MOBI.AI 차량 앱 디자인 규칙(현대자동차 공모전, Pleo
 ## 6. 모서리·간격·그림자
 
 - 마이현대 앱처럼 크게 둥글린다: 카드 `radius.card`(24), 버튼·입력칸·선택 타일 `radius.control`(20), 칩·아이콘 원·개수 표시 `radius.pill`.
-- 그림자는 카드에만 `shadows.card`(아주 연한 그림자) 하나를 쓴다. 다른 그림자를 만들지 않는다.
+- 그림자는 둘뿐이다: 카드·보조 버튼의 `shadows.card`(아주 연한 그림자), 주 CTA 의 `shadows.primaryButton`(옅은 파랑). 다른 그림자를 만들지 않는다.
 - 간격은 `spacing` 토큰(8 배수). 카드 사이는 `spacing.md`(24), 화면 제목과 본문 사이는 `spacing.lg`(32).
 
 ## 7. 컴포넌트 규칙
 
 - **주 CTA**: `<Button label="..." />` (primary). 동사형 문구("맞추기", "등록하기"). 처리 중에는 `loading` 으로 중복 입력을 막는다.
-- **보조 버튼**: `variant="secondary"` (파랑 `secondaryButton` 면 + `ink` 글자, 테두리 없음. 2026-11-14 흰 면 + 테두리에서 바꿈). 주 CTA보다 눈에 띄면 안 된다.
+- **보조 버튼**: `variant="secondary"` (흰 `surface` 면 + `shadows.card` + `ink` 글자, 테두리 없음. 2026-11-14 시안 B 로 결정: 테두리·연파랑 면은 촌스러워 보였다). 주 CTA 는 `primary` 면 + `shadows.primaryButton`. 보조가 주 CTA보다 눈에 띄면 안 된다.
 - **차량을 움직이는 버튼**: 누르면 `ConfirmDialog` 로 확인 → 확인 후 실행. 실행 중에는 같은 자리에 "멈추기". 시스템 `Alert` 는 글자·버튼이 차량 기준보다 작아 쓰지 않는다.
 - **입력**: `TextField` (라벨은 위, placeholder 로 라벨 대신 금지). 오류는 입력칸 아래에 이유와 고치는 방법을 함께. 숫자는 `keyboardType="decimal-pad"`.
 - **목록**: 행 높이 최소 `sizes.touchTarget` + 여백. 섹션당 7개 이하.

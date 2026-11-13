@@ -11,7 +11,6 @@ const dayColors = {
   primary: "#1570EF", // 밝은 파랑: 주 CTA·선택 상태·요약 카드 (흰 글자 대비 4.6:1)
   primaryStrong: "#0F5BD0", // 주 CTA 눌림
   primaryTint: "#E8F1FE", // 옅은 파랑: 아바타·진행 중인 행 배경
-  secondaryButton: "#D3E3FD", // 보조 버튼 면. primaryTint 는 화면 바탕(surfaceMuted)과 거의 같아 버튼이 보이지 않았다
   accent: "#0F5BD0", // 링크·보조 강조·포커스
   highlight: "#00AAD2", // Sky Blue: 장식 전용, 글자색 금지
   onPrimary: "#FFFFFF", // primary·success·warning 면 위 글자 (AppText tone="inverse")
@@ -47,7 +46,6 @@ const nightColors: Colors = {
   primary: "#5C9DFF",
   primaryStrong: "#4688EE",
   primaryTint: "#172A46",
-  secondaryButton: "#21406E",
   accent: "#8AB8FF",
   highlight: "#00AAD2",
   onPrimary: "#0B1220",
@@ -122,9 +120,10 @@ export const radius = {
   pill: 999, // 칩·아이콘 원·개수 표시
 } as const;
 
-// 카드를 바탕에서 살짝 띄우는 연한 그림자. 카드에만 쓴다.
+// 바탕에서 살짝 띄우는 연한 그림자. card: 카드·보조 버튼, primaryButton: 주 CTA (파랑이 번지는 정도로만).
 export const shadows = {
   card: { boxShadow: "0 4px 16px rgba(17, 24, 39, 0.06)" },
+  primaryButton: { boxShadow: "0 6px 16px rgba(21, 112, 239, 0.28)" },
 } as const;
 
 // 가로로 넓은 차량 화면에서 한 줄이 너무 길어지지 않게 본문 폭을 제한한다.
