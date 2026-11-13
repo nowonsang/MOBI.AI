@@ -9,6 +9,7 @@ import {
 } from "../model/bodyfit-auto-adjust";
 import { recommendComfort, toComfortRecord } from "../model/bodyfit-comfort";
 import { interpretByRules } from "../model/bodyfit-feedback";
+import { interpretYesNo } from "../model/bodyfit-voice-answer";
 import { recommendBaseline } from "../model/bodyfit-recommend";
 import {
   interpretVoiceRequest,
@@ -261,6 +262,17 @@ export function useVoiceAdjustment() {
         plan: planVoiceComfort(request.requests, state, usual),
       };
     },
+  });
+}
+
+/**
+ * 앉은 사람에게 "○○님이시죠?"를 음성으로 묻고 대답을 읽는다 (A-6).
+ * 대답은 화면을 넘길지만 정한다. 시트는 넘어간 화면에서 운전자가 확인해야 움직인다.
+ */
+export function useVoiceDriverConfirm() {
+  return useMutation({
+    mutationFn: async ({ name }: { name: string }) =>
+      interpretYesNo(await askByVoice(`${name}님이시죠?`)),
   });
 }
 

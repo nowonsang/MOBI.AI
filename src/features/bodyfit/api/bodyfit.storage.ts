@@ -6,6 +6,7 @@ import {
   setEncryptedItem,
 } from "@/shared/storage/encrypted-storage";
 
+import type { Boarding } from "../model/bodyfit-identify";
 import { appendSeatAdjustment } from "../model/bodyfit-learning";
 import {
   bodyProfileSchema,
@@ -124,6 +125,14 @@ export async function findSeatAdjustments(
 ): Promise<SeatAdjustment[]> {
   const adjustments = await readList(ADJUSTMENTS_KEY, adjustmentsSchema);
   return adjustments.filter((record) => record.profileId === profileId);
+}
+
+/** 모든 운전자의 주행 시작 기록 (누가 언제 출발했는지). 탑승한 운전자를 추측하는 데 쓴다. */
+export async function findBoardings(): Promise<Boarding[]> {
+  const adjustments = await readList(ADJUSTMENTS_KEY, adjustmentsSchema);
+  return adjustments
+    .filter((record) => record.source === "drive-start")
+    .map(({ profileId, at }) => ({ profileId, at }));
 }
 
 export async function createSeatAdjustment(

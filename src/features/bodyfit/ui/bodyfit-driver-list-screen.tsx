@@ -1,8 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { View } from "react-native";
 
+import { useAppDispatch, useAppSelector } from "@/core/store/hooks";
+import { canUseVoice } from "@/shared/config/app-variant";
+import { isPleosAvailable } from "@/shared/pleos/pleos";
+import { useGear } from "@/shared/pleos/use-gear";
 import { AppText } from "@/shared/ui/app-text";
 import { Card } from "@/shared/ui/card";
 import { Columns } from "@/shared/ui/columns";
@@ -15,6 +19,12 @@ import { radius, sizes, spacing } from "@/shared/ui/theme";
 import { themedStyles } from "@/shared/ui/use-theme";
 
 import { bodyfitQueries } from "../api/bodyfit.queries";
+import { AUTO_START_CONFIDENCE, guessDriver } from "../model/bodyfit-identify";
+import {
+  driverGuessDismissed,
+  selectDriverGuessPending,
+} from "../model/bodyfit-session.slice";
+import { BodyfitDriverGuess } from "./bodyfit-driver-guess";
 import { describeBodyfitError } from "./bodyfit-error-copy";
 import { BodyfitSeatImage } from "./bodyfit-seat-image";
 
@@ -22,8 +32,29 @@ import { BodyfitSeatImage } from "./bodyfit-seat-image";
 export function BodyfitDriverListScreen() {
   const styles = useStyles();
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const profiles = useQuery(bodyfitQueries.profiles());
+  const boardings = useQuery(bodyfitQueries.boardings());
+  const guessPending = useAppSelector(selectDriverGuessPending);
+  const gear = useGear();
+  // 화면을 연 시각 기준으로 한 번만 추측한다 (렌더마다 시각이 바뀌어 추측이 흔들리지 않게).
+  const [openedAt] = useState(() => Date.now());
   const goToNew = () => router.push("/bodyfit/new");
+  const openDriver = (profileId: string) =>
+    router.push({ pathname: "/bodyfit/[profileId]", params: { profileId } });
+
+  // 앉은 사람을 기록으로 추측한다 (카메라 없이). 이번 탑승에서 아직 고르지 않았을 때만 보여 준다.
+  const guess =
+    guessPending && profiles.data && boardings.data
+      ? guessDriver({
+          profileIds: profiles.data.map((profile) => profile.id),
+          boardings: boardings.data,
+          now: openedAt,
+        })
+      : null;
+  const guessed = guess
+    ? profiles.data?.find((profile) => profile.id === guess.profileId)
+    : undefined;
 
   // 오른쪽 단: 불러오는 중 → 실패 → 빈 상태(등록이 유일한 행동이라 주 CTA) → 목록
   const drivers = profiles.isPending ? (
@@ -59,16 +90,13 @@ export function BodyfitDriverListScreen() {
           <Fragment key={profile.id}>
             <View style={styles.row}>
               <InfoRow
-                icon={<IconBadge glyph={profile.name.slice(0, 1)} tone="tint" />}
+                icon={
+                  <IconBadge glyph={profile.name.slice(0, 1)} tone="tint" />
+                }
                 value={profile.name}
                 detail={`${profile.heightCm}cm · ${profile.weightKg}kg`}
                 accessibilityLabel={`${profile.name}, 키 ${profile.heightCm}센티미터`}
-                onPress={() =>
-                  router.push({
-                    pathname: "/bodyfit/[profileId]",
-                    params: { profileId: profile.id },
-                  })
-                }
+                onPress={() => openDriver(profile.id)}
               />
             </View>
             <Divider />
@@ -114,7 +142,34 @@ export function BodyfitDriverListScreen() {
             />
           </Card>
         }
-        right={drivers}
+        right={
+          guess && guessed ? (
+            <View style={styles.stack}>
+              <BodyfitDriverGuess
+                key={guessed.id}
+                name={guessed.name}
+                reason={guess.reason}
+                confidence={guess.confidence}
+                // 주차(P) 중이고 확률이 충분히 높을 때만 저절로 넘어간다 (S-5). 낮으면 묻기만 한다.
+                autoStart={
+                  gear === "park" && guess.confidence >= AUTO_START_CONFIDENCE
+                }
+                // 음성은 Pleos 서버에서 처리될 수 있어, 추측한 운전자가 음성 기능에 동의했을 때만 묻는다.
+                askByVoice={
+                  canUseVoice &&
+                  isPleosAvailable() &&
+                  guessed.voiceConsent &&
+                  gear === "park"
+                }
+                onAccept={() => openDriver(guessed.id)}
+                onDismiss={() => dispatch(driverGuessDismissed())}
+              />
+              {drivers}
+            </View>
+          ) : (
+            drivers
+          )
+        }
       />
     </Screen>
   );
@@ -127,6 +182,7 @@ const useStyles = themedStyles((colors) => ({
     padding: spacing.sm,
   },
   intro: { gap: spacing.xs },
+  stack: { gap: spacing.lg },
   // 행 위아래 여백으로 터치 대상 사이 24dp 를 확보한다 (구분선 포함).
   row: { paddingVertical: spacing.xs },
   skeletonRow: {
@@ -143,7 +199,10 @@ const useStyles = themedStyles((colors) => ({
     backgroundColor: colors.surfaceMuted,
   },
   skeletonText: { flex: 1, gap: spacing.xs },
-  skeletonBar: { borderRadius: radius.control, backgroundColor: colors.surfaceMuted },
+  skeletonBar: {
+    borderRadius: radius.control,
+    backgroundColor: colors.surfaceMuted,
+  },
   skeletonName: { width: "40%", height: spacing.lg },
   skeletonDetail: { width: "60%", height: spacing.md },
 }));

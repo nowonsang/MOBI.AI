@@ -1,12 +1,14 @@
 import {
   bodyfitSessionSlice,
   driveContextSelected,
+  driverGuessDismissed,
   driverSelected,
   comfortProposed,
   feedbackProposed,
   occupantChanged,
   selectActiveDriverId,
   selectDriveContext,
+  selectDriverGuessPending,
   selectPendingComfort,
   selectPendingFeedback,
 } from "./bodyfit-session.slice";
@@ -100,5 +102,28 @@ describe("bodyfitSessionSlice: 운전 상황 (C-5)", () => {
     state = reduce(state, driveContextSelected("city"));
     state = reduce(state, occupantChanged());
     expect(selectDriveContext(root(state))).toBe("usual");
+  });
+
+  it("앱을 켜면 추측한 운전자로 자동으로 넘어갈 수 있다", () => {
+    expect(
+      selectDriverGuessPending(root(reduce(undefined, { type: "init" }))),
+    ).toBe(true);
+  });
+
+  it("운전자를 고르거나 추측을 거절하면 이번 탑승에서는 다시 자동으로 넘어가지 않는다", () => {
+    expect(
+      selectDriverGuessPending(root(reduce(undefined, driverSelected("p1")))),
+    ).toBe(false);
+    expect(
+      selectDriverGuessPending(root(reduce(undefined, driverGuessDismissed()))),
+    ).toBe(false);
+  });
+
+  it("운전석에 앉은 사람이 바뀌면 다시 추측한 운전자로 넘어갈 수 있다", () => {
+    const state = reduce(
+      reduce(undefined, driverSelected("p1")),
+      occupantChanged(),
+    );
+    expect(selectDriverGuessPending(root(state))).toBe(true);
   });
 });

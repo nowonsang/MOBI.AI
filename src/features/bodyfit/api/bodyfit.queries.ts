@@ -7,6 +7,7 @@ import { shouldRereadSeat } from "../model/bodyfit-seat";
 import {
   findBodyProfile,
   findBodyProfiles,
+  findBoardings,
   findComfortRecords,
   findSeatAdjustments,
 } from "./bodyfit.storage";
@@ -18,6 +19,7 @@ export const bodyfitKeys = {
   profile: (id: string) => [...bodyfitKeys.profiles(), id] as const,
   adjustments: (profileId: string) =>
     [...bodyfitKeys.all, "adjustments", profileId] as const,
+  boardings: () => [...bodyfitKeys.all, "boardings"] as const,
   seat: () => [...bodyfitKeys.all, "seat"] as const,
   /** 시트 이동 뮤테이션. 화면 밖에서도 "움직이는 중"인지 알 수 있게 (useIsMutating) */
   seatMove: () => [...bodyfitKeys.all, "seat-move"] as const,
@@ -37,6 +39,16 @@ export const bodyfitQueries = {
     queryOptions({
       queryKey: bodyfitKeys.profile(id),
       queryFn: () => findBodyProfile(id),
+    }),
+  /**
+   * 모든 운전자의 주행 시작 기록. 출발할 때마다 늘어나는데 기록하는 곳(주행 감시)이 여러 운전자 키를 무효화하지 않으므로,
+   * 운전자 선택 화면을 열 때마다 다시 읽는다 (기기 저장소라 빠르다).
+   */
+  boardings: () =>
+    queryOptions({
+      queryKey: bodyfitKeys.boardings(),
+      queryFn: findBoardings,
+      staleTime: 0,
     }),
   adjustments: (profileId: string) =>
     queryOptions({
