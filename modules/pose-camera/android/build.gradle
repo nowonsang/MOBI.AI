@@ -17,7 +17,7 @@ android {
   }
 }
 
-// Android 표준 카메라(CameraX)와 기기 안에서만 도는 자세 인식(ML Kit Pose Detection, 모델이 APK 에 들어 있어 내려받지 않는다).
+// Android 표준 카메라(CameraX)와 기기 안에서만 도는 자세 인식·QR 읽기(ML Kit Pose Detection·Barcode Scanning, 모델이 APK 에 들어 있어 내려받지 않는다).
 // Pleos SDK 가 아니므로 pleos-connect 모듈과 나눴다. 출처·라이선스는 README '오픈소스' 표에 적는다.
 // 버전을 올릴 때는 https://dl.google.com/dl/android/maven2/ 의 maven-metadata.xml 과 각 릴리스 노트를 확인한다.
 dependencies {
@@ -26,4 +26,7 @@ dependencies {
   implementation 'androidx.camera:camera-view:1.6.2'
   // 한 장만 분석하므로 속도보다 정확도가 중요해 accurate 모델을 쓴다.
   implementation 'com.google.mlkit:pose-detection-accurate:18.0.0-beta5'
+  // QR 코드 읽기 (다른 차로 내 자세 가져가기). 모델이 APK 에 들어 있는 쪽을 쓴다:
+  // play-services-mlkit-barcode-scanning 은 Google Play 서비스에서 모델을 내려받아 차량에서 동작하지 않는다.
+  implementation 'com.google.mlkit:barcode-scanning:17.3.0'
 }

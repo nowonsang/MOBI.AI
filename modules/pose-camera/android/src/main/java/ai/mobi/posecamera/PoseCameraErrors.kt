@@ -21,3 +21,6 @@ class CameraTimeoutException :
 
 class PoseFailedException(cause: Throwable?) :
   CodedException("ERR_POSE_FAILED", "자세 인식에 실패했습니다: ${cause?.message}", cause)
+
+class QrFailedException(cause: Throwable?) :
+  CodedException("ERR_QR_FAILED", "QR 코드 인식에 실패했습니다: ${cause?.message}", cause)

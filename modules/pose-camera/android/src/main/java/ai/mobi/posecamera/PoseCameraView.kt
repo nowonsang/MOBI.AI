@@ -24,6 +24,9 @@ import androidx.camera.view.PreviewView
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.Observer
+import com.google.mlkit.vision.barcode.BarcodeScannerOptions
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.pose.Pose
 import com.google.mlkit.vision.pose.PoseDetection
@@ -38,9 +41,9 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicReference
 
-// 카메라 미리보기 + "지금 화면 한 장"의 관절 위치 인식.
+// 카메라 미리보기 + "지금 화면 한 장"에서 관절 위치(capturePose) 또는 QR 코드의 글자(scanQrCode)를 읽는다.
 // 개인정보 원칙: 카메라 프레임은 메모리에서만 다룬다. 파일로 쓰지 않고, 네트워크로 보내지 않고, JS 로도 넘기지 않는다.
-// JS 가 받는 것은 관절 좌표(숫자)뿐이다.
+// JS 가 받는 것은 관절 좌표(숫자)나 QR 에 적힌 글자뿐이다.
 class PoseCameraView(
   context: Context,
   appContext: AppContext,
@@ -74,6 +77,17 @@ class PoseCameraView(
       )
     }
 
+  // QR 만 읽는다 (다른 바코드 형식은 보지 않는다). 모델은 APK 에 들어 있다 (com.google.mlkit:barcode-scanning).
+  private val scannerLazy =
+    lazy {
+      BarcodeScanning.getClient(
+        BarcodeScannerOptions
+          .Builder()
+          .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+          .build(),
+      )
+    }
+
   private var provider: ProcessCameraProvider? = null
 
   @Volatile
@@ -91,9 +105,14 @@ class PoseCameraView(
   private var mirrored = false
   private var attached = false
 
-  // 촬영 요청 하나. 분석 스레드가 다음 프레임에서 꺼내 간다.
-  private val pending = AtomicReference<Promise?>(null)
-  private val captureTimeout = Runnable { pending.getAndSet(null)?.reject(CameraTimeoutException()) }
+  // 촬영 요청 하나 (관절 읽기 또는 QR 읽기). 분석 스레드가 다음 프레임에서 꺼내 간다.
+  private class Request(
+    val promise: Promise,
+    val qr: Boolean,
+  )
+
+  private val pending = AtomicReference<Request?>(null)
+  private val captureTimeout = Runnable { pending.getAndSet(null)?.promise?.reject(CameraTimeoutException()) }
 
   init {
     addView(previewView)
@@ -189,7 +208,7 @@ class PoseCameraView(
 
   private fun stop() {
     mainHandler.removeCallbacks(captureTimeout)
-    pending.getAndSet(null)?.reject(CameraFailedException("카메라가 꺼졌습니다"))
+    pending.getAndSet(null)?.promise?.reject(CameraFailedException("카메라가 꺼졌습니다"))
     cameraState?.removeObserver(cameraStateObserver)
     cameraState = null
     if (useCases.isNotEmpty()) provider?.unbind(*useCases.toTypedArray())
@@ -202,25 +221,46 @@ class PoseCameraView(
     stop()
     analysisExecutor.shutdown()
     if (detectorLazy.isInitialized()) detectorLazy.value.close()
+    if (scannerLazy.isInitialized()) scannerLazy.value.close()
   }
 
-  fun capturePose(promise: Promise) {
-    if (useCases.isEmpty()) return promise.reject(CameraFailedException("카메라가 켜져 있지 않습니다"))
-    if (!pending.compareAndSet(null, promise)) return promise.reject(CameraBusyException())
+  fun capturePose(promise: Promise) = request(Request(promise, qr = false))
+
+  /** 지금 화면 한 장에서 QR 코드를 찾는다. 없으면 text 가 null 이다 (JS 가 찾을 때까지 다시 부른다). */
+  fun scanQrCode(promise: Promise) = request(Request(promise, qr = true))
+
+  private fun request(request: Request) {
+    if (useCases.isEmpty()) return request.promise.reject(CameraFailedException("카메라가 켜져 있지 않습니다"))
+    if (!pending.compareAndSet(null, request)) return request.promise.reject(CameraBusyException())
     mainHandler.postDelayed(captureTimeout, CAPTURE_TIMEOUT_MS)
   }
 
   // 미리보기 중에는 프레임을 바로 버린다. 촬영 요청이 있을 때만 그 한 장을 메모리에서 분석하고, 끝나면 닫는다.
   @OptIn(ExperimentalGetImage::class)
   private fun analyze(frame: ImageProxy) {
-    val promise = pending.getAndSet(null)
+    val request = pending.getAndSet(null)
     val image = frame.image
-    if (promise == null || image == null) {
+    if (request == null || image == null) {
       frame.close()
-      promise?.reject(CameraFailedException("카메라 화면을 읽지 못했습니다"))
+      request?.promise?.reject(CameraFailedException("카메라 화면을 읽지 못했습니다"))
       return
     }
     mainHandler.removeCallbacks(captureTimeout)
+    val promise = request.promise
+
+    if (request.qr) {
+      try {
+        scannerLazy.value
+          .process(InputImage.fromMediaImage(image, frame.imageInfo.rotationDegrees))
+          .addOnSuccessListener { barcodes -> promise.resolve(qrResult(barcodes)) }
+          .addOnFailureListener { error -> promise.reject(QrFailedException(error)) }
+          .addOnCompleteListener { frame.close() }
+      } catch (error: Exception) {
+        frame.close()
+        promise.reject(QrFailedException(error))
+      }
+      return
+    }
 
     // ML Kit 은 사람이 바로 선 방향으로 돌린 뒤의 좌표를 준다. 가로·세로도 그 기준으로 넘긴다.
     val rotation = frame.imageInfo.rotationDegrees
@@ -261,6 +301,17 @@ class PoseCameraView(
         },
     )
 
+  // QR 에 적힌 글자만 넘긴다. 내용은 신뢰하지 않는 입력이라 해석·검증은 JS(model)가 한다.
+  // 지나치게 긴 코드는 글자를 넘기지 않고 크다는 사실만 알린다.
+  private fun qrResult(barcodes: List<Barcode>): Map<String, Any?> {
+    val text = barcodes.firstNotNullOfOrNull { it.rawValue }
+    val oversized = text != null && text.length > MAX_QR_TEXT_LENGTH
+    return mapOf(
+      "text" to if (oversized) null else text,
+      "oversized" to oversized,
+    )
+  }
+
   private fun fail(error: CodedException) {
     onCameraError(mapOf("code" to error.code, "message" to (error.message ?: "")))
   }
@@ -274,6 +325,9 @@ class PoseCameraView(
 
   private companion object {
     const val CAPTURE_TIMEOUT_MS = 5_000L
+
+    // JS 로 넘기는 QR 글자 수 한계. 앱이 읽는 코드(BodyFit 프로필)는 이보다 훨씬 짧다.
+    const val MAX_QR_TEXT_LENGTH = 2_048
 
     // 자세 인식에는 이 정도면 충분하다. 더 크면 분석만 느려진다.
     val ANALYSIS_SIZE = Size(1280, 960)

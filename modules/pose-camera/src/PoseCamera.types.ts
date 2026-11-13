@@ -53,6 +53,14 @@ export type PoseCapture = {
   landmarks: PoseLandmark[];
 };
 
+/** 화면 한 장에서 읽은 QR 코드. 사진은 넘어오지 않는다. 내용은 신뢰하지 않는 입력이다 (받는 쪽에서 검증한다). */
+export type QrScan = {
+  /** QR 에 적힌 글자. 화면에 QR 이 없거나 너무 길면 null */
+  text: string | null;
+  /** QR 은 있었지만 글자가 너무 길어 넘기지 않았다 */
+  oversized: boolean;
+};
+
 export type CameraPermission = {
   granted: boolean;
   /** false 면 권한 창을 다시 띄울 수 없다 (차량 설정에서 바꿔야 한다) */
@@ -65,7 +73,8 @@ export type PoseCameraErrorCode =
   | "ERR_CAMERA_FAILED"
   | "ERR_CAMERA_BUSY"
   | "ERR_CAMERA_TIMEOUT"
-  | "ERR_POSE_FAILED";
+  | "ERR_POSE_FAILED"
+  | "ERR_QR_FAILED";
 
 export type PoseCameraReadyEvent = {
   /** 앱이 쓸 수 있는 카메라 수. 2 이상이면 cameraIndex 로 바꿀 수 있다 */

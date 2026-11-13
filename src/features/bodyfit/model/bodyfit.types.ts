@@ -38,9 +38,15 @@ export type DriveContext = "usual" | "commute" | "long" | "city";
 
 /**
  * drive-start: 주행을 시작할 때의 자세, saved: 직접 저장한 자세,
- * touch: 주행 후 터치 피드백(지금 자세 + 고른 방향, 시트는 움직이지 않음), voice: 음성 피드백으로 조절한 자세
+ * touch: 주행 후 터치 피드백(지금 자세 + 고른 방향, 시트는 움직이지 않음), voice: 음성 피드백으로 조절한 자세,
+ * imported: 다른 차에서 QR 로 가져온 보정 (A-7). 실제로 앉은 자세가 아니라 가져온 보정값을 기록 모양으로 되살린 것이다
  */
-export type SeatAdjustmentSource = "drive-start" | "voice" | "saved" | "touch";
+export type SeatAdjustmentSource =
+  | "drive-start"
+  | "voice"
+  | "saved"
+  | "touch"
+  | "imported";
 
 /** 체형만으로 계산한 기본 추천(baseline)과 운전자가 최종으로 받아들인 자세(final). 개인 보정의 학습 데이터다. */
 export type SeatAdjustment = {

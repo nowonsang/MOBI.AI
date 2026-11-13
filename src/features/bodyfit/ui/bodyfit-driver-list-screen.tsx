@@ -19,6 +19,7 @@ import { radius, sizes, spacing } from "@/shared/ui/theme";
 import { themedStyles } from "@/shared/ui/use-theme";
 
 import { bodyfitQueries } from "../api/bodyfit.queries";
+import { transferReadMode } from "../api/bodyfit.transfer";
 import { AUTO_START_CONFIDENCE, guessDriver } from "../model/bodyfit-identify";
 import {
   driverGuessDismissed,
@@ -40,6 +41,9 @@ export function BodyfitDriverListScreen() {
   // 화면을 연 시각 기준으로 한 번만 추측한다 (렌더마다 시각이 바뀌어 추측이 흔들리지 않게).
   const [openedAt] = useState(() => Date.now());
   const goToNew = () => router.push("/bodyfit/new");
+  // 다른 차에서 쓰던 프로필을 QR 로 가져오기 (A-7). 쓸 수 없는 빌드·기기에서는 행을 숨긴다.
+  const [canImport] = useState(() => transferReadMode() !== null);
+  const goToImport = () => router.push("/bodyfit/import");
   const openDriver = (profileId: string) =>
     router.push({ pathname: "/bodyfit/[profileId]", params: { profileId } });
 
@@ -78,11 +82,25 @@ export function BodyfitDriverListScreen() {
       action={{ label: "다시 불러오기", onPress: () => profiles.refetch() }}
     />
   ) : profiles.data.length === 0 ? (
-    <StatusView
-      title="아직 등록된 운전자가 없어요"
-      description="키와 몸무게만 알려 주시면 첫 자세를 바로 추천해 드려요"
-      action={{ label: "운전자 등록하기", onPress: goToNew }}
-    />
+    <View style={styles.stack}>
+      <StatusView
+        title="아직 등록된 운전자가 없어요"
+        description="키와 몸무게만 알려 주시면 첫 자세를 바로 추천해 드려요"
+        action={{ label: "운전자 등록하기", onPress: goToNew }}
+      />
+      {/* 등록이 주 행동이다. 가져오기는 다른 차에서 쓰던 사람만 쓰는 길이라 아래에 조용한 행으로 둔다. */}
+      {canImport ? (
+        <Card>
+          <InfoRow
+            icon={<IconBadge glyph="↓" />}
+            value="QR 로 가져오기"
+            valueTone="accent"
+            detail="다른 차에서 쓰던 내 자세를 가져와요"
+            onPress={goToImport}
+          />
+        </Card>
+      ) : null}
+    </View>
   ) : (
     <Card title="운전자" count={`${profiles.data.length}명`}>
       <View>
@@ -111,6 +129,20 @@ export function BodyfitDriverListScreen() {
             onPress={goToNew}
           />
         </View>
+        {canImport ? (
+          <>
+            <Divider />
+            <View style={styles.row}>
+              <InfoRow
+                icon={<IconBadge glyph="↓" />}
+                value="QR 로 가져오기"
+                valueTone="accent"
+                detail="다른 차에서 쓰던 내 자세를 가져와요"
+                onPress={goToImport}
+              />
+            </View>
+          </>
+        ) : null}
       </View>
     </Card>
   );

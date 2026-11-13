@@ -17,12 +17,15 @@ import { DEFAULT_DRIVE_CONTEXT, DRIVE_CONTEXTS } from "./bodyfit-drive-context";
 export const HEIGHT_CM_RANGE = { min: 120, max: 220 } as const;
 export const SITTING_HEIGHT_CM_RANGE = { min: 60, max: 120 } as const;
 
+/** 운전자 이름 길이 한계. 가져온 프로필의 이름(A-7)도 같은 한계로 자른다. */
+export const NAME_MAX_LENGTH = 20;
+
 export const bodyProfileInputSchema = z.object({
   name: z
     .string()
     .trim()
     .min(1, "운전자 이름을 입력해 주세요")
-    .max(20, "이름은 20자 이내로 입력해 주세요"),
+    .max(NAME_MAX_LENGTH, "이름은 20자 이내로 입력해 주세요"),
   heightCm: z
     .number({ error: "키를 숫자로 입력해 주세요" })
     .min(HEIGHT_CM_RANGE.min, "키는 120~220cm 사이로 입력해 주세요")
@@ -78,7 +81,7 @@ export const seatAdjustmentSchema = z.object({
   at: z.number(),
   baseline: seatRatiosSchema,
   final: seatRatiosSchema,
-  source: z.enum(["drive-start", "voice", "saved", "touch"]),
+  source: z.enum(["drive-start", "voice", "saved", "touch", "imported"]),
   context: driveContext,
 });
 
