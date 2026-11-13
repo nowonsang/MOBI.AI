@@ -30,7 +30,7 @@ export function BodyfitPostureWatchToggle({ driver }: { driver: BodyProfile }) {
 
   if (driver.postureConsent) {
     return (
-      <Card title="주행 중 자세 관찰">
+      <Card title="주행 자세 관찰">
         <AppText variant="secondary" accessibilityLiveRegion="polite">
           켜져 있어요. 주차하면 이번 주행의 리포트가 생겨요
         </AppText>
@@ -48,7 +48,7 @@ export function BodyfitPostureWatchToggle({ driver }: { driver: BodyProfile }) {
   }
 
   return (
-    <Card title="주행 중 자세 관찰 (선택)">
+    <Card title="주행 자세 관찰 (선택)">
       <AppText variant="secondary">
         주행하는 동안 카메라로 머리·어깨·등 위치만 살펴봐요
       </AppText>

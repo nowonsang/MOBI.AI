@@ -6,6 +6,7 @@ import { Pressable, View } from "react-native";
 import { useAppDispatch, useAppSelector } from "@/core/store/hooks";
 import {
   canControlSeat,
+  canUseCamera,
   canUseVoice,
   isDemoBuild,
 } from "@/shared/config/app-variant";
@@ -264,6 +265,8 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   };
 
   const error = seat.error;
+  // 주행 자세 관찰을 켠 운전자는 주차 중 카메라가 켜져 있고, 주행 중에도 관찰한다 (C-7).
+  const observing = canUseCamera && vehicleConnected && driver.postureConsent;
   const status = !vehicleConnected
     ? { label: "차량에 연결되어 있지 않아요", dot: styles.dotIdle }
     : parked
@@ -325,6 +328,23 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
               disabled={auto.seatMoving}
               accessibilityHint="운전자 목록으로 가요"
             />
+          ) : null}
+          {observing ? (
+            // 주행 자세 관찰(카메라)을 켜 둔 운전자: 카메라가 켜지는 기능이 있다는 것을 늘 보이게 둔다. 누르면 켜고 끄는 화면으로.
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="자세 관찰 중. 눌러서 주행 자세 관찰 화면을 열어요"
+              onPress={auto.seatMoving ? undefined : openPosture}
+              style={({ pressed }) => [
+                styles.status,
+                pressed && styles.statusPressed,
+              ]}
+            >
+              <View style={[styles.dot, styles.dotObserving]} />
+              <AppText variant="secondary" style={styles.statusText}>
+                자세 관찰 중
+              </AppText>
+            </Pressable>
           ) : null}
           {statusPill}
         </View>
@@ -630,6 +650,9 @@ const useStyles = themedStyles((colors) => ({
   statusText: { fontWeight: "700" },
   dot: { width: 16, height: 16, borderRadius: radius.pill },
   dotParked: { backgroundColor: colors.success },
+  dotObserving: { backgroundColor: colors.primary },
+  // Pleos 인터랙션 가이드: 눌린 요소는 배경색을 바꾼다.
+  statusPressed: { backgroundColor: colors.surfaceMuted },
   dotBlocked: { backgroundColor: colors.warning },
   dotIdle: { backgroundColor: colors.inkDisabled },
   // 운전석 그림을 올려 두는 옅은 무대

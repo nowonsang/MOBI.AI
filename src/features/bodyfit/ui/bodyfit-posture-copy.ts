@@ -14,7 +14,11 @@ import { AXIS_COPY } from "./bodyfit-axis-copy";
 
 /** 예시 기록임을 알리는 표시. 카메라 관찰이 연결되기 전까지 화면마다 붙인다 */
 export const POSTURE_SAMPLE_NOTICE =
-  "예시 기록이에요. 주행 중 자세 관찰을 켜고 달리면 실제 기록으로 바뀌어요";
+  "예시 기록이에요. 주행 자세 관찰을 켜고 달리면 실제 기록으로 바뀌어요";
+
+// 에뮬레이터의 카메라는 고정 사진이라 켜고 달려도 자세가 변하지 않는다. 그래서 늘 예시로 보여 준다.
+export const POSTURE_EMULATOR_NOTICE =
+  "시연용 예시 기록이에요. 에뮬레이터 카메라는 고정 사진이라, 실제 차에서는 카메라로 본 자세가 나와요";
 
 /** 112 → "1시간 52분", 50 → "50분", 120 → "2시간" */
 export function formatMinutes(minutes: number): string {

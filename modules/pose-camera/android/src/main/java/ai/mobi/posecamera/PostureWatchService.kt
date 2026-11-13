@@ -210,13 +210,13 @@ class PostureWatchService :
   private fun notification(): Notification {
     val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     manager.createNotificationChannel(
-      NotificationChannel(CHANNEL_ID, "운전 자세 살펴보기", NotificationManager.IMPORTANCE_MIN),
+      NotificationChannel(CHANNEL_ID, "주행 자세 관찰", NotificationManager.IMPORTANCE_MIN),
     )
     // 포그라운드 서비스는 알림이 꼭 있어야 한다. 주행 중 눈길을 끌지 않게 가장 낮은 중요도로 둔다.
     return NotificationCompat
       .Builder(this, CHANNEL_ID)
       .setSmallIcon(applicationInfo.icon)
-      .setContentTitle("운전 자세를 살펴보고 있어요")
+      .setContentTitle("주행 자세를 관찰하고 있어요")
       .setContentText("영상은 저장하지 않아요")
       .setOngoing(true)
       .setSilent(true)
