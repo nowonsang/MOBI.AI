@@ -89,12 +89,12 @@ const useStyles = themedStyles((colors) => ({
   },
   tab: {
     flex: 1,
-    minHeight: sizes.touchTarget,
+    minHeight: sizes.primaryButton,
     paddingHorizontal: spacing.xs,
     borderRadius: radius.control,
     alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xs / 2,
+    justifyContent: "flex-end",
+    gap: spacing.sm,
   },
   // Pleos 인터랙션 가이드: 눌린 요소는 95% 로 줄이고 배경색을 바꾼다.
   pressed: {
@@ -114,8 +114,10 @@ const useStyles = themedStyles((colors) => ({
     backgroundColor: colors.fill,
   },
   // 고르지 않은 탭도 같은 높이를 차지해 탭을 바꿀 때 글자가 위아래로 움직이지 않는다.
+  // 탭 폭을 다 쓴다. 글자 폭만큼 짧은 밑줄은 탭이 좁아 보였다.
   underline: {
-    width: spacing.xxl,
+    alignSelf: "stretch",
+    marginHorizontal: spacing.md,
     height: UNDERLINE,
     borderRadius: radius.pill,
   },
