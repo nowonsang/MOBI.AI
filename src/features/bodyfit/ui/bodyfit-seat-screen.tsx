@@ -19,6 +19,7 @@ import { Card } from "@/shared/ui/card";
 import { ChipGroup, ToggleChip } from "@/shared/ui/chip";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { Columns } from "@/shared/ui/columns";
+import { Divider } from "@/shared/ui/divider";
 import { IconBadge } from "@/shared/ui/icon-badge";
 import { InfoRow } from "@/shared/ui/info-row";
 import { Screen } from "@/shared/ui/screen";
@@ -589,41 +590,41 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                     </View>
                   )}
                 </Card>
-                {/* D-2: 주행 후 질문. 하단 버튼에서 내려 주 행동(맞추기)만 하단에 남긴다 */}
-                <Card
-                  title="오늘 자세 알려 주기"
-                  onPress={auto.seatMoving ? undefined : openFeedback}
-                  accessibilityLabel="오늘 자세 알려 주기. 오늘 자세가 어땠는지 알려 주시면 다음 추천에 반영해요"
-                >
-                  <AppText variant="caption" tone="tertiary">
-                    다음 추천이 더 정확해져요
-                  </AppText>
+                {/* 기록으로 이어지는 화면들. 카드마다 띄우면 무거워 한 카드 안 행으로 묶는다.
+                    시트가 움직이는 동안에는 멈추기 버튼이 사라지지 않게 화면을 떠나지 않는다. */}
+                <Card>
+                  {/* D-2: 주행 후 질문. 화면 제목과 같은 말로 부른다 */}
+                  <InfoRow
+                    icon={<IconBadge glyph="↔" tone="tint" />}
+                    value="오늘 운전 자세는 편하셨나요?"
+                    detail="답하면 다음 추천에 반영돼요"
+                    onPress={auto.seatMoving ? undefined : openFeedback}
+                  />
+                  {/* 주행 중 카메라 관찰이 연결되기 전에는 예시 기록뿐이라 시연용 빌드에서만 연다 */}
+                  {isDemoBuild ? (
+                    <>
+                      <Divider />
+                      <InfoRow
+                        icon={<IconBadge glyph="◎" tone="tint" />}
+                        value="주행 자세 관찰"
+                        detail="주행 중 자세가 언제 흐트러지는지 봐요"
+                        onPress={auto.seatMoving ? undefined : openPosture}
+                      />
+                    </>
+                  ) : null}
+                  {/* A-7: 체형과 학습한 보정을 QR 코드로 보여 준다. 누르기 전에는 코드를 그리지 않는다 */}
+                  {canTransferProfile ? (
+                    <>
+                      <Divider />
+                      <InfoRow
+                        icon={<IconBadge glyph="QR" tone="tint" />}
+                        value="다른 차로 가져가기"
+                        detail="렌터카에서도 내 체형과 자세를 QR 코드로 옮겨요"
+                        onPress={auto.seatMoving ? undefined : openExport}
+                      />
+                    </>
+                  ) : null}
                 </Card>
-                {/* 주행 중 카메라 관찰이 연결되기 전에는 예시 기록뿐이라 시연용 빌드에서만 연다 */}
-                {isDemoBuild ? (
-                  <Card
-                    title="주행 자세 관찰"
-                    onPress={auto.seatMoving ? undefined : openPosture}
-                    accessibilityLabel="주행 자세 관찰. 출발 자세를 기억하고, 주행 중 달라진 점을 알려 드려요"
-                  >
-                    <AppText variant="caption" tone="tertiary">
-                      출발 자세를 기억하고, 주행 중 달라진 점을 알려 드려요
-                    </AppText>
-                  </Card>
-                ) : null}
-                {/* A-7: 체형과 학습한 보정을 QR 코드로 보여 준다. 누르기 전에는 코드를 그리지 않는다 */}
-                {canTransferProfile ? (
-                  <Card
-                    title="다른 차로 가져가기"
-                    onPress={auto.seatMoving ? undefined : openExport}
-                    accessibilityLabel="다른 차로 가져가기. 체형과 학습한 자세를 QR 코드로 옮겨요"
-                  >
-                    <AppText variant="caption" tone="tertiary">
-                      렌터카나 다른 차에서도 내 체형과 학습한 자세를 QR 코드로
-                      옮겨요
-                    </AppText>
-                  </Card>
-                ) : null}
                 {/* 되돌릴 수 없는 일이라 카드 밖 맨 아래에 조용한 글자 버튼으로 둔다. 누르면 확인 창을 거친다. */}
                 <Pressable
                   accessibilityRole="button"
