@@ -64,6 +64,9 @@ const isFanRow = (key: ComfortKey) =>
 
 const COMFORT_REREAD_MS = 5000;
 
+// 격자 폭이 이만큼이면 한 줄에 네 칸, 좁으면 두 칸.
+const FOUR_COLUMN_WIDTH = 880;
+
 type Tile = {
   id: string;
   label: string;
@@ -155,6 +158,7 @@ export function BodyfitComfortCard({
   });
   const apply = useApplyComfort();
   const [notice, setNotice] = useState<string | null>(null);
+  const [gridWidth, setGridWidth] = useState(0);
 
   // 주행을 마치고 주차로 돌아오면 기다리지 않고 바로 다시 읽는다.
   const { refetch: rereadComfort } = comfort;
@@ -277,25 +281,40 @@ export function BodyfitComfortCard({
         ? `${changeCount}곳이 평소와 달라요`
         : "✓ 평소와 같아요";
 
-  const renderRow = (tile: Tile, index: number) => (
-    <View
-      key={tile.id}
-      style={[styles.row, index > 0 && styles.divided]}
-      accessible
-      accessibilityLabel={tile.accessibilityLabel}
-    >
-      <AppText variant="body" tone="secondary" style={styles.rowLabel}>
-        {tile.label}
-      </AppText>
-      <AppText
-        variant="bodyStrong"
-        tone={state && tile.changing ? "accent" : "default"}
-        style={styles.rowValue}
+  // 네 칸씩(좁으면 두 칸) 같은 크기의 네모로 나눈다. 칸 폭을 정하려고 격자 폭을 잰다 (높이는 재지 않는다).
+  const columns = gridWidth >= FOUR_COLUMN_WIDTH ? 4 : 2;
+  const tileWidth =
+    gridWidth > 0
+      ? Math.floor((gridWidth - spacing.md * (columns - 1)) / columns)
+      : undefined;
+
+  const renderTile = (tile: Tile) => {
+    const changing = Boolean(state && tile.changing);
+    return (
+      <View
+        key={tile.id}
+        style={[
+          styles.tile,
+          tileWidth ? { width: tileWidth } : styles.tileUnmeasured,
+          changing && styles.tileChanging,
+        ]}
+        accessible
+        accessibilityLabel={tile.accessibilityLabel}
       >
-        {tile.detail ? `${tile.value} (${tile.detail})` : tile.value}
-      </AppText>
-    </View>
-  );
+        <AppText variant="secondary" tone="secondary">
+          {tile.label}
+        </AppText>
+        <AppText variant="bodyStrong" tone={changing ? "accent" : "default"}>
+          {tile.value}
+        </AppText>
+        {tile.detail ? (
+          <AppText variant="caption" tone="tertiary">
+            {tile.detail}
+          </AppText>
+        ) : null}
+      </View>
+    );
+  };
 
   return (
     <Card title={title}>
@@ -313,8 +332,12 @@ export function BodyfitComfortCard({
           </AppText>
         ) : (
           <>
-            {/* 두 단으로 나누면 왼쪽 값과 오른쪽 이름이 붙어 한 줄로 읽혀서 한 단으로 둔다 (폭은 탭이 좁혀 준다). */}
-            <View>{tiles.map(renderRow)}</View>
+            <View
+              style={styles.grid}
+              onLayout={(event) => setGridWidth(event.nativeEvent.layout.width)}
+            >
+              {tiles.map(renderTile)}
+            </View>
             {notes.length > 0 ? (
               <AppText variant="caption" tone="tertiary">
                 {notes.join(" · ")}
@@ -364,17 +387,18 @@ export function BodyfitComfortCard({
 
 const useStyles = themedStyles((colors) => ({
   body: { gap: spacing.md },
-  // 이름은 왼쪽, 값은 오른쪽 끝에 맞춘 한 줄
-  row: {
-    minHeight: sizes.touchTarget,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.md,
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
+  // 이름 위, 값 아래의 네모 칸. 평소와 다른 칸만 옅은 파랑 바탕 + 파란 값 (색과 글자로 함께 알린다).
+  tile: {
+    minHeight: sizes.touchTarget * 1.5,
+    justifyContent: "center",
+    gap: spacing.xs,
+    padding: spacing.md,
+    borderRadius: radius.control,
+    backgroundColor: colors.surfaceMuted,
   },
-  divided: { borderTopWidth: 1, borderTopColor: colors.line },
-  rowLabel: { flexShrink: 1 },
-  rowValue: { flexShrink: 1, textAlign: "right" },
+  tileUnmeasured: { flexBasis: "45%", flexGrow: 1 },
+  tileChanging: { backgroundColor: colors.primaryTint },
   action: {
     flexDirection: "row",
     alignItems: "center",
