@@ -219,9 +219,8 @@ export function BodyfitFeedbackScreen({
                 accessibilityHint="시트 버튼을 움직이면 화면에 축별로 보여 줘요"
               />
             </>
-          ) : (
-            <Button label="돌아가기" onPress={() => router.back()} />
-          )
+          ) : // 끝난 뒤에는 ← 뒤로 가기로 돌아간다. 같은 일을 하는 버튼을 또 두지 않는다.
+          undefined
         }
       >
         {answered === "adjusted" ? (

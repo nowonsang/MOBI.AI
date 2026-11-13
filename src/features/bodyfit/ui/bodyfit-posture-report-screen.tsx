@@ -144,7 +144,6 @@ export function BodyfitPostureReportScreen({
         title="다음 추천에 반영했어요"
         description={`시트는 그대로예요. ${nudgeApplied(nudge, drive.context)}`}
         width="narrow"
-        footer={<Button label="돌아가기" onPress={() => router.back()} />}
       >
         <Card>
           <InfoRow
@@ -197,9 +196,8 @@ export function BodyfitPostureReportScreen({
               accessibilityHint="시트는 움직이지 않고 다음 추천에만 반영해요"
             />
           </>
-        ) : (
-          <Button label="돌아가기" onPress={() => router.back()} />
-        )
+        ) : // 반영할 것이 없으면 ← 뒤로 가기로 충분하다 (같은 일을 하는 버튼을 두지 않는다).
+        undefined
       }
     >
       {drive.sample ? <BodyfitPostureSampleNotice /> : null}

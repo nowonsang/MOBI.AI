@@ -106,24 +106,20 @@ export function BodyfitPostureCompareScreen({
       title={TITLE}
       description="최근 두 번 주행에서 출발 자세를 유지한 시간이에요"
       footer={
-        <>
-          {before ? (
-            <Button
-              label="지난 리포트 보기"
-              variant="secondary"
-              onPress={() =>
-                router.push({
-                  pathname: "/bodyfit/[profileId]/posture/report",
-                  params: {
-                    profileId: driver.id,
-                    startedAt: String(before.startedAt),
-                  },
-                })
-              }
-            />
-          ) : null}
-          <Button label="돌아가기" onPress={() => router.back()} />
-        </>
+        before ? (
+          <Button
+            label="지난 리포트 보기"
+            onPress={() =>
+              router.push({
+                pathname: "/bodyfit/[profileId]/posture/report",
+                params: {
+                  profileId: driver.id,
+                  startedAt: String(before.startedAt),
+                },
+              })
+            }
+          />
+        ) : undefined
       }
     >
       {latest.sample ? <BodyfitPostureSampleNotice /> : null}

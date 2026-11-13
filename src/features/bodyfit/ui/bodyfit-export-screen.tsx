@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { View } from "react-native";
 
 import { AppText } from "@/shared/ui/app-text";
-import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 import { Columns } from "@/shared/ui/columns";
 import { Divider } from "@/shared/ui/divider";
@@ -111,7 +110,6 @@ export function BodyfitExportScreen({ profileId }: { profileId: string }) {
     <Screen
       title="다른 차로 가져가기"
       description="다른 차에서 이 코드를 읽으면 내 자세를 그대로 쓸 수 있어요"
-      footer={<Button label="다 찍었어요" onPress={() => router.back()} />}
     >
       <Columns
         stretch
