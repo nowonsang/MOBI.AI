@@ -26,6 +26,7 @@ import {
   toSeatRatios,
   toSeatTargets,
 } from "../model/bodyfit-seat";
+import type { PostureTransfer } from "../model/bodyfit-transfer";
 import type {
   BodyProfile,
   BodyProfileInput,
@@ -49,6 +50,7 @@ import {
   findBodyProfile,
   markPostureDriveApplied,
   findDriveSession,
+  importBodyProfile,
   updateBodyProfile,
 } from "./bodyfit.storage";
 import {
@@ -65,6 +67,26 @@ export function useCreateBodyProfile() {
     mutationFn: (input: BodyProfileInput) => createBodyProfile(input),
     onSettled: () =>
       queryClient.invalidateQueries({ queryKey: bodyfitKeys.profiles() }),
+  });
+}
+
+/** 다른 차에서 가져온 프로필을 새 운전자로 등록한다 (A-7). 운전자가 미리보기에서 확인했을 때만 부른다. */
+export function useImportBodyProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (request: {
+      transfer: PostureTransfer;
+      voiceConsent: boolean;
+    }) => importBodyProfile(request.transfer, request.voiceConsent),
+    onSettled: (profile) =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: bodyfitKeys.profiles() }),
+        profile
+          ? queryClient.invalidateQueries({
+              queryKey: bodyfitKeys.adjustments(profile.id),
+            })
+          : null,
+      ]),
   });
 }
 

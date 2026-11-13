@@ -9,6 +9,11 @@ import {
 import type { Boarding } from "../model/bodyfit-identify";
 import { appendSeatAdjustment } from "../model/bodyfit-learning";
 import {
+  resolveImportName,
+  toImportedAdjustments,
+  type PostureTransfer,
+} from "../model/bodyfit-transfer";
+import {
   bodyProfileSchema,
   comfortRecordSchema,
   driveSessionSchema,
@@ -68,18 +73,63 @@ export async function findBodyProfile(id: string): Promise<BodyProfile | null> {
   return profiles.find((profile) => profile.id === id) ?? null;
 }
 
+const newProfileId = () =>
+  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
 export async function createBodyProfile(
   input: BodyProfileInput,
 ): Promise<BodyProfile> {
   const profile: BodyProfile = {
     ...input,
-    id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    id: newProfileId(),
     createdAt: Date.now(),
     // 등록은 "동의하고 등록하기" 버튼으로만 일어난다.
     consentedAt: Date.now(),
   };
   const profiles = await findBodyProfiles();
   await writeList(PROFILES_KEY, [...profiles, profile]);
+  return profile;
+}
+
+/**
+ * 다른 차에서 가져온 프로필을 새 운전자로 등록한다 (A-7). transfer 는 검증을 통과한 내용이어야 한다
+ * (model 의 decodeTransfer). 있던 운전자를 덮어쓰지 않는다: 이름이 같으면 번호를 붙여 새로 등록한다.
+ * 가져온 학습 요약은 이 운전자의 자세 기록으로 되살려 함께 저장한다. 시트는 움직이지 않는다.
+ */
+export async function importBodyProfile(
+  transfer: PostureTransfer,
+  voiceConsent: boolean,
+): Promise<BodyProfile> {
+  const profiles = await findBodyProfiles();
+  const now = Date.now();
+  const profile: BodyProfile = {
+    id: newProfileId(),
+    name: resolveImportName(
+      transfer.name,
+      profiles.map((item) => item.name),
+    ).name,
+    heightCm: transfer.heightCm,
+    weightKg: transfer.weightKg,
+    sittingHeightCm: transfer.sittingHeightCm,
+    // 동의는 옮겨 오지 않는다. 이 차에서 "동의하고 가져오기"를 누른 때와 그때 고른 음성 동의를 남긴다.
+    voiceConsent,
+    // 주행 중 카메라로 자세 살펴보기(C-7)는 이 차의 주행 자세 관찰 화면에서 따로 켜야 한다.
+    postureConsent: false,
+    createdAt: now,
+    consentedAt: now,
+  };
+  await writeList(PROFILES_KEY, [...profiles, profile]);
+  try {
+    const imported = toImportedAdjustments(transfer, profile, now);
+    if (imported.length > 0) {
+      const adjustments = await readList(ADJUSTMENTS_KEY, adjustmentsSchema);
+      await writeList(ADJUSTMENTS_KEY, [...adjustments, ...imported]);
+    }
+  } catch (error) {
+    // 보정 없이 프로필만 남으면 "가져왔어요"가 거짓이 된다. 프로필을 되돌리고 실패로 알린다.
+    await writeList(PROFILES_KEY, profiles);
+    throw error;
+  }
   return profile;
 }
 

@@ -32,12 +32,12 @@ type Props = {
   askVoice: boolean;
   voiceConsent: boolean;
   onVoiceConsentChange: (next: boolean) => void;
-  /** 주행 중 자세 관찰(C-7) 선택 동의를 묻는다. 카메라가 있는 contest 빌드에서만 */
-  askPosture: boolean;
-  postureConsent: boolean;
-  onPostureConsentChange: (next: boolean) => void;
+  /** 주행 자세 관찰(C-7) 선택 동의를 묻는다. 운전자 등록 화면만 넘긴다. 넘기지 않으면 묻지 않는다 (QR 가져오기 등) */
+  askPosture?: boolean;
+  postureConsent?: boolean;
+  onPostureConsentChange?: (next: boolean) => void;
   /** 카메라 권한을 받지 못해 켜지 못했을 때의 안내 */
-  postureNote: string | null;
+  postureNote?: string | null;
 };
 
 // 체형 정보 카드와 같은 모양의 카드로 둔다. 안내 → (선택) 음성 동의 순서로 위에서 아래로 읽힌다.
@@ -46,10 +46,10 @@ export function BodyfitConsentNotice({
   askVoice,
   voiceConsent,
   onVoiceConsentChange,
-  askPosture,
-  postureConsent,
+  askPosture = false,
+  postureConsent = false,
   onPostureConsentChange,
-  postureNote,
+  postureNote = null,
 }: Props) {
   const styles = useStyles();
   return (
@@ -87,7 +87,7 @@ export function BodyfitConsentNotice({
         </>
       ) : null}
 
-      {askPosture ? (
+      {askPosture && onPostureConsentChange ? (
         <>
           <Divider />
           <ConsentCheck

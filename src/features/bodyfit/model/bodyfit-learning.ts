@@ -14,11 +14,12 @@ import type {
   SeatRatios,
 } from "./bodyfit.types";
 
-const MAX_RECORDS = 10;
+/** 보정 한 번에 반영하는 최근 기록 수 (C-2) */
+export const MAX_RECORDS = 10;
 // 최근 기록일수록 크게 반영한다 (한 단계 오래될 때마다 가중치 × 0.7).
 const DECAY = 0.7;
-// 한 번의 이상한 기록이 추천을 크게 흔들지 않게 보정 폭을 제한한다.
-const MAX_OFFSET = 0.3;
+/** 한 번의 이상한 기록이 추천을 크게 흔들지 않게 보정 폭을 제한한다. 밖에서 들어온 보정(A-7)도 이 한계를 넘지 못한다. */
+export const MAX_OFFSET = 0.3;
 /**
  * 고른 상황의 기록이 이만큼 모이면 그 기록만으로 보정한다 (C-5).
  * 그 전에는 (그 상황의 기록 수 ÷ 이 값)만큼만 반영하고 나머지는 전체 기록으로 채운다.
@@ -152,6 +153,22 @@ export function learnRemembered(
     remembered[axis] = all + (mine - all) * weight;
   }
   return remembered;
+}
+
+/**
+ * 한 상황의 기록만으로 낸 보정값과 기억한 위치 (전체 기록과 섞기 전의 값).
+ * 다른 차로 가져갈 때(A-7) 이 요약만 내보낸다: 차량 원시 값이 아니라 비율 차이라 차종에 묶이지 않는다.
+ */
+export function summarizeContext(
+  history: readonly SeatAdjustment[],
+  context: DriveContext,
+): { count: number; offsets: SeatRatios; remembered: SeatRatios } {
+  const own = recordsIn(history, context);
+  return {
+    count: Math.min(own.length, MAX_RECORDS),
+    offsets: averageOffsets(own),
+    remembered: averageRemembered(own, 1),
+  };
 }
 
 export type LearningBasis = {

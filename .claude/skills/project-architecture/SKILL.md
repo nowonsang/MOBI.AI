@@ -28,10 +28,10 @@ app → core → features → shared → native(modules/*)
   - `pleos.ts`: `pleos()`(차량이 아니면 `PleosUnavailableError`), `isPleosAvailable()`, `pleosErrorCode()`
   - `pleos.types.ts`: 타입·`SEAT_AXES`. 네이티브 모듈을 불러오지 않으므로 `model` 과 테스트는 이 파일만 import 한다.
   - `use-gear.ts`, `use-ux-restrictions.ts`, `use-pleos-event.ts`: 기어·플랫폼 주행 제한(CarUxRestrictions)·차량 이벤트 구독 훅
-- **카메라·자세 인식(`modules/pose-camera`, Android 표준 카메라 + ML Kit)은 `src/shared/pose-camera/*` 를 통해서만 쓴다.** 네이티브 모듈마다 창구는 하나다 (`eslint.config.mjs` 의 `NATIVE_GATEWAYS`).
+- **카메라·자세 인식·QR 읽기(`modules/pose-camera`, Android 표준 카메라 + ML Kit)는 `src/shared/pose-camera/*` 를 통해서만 쓴다.** 네이티브 모듈마다 창구는 하나다 (`eslint.config.mjs` 의 `NATIVE_GATEWAYS`).
   - `pose-camera.ts`: `isPoseCameraAvailable()`, `requestCameraPermission()`, `poseCameraErrorCode()`
   - `pose-camera.types.ts`: 관절 이름·타입. 네이티브 모듈을 불러오지 않으므로 `model` 과 테스트는 이 파일만 import 한다.
-  - `pose-camera-view.tsx`: 미리보기 뷰 (`capturePose()` 는 관절 좌표만 돌려준다. 사진은 JS 로 오지 않는다)
+  - `pose-camera-view.tsx`: 미리보기 뷰 (`capturePose()` 는 관절 좌표만, `scanQrCode()` 는 QR 에 적힌 글자만 돌려준다. 사진은 JS 로 오지 않는다. QR 글자는 신뢰하지 않는 입력이라 `model` 에서 검증한다)
 - 개인정보는 `src/shared/storage/encrypted-storage.ts` 로만 저장한다. 빌드 종류(contest/market)별 기능 여부는 `src/shared/config/app-variant.ts`.
 - `src/` 바로 아래에 새 최상위 폴더를 만들지 않는다 (`boundaries/no-unknown-files` 에러).
 - 배럴 파일(`index.ts`)을 만들지 않는다. 항상 실제 파일 경로로 import 한다.

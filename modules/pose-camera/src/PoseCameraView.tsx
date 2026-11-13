@@ -6,11 +6,14 @@ import type {
   PoseCameraErrorEvent,
   PoseCameraReadyEvent,
   PoseCapture,
+  QrScan,
 } from "./PoseCamera.types";
 
 export type PoseCameraViewHandle = {
   /** 지금 보이는 화면 한 장에서 관절 위치만 뽑는다. 사진은 저장하지도 돌려주지도 않는다. */
   capturePose(): Promise<PoseCapture>;
+  /** 지금 보이는 화면 한 장에서 QR 코드의 글자만 읽는다. 없으면 text 가 null 이라 찾을 때까지 다시 부른다. */
+  scanQrCode(): Promise<QrScan>;
 };
 
 export type PoseCameraViewProps = {

@@ -30,6 +30,7 @@ import { themedStyles } from "@/shared/ui/use-theme";
 import { useAutoAdjust } from "../api/bodyfit.auto-adjust";
 import { useDeleteBodyProfile, useStopSeat } from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
+import { canTransferProfile } from "../api/bodyfit.transfer";
 import { speakQuietly } from "../api/bodyfit.voice";
 import {
   DEFAULT_DRIVE_CONTEXT,
@@ -87,6 +88,7 @@ const SOURCE_COPY: Record<
   touch: { glyph: "↔", label: "주행 후 피드백" },
   voice: { glyph: "♪", label: "음성 피드백" },
   camera: { glyph: "◎", label: "카메라로 본 자세" },
+  imported: { glyph: "↓", label: "다른 차에서 가져온 보정" },
 };
 
 const RECENT_RECORDS = 3;
@@ -254,6 +256,13 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   const openPosture = () =>
     router.push({
       pathname: "/bodyfit/[profileId]/posture",
+      params: { profileId: driver.id },
+    });
+
+  // A-7: 다른 차로 가져갈 QR 코드 화면
+  const openExport = () =>
+    router.push({
+      pathname: "/bodyfit/[profileId]/export",
       params: { profileId: driver.id },
     });
 
@@ -588,6 +597,19 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                   >
                     <AppText variant="caption" tone="tertiary">
                       출발 자세를 기억하고, 주행 중 달라진 점을 알려 드려요
+                    </AppText>
+                  </Card>
+                ) : null}
+                {/* A-7: 체형과 학습한 보정을 QR 코드로 보여 준다. 누르기 전에는 코드를 그리지 않는다 */}
+                {canTransferProfile ? (
+                  <Card
+                    title="다른 차로 가져가기"
+                    onPress={auto.seatMoving ? undefined : openExport}
+                    accessibilityLabel="다른 차로 가져가기. 체형과 학습한 자세를 QR 코드로 옮겨요"
+                  >
+                    <AppText variant="caption" tone="tertiary">
+                      렌터카나 다른 차에서도 내 체형과 학습한 자세를 QR 코드로
+                      옮겨요
                     </AppText>
                   </Card>
                 ) : null}

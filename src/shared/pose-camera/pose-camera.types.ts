@@ -6,6 +6,7 @@ import {
   type PoseCapture,
   type PoseLandmark,
   type PoseLandmarkName,
+  type QrScan,
   type PostureSample,
   type PostureWatchStatus,
 } from "@modules/pose-camera/src/PoseCamera.types";
@@ -19,6 +20,7 @@ export type {
   PoseCapture,
   PoseLandmark,
   PoseLandmarkName,
+  QrScan,
   PostureSample,
   PostureWatchStatus,
 };
