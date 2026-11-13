@@ -2,6 +2,7 @@ import { useIsMutating } from "@tanstack/react-query";
 import { useEffect, useReducer, useRef } from "react";
 
 import { canUseDemoMode } from "@/shared/config/app-variant";
+import { isEmulator } from "@/shared/config/emulator";
 import { pleosErrorCode } from "@/shared/pleos/pleos";
 
 import {
@@ -12,6 +13,10 @@ import { DEMO_MOVE_TICK_MS } from "../model/bodyfit-demo-seat";
 import type { SeatRatios } from "../model/bodyfit.types";
 import { useMoveSeat, useStopSeat } from "./bodyfit.mutations";
 import { bodyfitKeys } from "./bodyfit.queries";
+
+// 에뮬레이터는 시트 위치가 늘 0 이라 자동 조절 흐름을 모의 위치로만 보여 줄 수 있다.
+// 실제 차량에서는 운전자가 쓸 일이 없어 화면에 내놓지 않는다 (가이드 조절 시연도 같은 기준).
+export const canDemoSeat = canUseDemoMode && isEmulator;
 
 // 멈추기를 눌렀는데도 이동이 끝나지 않으면 이 간격으로 STOP 을 다시 보낸다.
 const STOP_RETRY_MS = 500;
@@ -103,15 +108,15 @@ export function useAutoAdjust({ parked }: { parked: boolean }) {
   };
 
   return {
-    /** 시연 모드를 쓸 수 있는 빌드인지 (contest). market 빌드에서는 켤 수 없다 */
-    canDemo: canUseDemoMode,
+    /** 시연 모드를 쓸 수 있는지: contest 빌드를 에뮬레이터에서 돌릴 때만 (실차는 시트가 실제로 움직인다) */
+    canDemo: canDemoSeat,
     demo: state.demo,
     /** 시연으로 움직인 모의 시트 위치. 시연 모드에서 화면의 "지금" 자세로 쓴다 */
     demoSeat: state.demoSeat,
     run,
     seatMoving,
     toggleDemo: () => {
-      if (canUseDemoMode) dispatch({ type: "demoToggled" });
+      if (canDemoSeat) dispatch({ type: "demoToggled" });
     },
     start,
     stop,

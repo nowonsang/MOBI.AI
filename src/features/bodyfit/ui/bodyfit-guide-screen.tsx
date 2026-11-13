@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { View, useWindowDimensions } from "react-native";
 
 import { useAppSelector } from "@/core/store/hooks";
-import { canUseDemoMode } from "@/shared/config/app-variant";
 import { isPleosAvailable } from "@/shared/pleos/pleos";
 import { useGear } from "@/shared/pleos/use-gear";
 import { useUxRestrictions } from "@/shared/pleos/use-ux-restrictions";
@@ -17,6 +16,7 @@ import { StatusView } from "@/shared/ui/status-view";
 import { radius, shadows, sizes, spacing } from "@/shared/ui/theme";
 import { themedStyles } from "@/shared/ui/use-theme";
 
+import { canDemoSeat } from "../api/bodyfit.auto-adjust";
 import { useRecordSeatAdjustment } from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
 import { useLiveDriverSeat } from "../api/bodyfit.seat-live";
@@ -159,7 +159,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
     />
   ) : (
     <>
-      {canUseDemoMode ? (
+      {canDemoSeat ? (
         <Button
           label="시연 모드로 보기"
           variant="secondary"
