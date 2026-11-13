@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { z } from "zod";
 
-import { canUseVoice } from "@/shared/config/app-variant";
+import { canUseCamera, canUseVoice } from "@/shared/config/app-variant";
 import { AppText } from "@/shared/ui/app-text";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
@@ -48,6 +48,9 @@ export function BodyfitNewDriverScreen() {
   });
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [voiceConsent, setVoiceConsent] = useState(false);
+  // 주행 중 자세 관찰(C-7) 선택 동의. 체크할 때 카메라 권한을 묻고, 받지 못하면 체크하지 않는다.
+  const [postureConsent, setPostureConsent] = useState(false);
+  const [postureDenied, setPostureDenied] = useState(false);
   // 카메라로 재기 (A-5). 기기에 카메라가 있는지는 화면을 여는 동안 바뀌지 않아 한 번만 확인한다.
   const [scanMode] = useState(bodyScanMode);
   const parked = useParkedForBodyScan();
@@ -57,9 +60,7 @@ export function BodyfitNewDriverScreen() {
     mode: BodyScanMode;
     heightCm: number;
   } | null>(null);
-  const [scanNote, setScanNote] = useState<keyof typeof SCAN_NOTE | null>(
-    null,
-  );
+  const [scanNote, setScanNote] = useState<keyof typeof SCAN_NOTE | null>(null);
   // 키보드의 "다음" 키로 다음 칸에 바로 넘어간다 (입력칸을 다시 찾아 누르지 않게).
   const heightRef = useRef<TextFieldHandle>(null);
   const weightRef = useRef<TextFieldHandle>(null);
@@ -112,6 +113,7 @@ export function BodyfitNewDriverScreen() {
         ? parseMeasurement(values.sittingHeightCm)
         : null,
       voiceConsent: canUseVoice && voiceConsent,
+      postureConsent: canUseCamera && postureConsent,
     });
     if (!parsed.success) {
       const fieldErrors = z.flattenError(parsed.error).fieldErrors;
@@ -133,7 +135,9 @@ export function BodyfitNewDriverScreen() {
     });
   };
 
-  const createError = create.isError ? describeBodyfitError(create.error) : null;
+  const createError = create.isError
+    ? describeBodyfitError(create.error)
+    : null;
 
   if (scan) {
     return (
@@ -275,6 +279,27 @@ export function BodyfitNewDriverScreen() {
         askVoice={canUseVoice}
         voiceConsent={voiceConsent}
         onVoiceConsentChange={setVoiceConsent}
+        askPosture={canUseCamera && scanMode === "camera"}
+        postureConsent={postureConsent}
+        onPostureConsentChange={(next) => {
+          setPostureDenied(false);
+          if (!next) {
+            setPostureConsent(false);
+            return;
+          }
+          permission.mutate(undefined, {
+            onSuccess: ({ granted }) => {
+              setPostureConsent(granted);
+              setPostureDenied(!granted);
+            },
+            onError: () => setPostureDenied(true),
+          });
+        }}
+        postureNote={
+          postureDenied
+            ? "카메라 권한이 없어 켜지 못했어요. 차량 설정에서 카메라를 허용해 주세요"
+            : null
+        }
       />
       {/* 저장 실패는 하단 버튼 바로 위에 이유와 다음 행동을 함께 알린다. */}
       {createError ? (

@@ -22,7 +22,7 @@ const REQUIRED_NOTICE = [
 // 자세 인식 도구(Google ML Kit)는 사진을 보내지 않지만 사용 통계는 보낼 수 있어 함께 알린다 (ML Kit 약관의 고지 의무).
 const CAMERA_NOTICE = {
   label: "카메라 (선택)",
-  text: "'카메라로 재기'를 누를 때만 켜요. 촬영한 화면은 저장하지 않고 이 차량 안에서만 분석하며, 추정한 앉은키만 저장해요. 자세 인식 도구(Google ML Kit)가 기기 종류·성능 같은 사용 통계를 Google 에 보낼 수 있지만 화면과 관절 값은 보내지 않아요",
+  text: "'카메라로 재기'를 누를 때와, 아래 주행 자세 관찰에 동의한 경우 주행하는 동안에만 켜요. 촬영한 화면은 저장하지 않고 이 차량 안에서만 분석하며, 추정한 앉은키와 분마다의 자세 변화만 저장해요. 자세 인식 도구(Google ML Kit)가 기기 종류·성능 같은 사용 통계를 Google 에 보낼 수 있지만 화면과 관절 값은 보내지 않아요",
 } as const;
 
 type Props = {
@@ -32,6 +32,12 @@ type Props = {
   askVoice: boolean;
   voiceConsent: boolean;
   onVoiceConsentChange: (next: boolean) => void;
+  /** 주행 중 자세 관찰(C-7) 선택 동의를 묻는다. 카메라가 있는 contest 빌드에서만 */
+  askPosture: boolean;
+  postureConsent: boolean;
+  onPostureConsentChange: (next: boolean) => void;
+  /** 카메라 권한을 받지 못해 켜지 못했을 때의 안내 */
+  postureNote: string | null;
 };
 
 // 체형 정보 카드와 같은 모양의 카드로 둔다. 안내 → (선택) 음성 동의 순서로 위에서 아래로 읽힌다.
@@ -40,56 +46,109 @@ export function BodyfitConsentNotice({
   askVoice,
   voiceConsent,
   onVoiceConsentChange,
+  askPosture,
+  postureConsent,
+  onPostureConsentChange,
+  postureNote,
 }: Props) {
   const styles = useStyles();
   return (
     <Card title="개인정보 수집·이용 안내 (필수)">
       {/* 항목 사이(sm)는 띄우고, 항목 이름과 내용은 한 줄에 붙여 표처럼 읽히게 한다. */}
       <View style={styles.notice}>
-        {[...REQUIRED_NOTICE, ...(showCamera ? [CAMERA_NOTICE] : [])].map((row) => (
-          <View key={row.label} style={styles.row}>
-            <AppText variant="secondary" tone="secondary" style={styles.label}>
-              {row.label}
-            </AppText>
-            <AppText variant="secondary" style={styles.text}>
-              {row.text}
-            </AppText>
-          </View>
-        ))}
+        {[...REQUIRED_NOTICE, ...(showCamera ? [CAMERA_NOTICE] : [])].map(
+          (row) => (
+            <View key={row.label} style={styles.row}>
+              <AppText
+                variant="secondary"
+                tone="secondary"
+                style={styles.label}
+              >
+                {row.label}
+              </AppText>
+              <AppText variant="secondary" style={styles.text}>
+                {row.text}
+              </AppText>
+            </View>
+          ),
+        )}
       </View>
 
       {askVoice ? (
         <>
           <Divider />
-          <Pressable
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: voiceConsent }}
+          <ConsentCheck
+            checked={voiceConsent}
+            onChange={onVoiceConsentChange}
+            label="음성 기능 사용에 동의해요 (선택)"
             accessibilityLabel="음성 기능 사용에 동의해요, 선택"
-            onPress={() => onVoiceConsentChange(!voiceConsent)}
-            style={({ pressed }) => [
-              styles.check,
-              pressed && styles.checkPressed,
-            ]}
-          >
-            <View style={[styles.box, voiceConsent && styles.boxChecked]}>
-              {voiceConsent ? (
-                <AppText variant="bodyStrong" tone="inverse">
-                  ✓
-                </AppText>
-              ) : null}
-            </View>
-            <View style={styles.text}>
-              <AppText variant="body">음성 기능 사용에 동의해요 (선택)</AppText>
-              <AppText variant="caption" tone="tertiary">
-                착좌감을 말로 답할 때 써요. 음성은 Pleos 음성
-                인식(현대자동차그룹)에서 처리될 수 있어요. 동의하지 않아도
-                화면으로 쓸 수 있어요
-              </AppText>
-            </View>
-          </Pressable>
+            detail="착좌감을 말로 답할 때 써요. 음성은 Pleos 음성 인식(현대자동차그룹)에서 처리될 수 있어요. 동의하지 않아도 화면으로 쓸 수 있어요"
+          />
+        </>
+      ) : null}
+
+      {askPosture ? (
+        <>
+          <Divider />
+          <ConsentCheck
+            checked={postureConsent}
+            onChange={onPostureConsentChange}
+            label="주행 자세 관찰에 동의해요 (선택)"
+            accessibilityLabel="주행 자세 관찰에 동의해요, 선택. 체크하면 카메라 권한을 물어요"
+            detail="주행하는 동안 카메라로 머리·어깨·등 위치만 살펴, 주차하면 자세가 언제부터 흐트러졌는지 알려 드려요. 영상은 저장하지 않고 분마다의 변화만 남겨요. 나중에 주행 자세 관찰 화면에서 끌 수 있어요"
+          />
+          {postureNote ? (
+            <AppText
+              variant="caption"
+              tone="danger"
+              accessibilityLiveRegion="polite"
+            >
+              {postureNote}
+            </AppText>
+          ) : null}
         </>
       ) : null}
     </Card>
+  );
+}
+
+// 선택 동의 한 줄. 누르는 범위는 행 전체(76dp 이상)다.
+function ConsentCheck({
+  checked,
+  onChange,
+  label,
+  accessibilityLabel,
+  detail,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  label: string;
+  accessibilityLabel: string;
+  detail: string;
+}) {
+  const styles = useStyles();
+  return (
+    <Pressable
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+      accessibilityLabel={accessibilityLabel}
+      onPress={() => onChange(!checked)}
+      style={({ pressed }) => [styles.check, pressed && styles.checkPressed]}
+    >
+      <View style={[styles.box, checked && styles.boxChecked]}>
+        {checked ? (
+          <AppText variant="bodyStrong" tone="inverse">
+            ✓
+          </AppText>
+        ) : null}
+      </View>
+      <View style={styles.text}>
+        <AppText variant="body">{label}</AppText>
+        <AppText variant="caption" tone="tertiary">
+          {detail}
+        </AppText>
+      </View>
+    </Pressable>
   );
 }
 
