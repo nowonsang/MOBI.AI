@@ -301,7 +301,22 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
           ? `체형과 지금까지의 자세 기록 ${learnedCount}건을 반영했어요`
           : "체형으로 계산한 첫 추천이에요. 쓰실수록 몸에 맞춰져요")
       }
-      aside={statusPill}
+      aside={
+        // 운전자 이름 칩은 상황 칩과 모양이 같아 헷갈렸다. 운전자는 제목 옆 버튼 하나로 목록에서 바꾼다.
+        <View style={styles.headerActions}>
+          {drivers.length > 1 ? (
+            <Button
+              label="운전자 바꾸기"
+              variant="secondary"
+              onPress={() => router.dismissTo("/bodyfit")}
+              // 시트가 움직이는 동안 화면을 떠나면 멈추기 버튼이 사라진다.
+              disabled={auto.seatMoving}
+              accessibilityHint="운전자 목록으로 가요"
+            />
+          ) : null}
+          {statusPill}
+        </View>
+      }
       // 제목·탭·왼쪽 요약은 자리를 지키고 탭 내용만 스크롤한다 (목록을 내려도 다른 탭으로 갈 수 있게).
       pinned
       footer={
@@ -353,23 +368,6 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
             count={learnedCount > 0 ? `기록 ${learnedCount}건 반영` : "첫 추천"}
             fill
           >
-            {drivers.length > 1 ? (
-              <ChipGroup
-                label="운전자 고르기"
-                options={drivers.map(({ id, name }) => ({
-                  value: id,
-                  label: name,
-                }))}
-                selected={driver.id}
-                onSelect={(id) => {
-                  if (id === driver.id) return;
-                  router.replace({
-                    pathname: "/bodyfit/[profileId]",
-                    params: { profileId: id },
-                  });
-                }}
-              />
-            ) : null}
             {vehicleConnected ? (
               <View style={styles.context}>
                 {/* 상황은 주차(P) 중에만 고른다. 주행 중에는 조작을 요구하지 않는다 (S-5). */}
@@ -589,6 +587,12 @@ const useStyles = themedStyles((colors) => ({
     backgroundColor: colors.surface,
   },
   // 제목 오른쪽 기어 상태 (점 + 글자). 누를 수 없는 표시라 터치 크기는 필요 없지만 버튼과 높이를 맞춘다.
+  headerActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: spacing.md,
+  },
   status: {
     flexDirection: "row",
     alignItems: "center",
