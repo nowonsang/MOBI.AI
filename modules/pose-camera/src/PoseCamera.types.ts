@@ -87,3 +87,18 @@ export type PoseCameraErrorEvent = {
   code: PoseCameraErrorCode;
   message: string;
 };
+
+/** 주행 중 자세 관찰(PostureWatchService)이 몇 초마다 남기는 표본. 상반신 관절만 있다. */
+export type PostureSample = PoseCapture & {
+  /** 찍은 시각 (epoch ms) */
+  at: number;
+};
+
+export type PostureWatchStatus = {
+  running: boolean;
+  /** 마지막으로 시작한 시각 (epoch ms). 시작한 적 없으면 0 */
+  startedAt: number;
+  sampleCount: number;
+  lastSampleAt: number | null;
+  error: PoseCameraErrorCode | null;
+};

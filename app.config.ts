@@ -101,7 +101,16 @@ const appConfig = ({ config }: ConfigContext): ExpoConfig =>
       // QR 코드의 글자(다른 차에서 만든 프로필 코드)만 읽는다. 영상·사진은 저장하지도 밖으로 보내지도 않는다
       // (modules/pose-camera). 권한 창도 그 버튼을 눌렀을 때 띄우고, 거부해도 직접 입력으로 등록할 수 있다.
       // Pleos 앱 마켓과 협의하지 않은 기능이라 market 빌드에서는 권한을 선언하지 않는다 (화면도 숨긴다: app-variant.ts).
-      permissions: appVariant() === "market" ? [] : ["android.permission.CAMERA"],
+      // FOREGROUND_SERVICE·FOREGROUND_SERVICE_CAMERA: 주행 중 자세 관찰(C-7). 주행 중에는 앱 화면이 가려져
+      // 화면 없이 도는 카메라 서비스가 필요하다. 운전자가 켠 경우에만 주차 중에 시작하고, 관절 좌표만 기기 안에 남긴다.
+      permissions:
+        appVariant() === "market"
+          ? []
+          : [
+              "android.permission.CAMERA",
+              "android.permission.FOREGROUND_SERVICE",
+              "android.permission.FOREGROUND_SERVICE_CAMERA",
+            ],
     },
     plugins: [
       "expo-router",

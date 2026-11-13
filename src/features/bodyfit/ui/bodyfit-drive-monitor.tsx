@@ -4,11 +4,13 @@ import { useEffect, useEffectEvent, useRef } from "react";
 
 import { useAppDispatch, useAppSelector } from "@/core/store/hooks";
 import { canUseVoice, isDemoBuild } from "@/shared/config/app-variant";
+import { isEmulator } from "@/shared/config/emulator";
 import type { Gear } from "@/shared/pleos/pleos.types";
 import { useGear } from "@/shared/pleos/use-gear";
 import { usePleosEvent } from "@/shared/pleos/use-pleos-event";
 
 import {
+  useAnalyzeDrivePosture,
   useEndDriveSession,
   useRecordComfort,
   useRecordSeatAdjustment,
@@ -35,7 +37,8 @@ import type { DriveSession } from "../model/bodyfit.types";
  * 화면 없이 주행 흐름을 따라간다.
  * - 주차(P)에서 벗어날 때: 그때의 시트 자세를 운전자가 받아들인 자세로 기록하고 (학습 데이터),
  *   누가 언제 출발했는지 기기에 남긴다. 주행 중에는 차량이 앱을 종료하므로 메모리에 두면 사라진다.
- * - 주차(P)했거나 주차 중에 앱이 다시 켜졌을 때: 남겨 둔 주행이 길었으면 화면으로 착좌감을 묻는다 (D-1).
+ * - 주차(P)했거나 주차 중에 앱이 다시 켜졌을 때: 카메라로 살펴봤으면 그 주행의 자세 기록을 남기고 (C-7),
+ *   남겨 둔 주행이 길었으면 화면으로 착좌감을 묻는다 (D-1).
  *   음성 기능을 쓸 수 있고 동의한 운전자에게는 음성으로 묻고, 조절안이 있으면 확인 화면으로 보낸다.
  */
 export function BodyfitDriveMonitor() {
@@ -52,6 +55,7 @@ export function BodyfitDriveMonitor() {
   const startDrive = useStartDriveSession();
   const endDrive = useEndDriveSession();
   const ask = useVoiceSeatFeedback();
+  const analyzePosture = useAnalyzeDrivePosture();
   // 현재 기어를 먼저 읽어 둔다. 알림만 기다리면 앱을 켠 뒤 첫 P → D 전환을 기준 없이 받아 출발 기록을 놓친다.
   const gear = useGear();
   const lastGear = useRef<Gear | null>(null);
@@ -113,7 +117,15 @@ export function BodyfitDriveMonitor() {
     endingDrive.current = true;
     endDrive.mutate(undefined, {
       onSuccess: (session) => {
-        if (session) askComfort(session, parked);
+        if (!session) return;
+        // 카메라로 살펴봤으면 그 주행의 자세 기록을 먼저 남겨 둔다 (C-7). 주행 후 질문 화면이 리포트로 이어 준다.
+        analyzePosture.mutate({
+          session,
+          endedAt: Date.now(),
+          // 에뮬레이터 카메라는 고정 사진이라 시연 빌드에서는 모의 표본으로 보여 준다 (기록에 "예시"로 표시).
+          demo: isDemoBuild && isEmulator,
+        });
+        askComfort(session, parked);
       },
       onSettled: () => {
         endingDrive.current = false;

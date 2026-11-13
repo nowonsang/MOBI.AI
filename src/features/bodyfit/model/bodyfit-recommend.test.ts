@@ -16,6 +16,7 @@ const profile = (overrides: Partial<BodyProfile> = {}): BodyProfile => ({
   weightKg: 68,
   sittingHeightCm: null,
   voiceConsent: false,
+  postureConsent: false,
   createdAt: 0,
   consentedAt: 0,
   ...overrides,

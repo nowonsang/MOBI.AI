@@ -7,4 +7,15 @@
   <uses-feature android:name="android.hardware.camera.any" android:required="false" />
   <uses-feature android:name="android.hardware.camera" android:required="false" />
   <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
+  <application>
+    <!--
+      주행 중 자세 관찰 (PostureWatchService). 앱 화면이 가려진 주행 중에도 카메라로 관절 위치만 모은다.
+      다른 앱이 부를 수 없게 export 하지 않는다. 포그라운드 서비스 권한은 app.config.ts 에서 contest 빌드에만 선언한다.
+    -->
+    <service
+      android:name=".PostureWatchService"
+      android:exported="false"
+      android:foregroundServiceType="camera" />
+  </application>
 </manifest>

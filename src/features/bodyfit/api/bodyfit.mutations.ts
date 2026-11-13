@@ -10,6 +10,11 @@ import {
 import { recommendComfort, toComfortRecord } from "../model/bodyfit-comfort";
 import { interpretByRules } from "../model/bodyfit-feedback";
 import { interpretYesNo } from "../model/bodyfit-voice-answer";
+import type { PostureDrive } from "../model/bodyfit-posture";
+import {
+  demoCameraSamples,
+  toPostureDrive,
+} from "../model/bodyfit-posture-camera";
 import { recommendBaseline } from "../model/bodyfit-recommend";
 import {
   interpretVoiceRequest,
@@ -38,12 +43,21 @@ import {
   createBodyProfile,
   createComfortRecord,
   createDriveSession,
+  createPostureDrive,
   createSeatAdjustment,
   deleteBodyProfile,
   deleteDriveSession,
+  findBodyProfile,
   findDriveSession,
   importBodyProfile,
+  updateBodyProfile,
 } from "./bodyfit.storage";
+import {
+  askPostureCamera,
+  isPostureWatching,
+  stopPostureWatching,
+  takePostureSamples,
+} from "./bodyfit.posture-camera";
 import { askByVoice } from "./bodyfit.voice";
 
 export function useCreateBodyProfile() {
@@ -87,6 +101,9 @@ export function useDeleteBodyProfile() {
         }),
         queryClient.invalidateQueries({
           queryKey: bodyfitKeys.comfortRecords(id),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: bodyfitKeys.postureDrives(id),
         }),
       ]),
   });
@@ -300,4 +317,79 @@ export function useVoiceDriverConfirm() {
 
 export function useStopListening() {
   return useMutation({ mutationFn: () => pleos().stopListening() });
+}
+
+/**
+ * 주행 중 카메라로 자세 살펴보기(C-7) 동의를 켜고 끈다. 켤 때는 카메라 권한 창을 띄우고, 거부하면 켜지 않는다.
+ * 끄면 카메라를 바로 끄고 그 운전자의 결과도 지운다 (동의 철회 시 데이터 삭제).
+ */
+export function useUpdatePostureConsent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      profileId,
+      postureConsent,
+    }: {
+      profileId: string;
+      postureConsent: boolean;
+    }): Promise<{ granted: boolean }> => {
+      if (postureConsent && !(await askPostureCamera()))
+        return { granted: false };
+      if (!postureConsent) stopPostureWatching();
+      await updateBodyProfile(profileId, { postureConsent });
+      return { granted: true };
+    },
+    onSettled: (_data, _error, { profileId }) =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: bodyfitKeys.profiles() }),
+        queryClient.invalidateQueries({
+          queryKey: bodyfitKeys.postureDrives(profileId),
+        }),
+      ]),
+  });
+}
+
+/**
+ * 주행이 끝났을 때 그 주행 동안 모은 관절 표본을 주행 자세 기록(D-6 화면이 읽는 형식)으로 바꿔 남긴다 (C-7).
+ * 관찰이 켜져 있지 않았으면 아무것도 하지 않는다. 표본은 꺼내는 순간 네이티브에서 지워진다.
+ * 시연 빌드를 에뮬레이터에서 돌리면 시연용 모의 표본으로 바꾸고 기록에 예시(sample)로 표시한다.
+ */
+export function useAnalyzeDrivePosture() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      session,
+      endedAt,
+      demo,
+    }: {
+      session: DriveSession;
+      endedAt: number;
+      /** 시연용 모의 표본을 쓴다 (에뮬레이터 카메라는 고정 사진이라 자세가 변하지 않는다) */
+      demo: boolean;
+    }): Promise<PostureDrive | null> => {
+      if (!isPostureWatching()) return null;
+      // 모의 표본을 쓰더라도 카메라 표본은 꺼내서 버린다 (네이티브에 쌓아 두지 않는다).
+      const captured = takePostureSamples();
+      const profile = await findBodyProfile(session.profileId);
+      if (!profile) return null;
+      const source = demo
+        ? demoCameraSamples(endedAt)
+        : { startedAt: session.startedAt, samples: captured };
+      const drive = toPostureDrive({
+        profileId: profile.id,
+        context: session.context,
+        startedAt: source.startedAt,
+        endedAt,
+        heightCm: profile.heightCm,
+        samples: source.samples,
+        sample: demo,
+      });
+      if (drive) await createPostureDrive(drive);
+      return drive;
+    },
+    onSettled: (_data, _error, { session }) =>
+      queryClient.invalidateQueries({
+        queryKey: bodyfitKeys.postureDrives(session.profileId),
+      }),
+  });
 }

@@ -61,6 +61,7 @@ npm run verify         # 위 4개 전부 — push 전 필수
 | `pleos.car.permission.NAVI_ROUTE` | 목적지 도착 이벤트 (장거리 주행 후 착좌감 질문), 목적지까지 남은 거리·시간 읽기 (주차 중 운전 상황 제안) |
 
 | `android.permission.CAMERA` (Android 표준, contest 빌드만) | ① 운전자 등록의 "카메라로 재기": 주차 중 버튼을 눌렀을 때만 켜서 화면 한 장의 관절 위치로 앉은키를 추정한다. ② "QR 로 가져오기"의 "카메라로 읽기": 주차 중 버튼을 눌렀을 때만 켜서 다른 차에서 만든 QR 코드의 글자를 읽는다. 어느 쪽도 화면은 저장·전송하지 않는다. `app.config.ts` 에서 선언하고 권한 창도 그 버튼을 눌렀을 때 띄운다 |
+| `android.permission.FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_CAMERA` (Android 표준, contest 빌드만) | 주행 중 자세 살펴보기(C-7): 주행 중에는 앱 화면이 가려지므로 화면 없이 도는 카메라 서비스(`PostureWatchService`)로 5초마다 상반신 관절 위치만 모은다. 운전자가 주행 자세 관찰 화면에서 "켜기"로 동의했을 때만, 앱이 보이는 주차 중에 시작한다 (Android 14 제한). 주행이 끝나면 분마다의 자세 변화만 기기에 남기고 관절 값은 버린다 |
 
 > Pleos 권한은 Pleos App Market 과 사전 협의·승인된 범위에서만 쓸 수 있다. 쓰지 않는 권한은 넣지 않는다.
 
@@ -97,7 +98,8 @@ JS 에서 쓰는 API (`@/shared/pleos/pleos` 의 `pleos()` 로만 접근):
 4. **개인 학습**: 주행을 시작하는 순간(P → D)의 자세, "지금 자세 기억하기", 음성 피드백 조절 결과를 기록하고, 체형 추천과의 차이를 최근 기록에 가중치를 두어 평균 내 다음 추천에 더한다 (`model/bodyfit-learning.ts`).
 5. **음성 피드백**: "페달이 멀어", "등받이 조금 눕혀" → 방향이 분명한 표현을 규칙으로 조절안으로 바꾸고, **운전자가 확인해야** 움직인다. (Pleos LLM SDK 는 제공 종료. 자유로운 문장 이해가 필요하면 Gleo Interface 연동을 검토한다)
 6. **장거리 주행 후 질문**: 1시간 이상 주행 후 주차하거나 목적지에 도착하면 "운전 자세는 편하셨나요?"를 음성으로 묻는다.
-7. **다른 차로 가져가기** (contest 빌드): 맞춤 자세 화면 기록 탭의 "다른 차로 가져가기"가 체형 값과 학습한 보정(상황별 요약)을 QR 코드로 보여 주고, 다른 차의 운전자 선택 화면 "QR 로 가져오기"가 그 코드를 카메라로 읽는다. 읽은 내용은 신뢰하지 않는 입력이라 크기·버전·형식·범위를 검증하고(`model/bodyfit-transfer.ts`), 미리보기에서 운전자가 확인해야 새 운전자로 저장한다 (같은 이름이 있으면 덮어쓰지 않고 번호를 붙인다). 서버를 거치지 않고, 가져오기만으로 시트를 움직이지 않는다. 추천 자세는 그 차의 시트 범위로 다시 계산된다.
+7. **주행 자세 관찰 (contest 빌드)**: 출발 자세를 기준으로 주행 중 달라진 점을 주차 뒤에 보여 주고("50분쯤부터 자세가 앞으로 쏠렸어요"), 다음 주행을 위한 조절을 제안한다. [반영하기]는 시트를 움직이지 않고 다음 추천에만 반영한다. 다음 주행 뒤에는 출발 자세를 더 오래 유지했는지 견준다 (`model/bodyfit-posture.ts`). 운전자가 켜면 주행 중 카메라로 상반신 관절을 살펴 실제 기록을 남긴다 (`model/bodyfit-posture-camera.ts`, `PostureWatchService`). 기록이 없거나 에뮬레이터(고정 사진 카메라)에서는 예시 기록으로 보여 주고 화면에 표시한다.
+8. **다른 차로 가져가기** (contest 빌드): 맞춤 자세 화면 기록 탭의 "다른 차로 가져가기"가 체형 값과 학습한 보정(상황별 요약)을 QR 코드로 보여 주고, 다른 차의 운전자 선택 화면 "QR 로 가져오기"가 그 코드를 카메라로 읽는다. 읽은 내용은 신뢰하지 않는 입력이라 크기·버전·형식·범위를 검증하고(`model/bodyfit-transfer.ts`), 미리보기에서 운전자가 확인해야 새 운전자로 저장한다 (같은 이름이 있으면 덮어쓰지 않고 번호를 붙인다). 서버를 거치지 않고, 가져오기만으로 시트를 움직이지 않는다. 추천 자세는 그 차의 시트 범위로 다시 계산된다.
 
 지금 범위에서 뺀 것: 카메라로 키·몸무게 재기(사진에는 길이·무게 단위가 없다), 카메라로 앉은 자세를 보고 시트 자동 조절(확대 계획), 체중 센서(Pleos SDK 에는 착석 여부만 있음), 스티어링 휠 위치.
 
@@ -149,10 +151,11 @@ modules/pleos-connect/        Pleos Connect SDK 로컬 Expo 모듈
 └── src/                      JS 계약 (PleosConnect.types.ts, PleosConnectModule.ts)
 modules/pose-camera/          Android 표준 카메라 + 기기 안 자세 인식·QR 읽기 로컬 Expo 모듈 (Pleos SDK 아님)
 ├── android/build.gradle      CameraX · ML Kit Pose Detection · ML Kit Barcode Scanning 의존성
-├── android/src/main/AndroidManifest.xml   카메라를 필수 하드웨어로 요구하지 않는다는 선언 (CAMERA 권한은 app.config.ts)
+├── android/src/main/AndroidManifest.xml   카메라를 필수 하드웨어로 요구하지 않는다는 선언, 자세 관찰 서비스 등록 (권한은 app.config.ts)
 ├── android/src/main/java/ai/mobi/posecamera/
 │   ├── PoseCameraModule.kt   카메라 유무·권한 요청, 뷰 등록
 │   ├── PoseCameraView.kt     미리보기 + 화면 한 장의 관절 인식·QR 읽기 (프레임은 메모리에서만, 저장·전송 없음)
+│   ├── PostureWatchService.kt  주행 중 자세 관찰 카메라 포그라운드 서비스 (5초마다 상반신 관절만 메모리에 모음)
 │   └── PoseCameraErrors.kt   JS 에러 코드
 └── src/                      JS 계약 (PoseCamera.types.ts, PoseCameraModule.ts, PoseCameraView.tsx)
 src/
@@ -169,7 +172,7 @@ src/
     ├── pleos/                차량 SDK 접근 창구 (pleos.ts, pleos.types.ts, use-gear, use-ux-restrictions, use-pleos-event)
     ├── pose-camera/          카메라·자세 인식·QR 읽기 접근 창구 (pose-camera.ts, pose-camera.types.ts, pose-camera-view.tsx)
     ├── storage/              기기 저장 값 암호화 (encrypted-storage.ts)
-    ├── config/               빌드 종류별 기능 (app-variant.ts: contest/market)
+    ├── config/               빌드 종류별 기능 (app-variant.ts: contest/market), 에뮬레이터 여부 (emulator.ts)
     └── ui/                   디자인 토큰(theme.ts, 주간·야간 색 세트), 색을 읽는 훅(use-theme.ts)과 공용 컴포넌트(Screen, Columns, Card, InfoRow, IconBadge, Chip, Button, TextField, StatusView, QrCode + qr-matrix.ts)
 scripts/                      개발 도구 (비밀 검사, env 권한, 마이그레이션 검사, Supabase 점검)
 scripts/android/              Android 스크립트 (점검·기기 목록·prebuild·빌드·에뮬레이터·실기기 실행, 공용 lib.mjs)
@@ -205,6 +208,7 @@ app → core → features → shared → native(modules/*)
 - 체형·자세 기록은 기기 안에만 **AES-GCM 으로 암호화**해 저장한다 (`src/shared/storage/encrypted-storage.ts`, 키는 `expo-secure-store` 로 Android Keystore 가 보호). 운전자가 지울 수 있다.
 - 카메라(`modules/pose-camera`)는 운전자가 "카메라로 재기"를 눌렀을 때만, 주차 중에만 켠다. 프레임은 메모리에서 한 장만 분석하고 버린다: 파일로 쓰지 않고, 앱 코드로 전송하지 않고, JS 로도 넘기지 않는다 (JS 가 받는 것은 관절 좌표뿐이고 zod 로 검증한다). 추정값은 입력 칸을 미리 채우기만 하고 시트를 움직이지 않는다.
 - "QR 로 가져오기"도 같은 카메라 원칙을 따른다 (누를 때만, 주차 중에만, JS 가 받는 것은 QR 에 적힌 글자뿐). 읽은 글자는 **신뢰하지 않는 입력**이다: 크기 → 종류·버전 → 형식(zod strict) → 범위 순으로 검증하고, 어긋나면 저장하지 않는다. 통과해도 미리보기에서 운전자가 "동의하고 가져오기"를 눌러야 저장하며, 가져오기만으로 시트를 움직이지 않는다. 내보내는 QR 에는 이름·체형 값·학습 요약만 담고 화면에만 그린다 (서버 전송 없음, 암호화하지 않으므로 화면에서 체형 정보가 들어 있음을 알린다).
+- 주행 중 자세 살펴보기(C-7)는 운전자가 주행 자세 관찰 화면(D-6)에서 "켜기"로 동의한 경우에만 켠다. 화면 없이 도는 서비스도 프레임은 메모리에서 분석하고 버리며, 관절 표본은 주행이 끝날 때 꺼내 zod 로 검증하고 분마다의 변화(cm·도)만 주행 자세 기록으로 암호화 저장소에 남긴다. 제안은 운전자가 리포트에서 "반영하기"를 눌러야 기록에 들어가고 시트는 움직이지 않는다. 끄면 카메라를 끄고 기록을 지운다.
 - 운전자 등록 화면에서 수집 항목·목적·보관·거부 권리를 알리고 **"동의하고 등록하기"** 버튼으로만 필수 동의를 받는다. 음성 기능은 별도 선택 동의(음성은 Pleos 서버에서 처리될 수 있음)이며, 동의한 운전자에게만 마이크를 연다.
 - `EXPO_PUBLIC_*` 변수와 앱 설정 값은 APK 에 들어간다. 비밀 값을 넣지 않는다.
 

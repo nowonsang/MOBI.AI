@@ -41,6 +41,7 @@ const profile: BodyProfile = {
   weightKg: 70,
   sittingHeightCm: 92,
   voiceConsent: true,
+  postureConsent: false,
   createdAt: 1,
   consentedAt: 1,
 };

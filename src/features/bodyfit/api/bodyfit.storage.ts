@@ -17,6 +17,7 @@ import {
   bodyProfileSchema,
   comfortRecordSchema,
   driveSessionSchema,
+  postureDriveSchema,
   seatAdjustmentSchema,
 } from "../model/bodyfit.schema";
 import type {
@@ -26,12 +27,17 @@ import type {
   DriveSession,
   SeatAdjustment,
 } from "../model/bodyfit.types";
+import type { PostureDrive } from "../model/bodyfit-posture";
 
 // 체형 정보는 민감한 개인정보라 기기 안(SQLite)에만 암호화해 저장하고 서버로 보내지 않는다.
 const PROFILES_KEY = "bodyfit:profiles";
 const ADJUSTMENTS_KEY = "bodyfit:adjustments";
 const DRIVE_SESSION_KEY = "bodyfit:drive-session";
 const COMFORT_KEY = "bodyfit:comfort";
+// 주행 자세 기록 (C-7 카메라 관찰 → D-6 화면). 영상·관절 좌표는 저장하지 않고 분마다의 변화(cm·도)만 남긴다.
+const POSTURE_DRIVES_KEY = "bodyfit:posture-drives";
+// 리포트·비교에는 최근 주행만 쓰므로 운전자별로 이 개수만 남긴다.
+const MAX_POSTURE_DRIVES_PER_PROFILE = 20;
 // 학습에는 최근 기록만 쓰므로 운전자별로 이 개수만 남긴다.
 const MAX_ADJUSTMENTS_PER_PROFILE = 50;
 // 자세 기록은 운전자·상황마다 이 개수만 남긴다 (가끔 고르는 상황의 기록이 밀려나지 않게, C-5).
@@ -40,6 +46,7 @@ const MAX_ADJUSTMENTS_PER_CONTEXT = 50;
 const profilesSchema = z.array(bodyProfileSchema);
 const adjustmentsSchema = z.array(seatAdjustmentSchema);
 const comfortRecordsSchema = z.array(comfortRecordSchema);
+const postureDrivesSchema = z.array(postureDriveSchema);
 
 // 저장된 값도 앱 버전이 바뀌면 형식이 다를 수 있다. 검증에 실패하면 빈 목록으로 본다.
 async function readList<T>(key: string, schema: z.ZodType<T[]>): Promise<T[]> {
@@ -106,6 +113,8 @@ export async function importBodyProfile(
     sittingHeightCm: transfer.sittingHeightCm,
     // 동의는 옮겨 오지 않는다. 이 차에서 "동의하고 가져오기"를 누른 때와 그때 고른 음성 동의를 남긴다.
     voiceConsent,
+    // 주행 중 카메라로 자세 살펴보기(C-7)는 이 차의 주행 자세 관찰 화면에서 따로 켜야 한다.
+    postureConsent: false,
     createdAt: now,
     consentedAt: now,
   };
@@ -122,6 +131,24 @@ export async function importBodyProfile(
     throw error;
   }
   return profile;
+}
+
+/** 선택 동의처럼 등록 뒤에 바꿀 수 있는 값만 고친다. 운전자가 없으면 null. */
+export async function updateBodyProfile(
+  id: string,
+  changes: Pick<Partial<BodyProfile>, "postureConsent">,
+): Promise<BodyProfile | null> {
+  const profiles = await findBodyProfiles();
+  const current = profiles.find((profile) => profile.id === id);
+  if (!current) return null;
+  const updated = { ...current, ...changes };
+  await writeList(
+    PROFILES_KEY,
+    profiles.map((profile) => (profile.id === id ? updated : profile)),
+  );
+  // 동의를 거두면 카메라로 만든 결과도 지운다.
+  if (changes.postureConsent === false) await deletePostureDrives(id);
+  return updated;
 }
 
 /** 프로필과 그 운전자의 자세·온도 기록, 진행 중이던 주행을 함께 지운다. */
@@ -145,6 +172,7 @@ export async function deleteBodyProfile(id: string): Promise<void> {
     comfort.filter((record) => record.profileId !== id),
   );
   if (session?.profileId === id) await deleteDriveSession();
+  await deletePostureDrives(id);
 }
 
 /** 진행 중인 주행. 없거나 형식이 다르면 null. */
@@ -210,4 +238,41 @@ export async function createComfortRecord(
     .slice(-MAX_ADJUSTMENTS_PER_PROFILE);
   const others = records.filter((item) => item.profileId !== record.profileId);
   await writeList(COMFORT_KEY, [...others, ...mine]);
+}
+
+/** 이 운전자의 주행 자세 기록 (최근 것부터). 형식이 다른 목록은 빈 목록으로 본다. */
+export async function findStoredPostureDrives(
+  profileId: string,
+): Promise<PostureDrive[]> {
+  const drives = await readList(POSTURE_DRIVES_KEY, postureDrivesSchema);
+  return drives
+    .filter((drive) => drive.profileId === profileId)
+    .sort((a, b) => b.startedAt - a.startedAt);
+}
+
+/** 같은 주행(출발 시각)이 있으면 바꾸고, 운전자별로 최근 기록만 남긴다. */
+export async function createPostureDrive(drive: PostureDrive): Promise<void> {
+  const drives = await readList(POSTURE_DRIVES_KEY, postureDrivesSchema);
+  const others = drives.filter(
+    (item) =>
+      !(
+        item.profileId === drive.profileId && item.startedAt === drive.startedAt
+      ),
+  );
+  const mine = [
+    drive,
+    ...others.filter((item) => item.profileId === drive.profileId),
+  ]
+    .sort((a, b) => b.startedAt - a.startedAt)
+    .slice(0, MAX_POSTURE_DRIVES_PER_PROFILE);
+  await writeList(POSTURE_DRIVES_KEY, [
+    ...others.filter((item) => item.profileId !== drive.profileId),
+    ...mine,
+  ]);
+}
+
+export async function deletePostureDrives(profileId: string): Promise<void> {
+  const drives = await readList(POSTURE_DRIVES_KEY, postureDrivesSchema);
+  const kept = drives.filter((drive) => drive.profileId !== profileId);
+  if (kept.length !== drives.length) await writeList(POSTURE_DRIVES_KEY, kept);
 }

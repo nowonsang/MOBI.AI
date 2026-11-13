@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import { Pressable, View } from "react-native";
 
 import { useAppDispatch, useAppSelector } from "@/core/store/hooks";
-import { canControlSeat, canUseVoice } from "@/shared/config/app-variant";
+import {
+  canControlSeat,
+  canUseVoice,
+  isDemoBuild,
+} from "@/shared/config/app-variant";
 import { isPleosAvailable } from "@/shared/pleos/pleos";
 import { useGear } from "@/shared/pleos/use-gear";
 import { useUxRestrictions } from "@/shared/pleos/use-ux-restrictions";
@@ -82,6 +86,7 @@ const SOURCE_COPY: Record<
   saved: { glyph: "✓", label: "직접 기억한 자세" },
   touch: { glyph: "↔", label: "주행 후 피드백" },
   voice: { glyph: "♪", label: "음성 피드백" },
+  camera: { glyph: "◎", label: "카메라로 본 자세" },
   imported: { glyph: "↓", label: "다른 차에서 가져온 보정" },
 };
 
@@ -243,6 +248,13 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   const openFeedback = () =>
     router.push({
       pathname: "/bodyfit/[profileId]/feedback",
+      params: { profileId: driver.id },
+    });
+
+  // 주행 자세 관찰: 출발 자세 기억 → 주행 중 변화 리포트 → 지난번과 비교.
+  const openPosture = () =>
+    router.push({
+      pathname: "/bodyfit/[profileId]/posture",
       params: { profileId: driver.id },
     });
 
@@ -556,6 +568,18 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                     다음 추천이 더 정확해져요
                   </AppText>
                 </Card>
+                {/* 주행 중 카메라 관찰이 연결되기 전에는 예시 기록뿐이라 시연용 빌드에서만 연다 */}
+                {isDemoBuild ? (
+                  <Card
+                    title="주행 자세 관찰"
+                    onPress={auto.seatMoving ? undefined : openPosture}
+                    accessibilityLabel="주행 자세 관찰. 출발 자세를 기억하고, 주행 중 달라진 점을 알려 드려요"
+                  >
+                    <AppText variant="caption" tone="tertiary">
+                      출발 자세를 기억하고, 주행 중 달라진 점을 알려 드려요
+                    </AppText>
+                  </Card>
+                ) : null}
                 {/* A-7: 체형과 학습한 보정을 QR 코드로 보여 준다. 누르기 전에는 코드를 그리지 않는다 */}
                 {canTransferProfile ? (
                   <Card

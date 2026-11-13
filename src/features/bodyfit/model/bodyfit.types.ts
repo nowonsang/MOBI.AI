@@ -11,6 +11,8 @@ export type BodyProfile = {
   sittingHeightCm: number | null;
   /** 음성 기능 선택 동의. 음성은 Pleos 음성 인식 서버에서 처리될 수 있다. */
   voiceConsent: boolean;
+  /** 주행 중 카메라로 자세 살펴보기(C-7) 선택 동의. 영상은 저장하지 않고 분석 결과만 남긴다. */
+  postureConsent: boolean;
   createdAt: number;
   /** 체형 정보 수집·이용 필수 동의 시각. 등록 버튼("동의하고 등록하기")을 누른 때다. */
   consentedAt: number;
@@ -37,7 +39,7 @@ export type SeatRatios = Partial<Record<SeatAxis, number>>;
 export type DriveContext = "usual" | "commute" | "long" | "city";
 
 /**
- * drive-start: 주행을 시작할 때의 자세, saved: 직접 저장한 자세,
+ * drive-start: 주행을 시작할 때의 자세, saved: 직접 저장한 자세, camera: 주행 중 카메라로 본 자세 변화(C-7)를 운전자가 반영한 것,
  * touch: 주행 후 터치 피드백(지금 자세 + 고른 방향, 시트는 움직이지 않음), voice: 음성 피드백으로 조절한 자세,
  * imported: 다른 차에서 QR 로 가져온 보정 (A-7). 실제로 앉은 자세가 아니라 가져온 보정값을 기록 모양으로 되살린 것이다
  */
@@ -46,6 +48,7 @@ export type SeatAdjustmentSource =
   | "voice"
   | "saved"
   | "touch"
+  | "camera"
   | "imported";
 
 /** 체형만으로 계산한 기본 추천(baseline)과 운전자가 최종으로 받아들인 자세(final). 개인 보정의 학습 데이터다. */
@@ -110,3 +113,4 @@ export type ComfortRecord = {
   cabinTemp: number | null;
   settings: ComfortSettings;
 };
+
