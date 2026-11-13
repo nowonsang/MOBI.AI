@@ -24,10 +24,14 @@ app → core → features → shared → native(modules/*)
 | native | `modules/<모듈>/` | Expo 로컬 네이티브 모듈 (Kotlin + JS 계약) | — |
 
 - **서비스끼리 import 금지** (`features/a` → `features/b`). 공유할 코드는 도메인을 걷어내고 `shared`로 올리거나, `app`에서 두 서비스를 조립한다.
-- **차량 SDK(Pleos)는 `src/shared/pleos/*` 를 통해서만 쓴다.** `@modules/*` 직접 import 는 `shared/pleos` 밖에서 ESLint 에러다.
+- **차량 SDK(Pleos)는 `src/shared/pleos/*` 를 통해서만 쓴다.** `@modules/*` 직접 import 는 창구 폴더(`shared/pleos`, `shared/pose-camera`) 밖에서 ESLint 에러다.
   - `pleos.ts`: `pleos()`(차량이 아니면 `PleosUnavailableError`), `isPleosAvailable()`, `pleosErrorCode()`
   - `pleos.types.ts`: 타입·`SEAT_AXES`. 네이티브 모듈을 불러오지 않으므로 `model` 과 테스트는 이 파일만 import 한다.
   - `use-gear.ts`, `use-ux-restrictions.ts`, `use-pleos-event.ts`: 기어·플랫폼 주행 제한(CarUxRestrictions)·차량 이벤트 구독 훅
+- **카메라·자세 인식(`modules/pose-camera`, Android 표준 카메라 + ML Kit)은 `src/shared/pose-camera/*` 를 통해서만 쓴다.** 네이티브 모듈마다 창구는 하나다 (`eslint.config.mjs` 의 `NATIVE_GATEWAYS`).
+  - `pose-camera.ts`: `isPoseCameraAvailable()`, `requestCameraPermission()`, `poseCameraErrorCode()`
+  - `pose-camera.types.ts`: 관절 이름·타입. 네이티브 모듈을 불러오지 않으므로 `model` 과 테스트는 이 파일만 import 한다.
+  - `pose-camera-view.tsx`: 미리보기 뷰 (`capturePose()` 는 관절 좌표만 돌려준다. 사진은 JS 로 오지 않는다)
 - 개인정보는 `src/shared/storage/encrypted-storage.ts` 로만 저장한다. 빌드 종류(contest/market)별 기능 여부는 `src/shared/config/app-variant.ts`.
 - `src/` 바로 아래에 새 최상위 폴더를 만들지 않는다 (`boundaries/no-unknown-files` 에러).
 - 배럴 파일(`index.ts`)을 만들지 않는다. 항상 실제 파일 경로로 import 한다.

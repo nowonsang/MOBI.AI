@@ -60,6 +60,8 @@ npm run verify         # 위 4개 전부 — push 전 필수
 | `pleos.car.permission.STT_SERVICE` / `TTS_SERVICE` | 음성 인식 · 음성 안내 |
 | `pleos.car.permission.NAVI_ROUTE` | 목적지 도착 이벤트 (장거리 주행 후 착좌감 질문), 목적지까지 남은 거리·시간 읽기 (주차 중 운전 상황 제안) |
 
+| `android.permission.CAMERA` (Android 표준, contest 빌드만) | 운전자 등록의 "카메라로 재기": 주차 중 버튼을 눌렀을 때만 켜서 화면 한 장의 관절 위치로 앉은키를 추정한다. 화면은 저장·전송하지 않는다. `app.config.ts` 에서 선언하고 권한 창도 그 버튼을 눌렀을 때 띄운다 |
+
 > Pleos 권한은 Pleos App Market 과 사전 협의·승인된 범위에서만 쓸 수 있다. 쓰지 않는 권한은 넣지 않는다.
 
 JS 에서 쓰는 API (`@/shared/pleos/pleos` 의 `pleos()` 로만 접근):
@@ -89,14 +91,26 @@ JS 에서 쓰는 API (`@/shared/pleos/pleos` 의 `pleos()` 로만 접근):
 
 ## BodyFit AI 흐름
 
-1. **운전자 등록**: 이름·키·몸무게(+ 선택: 앉은키). 체형 정보는 기기 안에만 저장한다.
+1. **운전자 등록**: 이름·키·몸무게(+ 선택: 앉은키). 체형 정보는 기기 안에만 저장한다. 앉은키는 "카메라로 재기"로 미리 채울 수 있다 (contest 빌드): 서 있는 전신 한 장의 관절 위치와 입력한 키로 추정한 값을 보여 주고, 운전자가 확인·수정한 뒤 저장한다 (`model/bodyfit-body-scan.ts`). 추정값이며 이 값만으로 시트를 움직이지 않는다.
 2. **체형 기반 추천**: 키가 클수록 뒤로, 상체가 길수록 낮게, 체중이 많이 실리면 조금 높게 (`model/bodyfit-recommend.ts`). 차종마다 원시 값 단위가 달라 모든 값은 축 범위 안의 비율(0~1)로 다룬다.
 3. **주차 중 자동 조절** (contest 빌드의 주 버튼): 확인 대화상자 → 축마다 순서대로 이동. 진행 화면이 축별 진행을 보여 주고, 움직이는 동안 누를 수 있는 것은 "멈추기"뿐이다 (`model/bodyfit-auto-adjust.ts`). 에뮬레이터는 시트 위치를 알려 주지 않아 "시연 모드"(모의 위치, 기록에 남지 않음)로 같은 흐름을 보여 준다.
 4. **개인 학습**: 주행을 시작하는 순간(P → D)의 자세, "지금 자세 기억하기", 음성 피드백 조절 결과를 기록하고, 체형 추천과의 차이를 최근 기록에 가중치를 두어 평균 내 다음 추천에 더한다 (`model/bodyfit-learning.ts`).
 5. **음성 피드백**: "페달이 멀어", "등받이 조금 눕혀" → 방향이 분명한 표현을 규칙으로 조절안으로 바꾸고, **운전자가 확인해야** 움직인다. (Pleos LLM SDK 는 제공 종료. 자유로운 문장 이해가 필요하면 Gleo Interface 연동을 검토한다)
 6. **장거리 주행 후 질문**: 1시간 이상 주행 후 주차하거나 목적지에 도착하면 "운전 자세는 편하셨나요?"를 음성으로 묻는다.
 
-지금 범위에서 뺀 것: 카메라 체형 분석(차량 실내 카메라 접근 API 미확인, 몸무게는 카메라로 잴 수 없음), 체중 센서(Pleos SDK 에는 착석 여부만 있음), 스티어링 휠 위치.
+지금 범위에서 뺀 것: 카메라로 키·몸무게 재기(사진에는 길이·무게 단위가 없다), 카메라로 앉은 자세를 보고 시트 자동 조절(확대 계획), 체중 센서(Pleos SDK 에는 착석 여부만 있음), 스티어링 휠 위치.
+
+### 오픈소스·외부 라이브러리 (카메라로 재기)
+
+공모전 안내에 따라 새로 쓴 라이브러리의 출처와 라이선스를 적는다. 모두 `modules/pose-camera/android/build.gradle` 에서 받는다.
+
+| 라이브러리 | 버전 | 쓰는 곳 | 출처 | 라이선스 |
+| --- | --- | --- | --- | --- |
+| CameraX (`androidx.camera:camera-camera2`, `camera-lifecycle`, `camera-view`) | 1.6.2 | 카메라 미리보기, 화면 한 장 읽기 | Google, [Android Jetpack](https://developer.android.com/jetpack/androidx/releases/camera) | Apache License 2.0 |
+| ML Kit Pose Detection (`com.google.mlkit:pose-detection-accurate`) | 18.0.0-beta5 | 기기 안에서 관절 33개 위치 인식 (모델이 APK 에 들어 있다) | Google, [ML Kit](https://developers.google.com/ml-kit/vision/pose-detection) | [ML Kit Terms of Service](https://developers.google.com/ml-kit/terms) (오픈소스가 아닌 무료 SDK. Google APIs 약관을 따른다) |
+
+- 앉은키 추정식의 인체 비율(눈·엉덩이 관절·발목 높이)은 Drillis & Contini (1966) 의 인체 마디 비율표 값을 썼다 (`model/bodyfit-body-scan.ts` 주석).
+- ML Kit 은 사진과 인식 결과를 기기 밖으로 보내지 않지만, 라이브러리가 Google 서버에 접속해 원격 설정을 받고 사용 통계(기기 종류, 앱 버전, 처리 시간 등)를 보낸다. 약관이 밝힌 동작이며 끌 수 없다 (11/13 에뮬레이터 로그로 확인). 운전자 등록 화면의 안내에 이 내용을 적었다.
 
 ## 팀 규칙 (Claude Code 스킬)
 
@@ -129,6 +143,14 @@ modules/pleos-connect/        Pleos Connect SDK 로컬 Expo 모듈
 │   ├── NaviEvents.kt         목적지 도착 이벤트, 남은 거리·시간 읽기
 │   └── PleosErrors.kt        JS 에러 코드
 └── src/                      JS 계약 (PleosConnect.types.ts, PleosConnectModule.ts)
+modules/pose-camera/          Android 표준 카메라 + 기기 안 자세 인식 로컬 Expo 모듈 (Pleos SDK 아님)
+├── android/build.gradle      CameraX · ML Kit Pose Detection 의존성
+├── android/src/main/AndroidManifest.xml   카메라를 필수 하드웨어로 요구하지 않는다는 선언 (CAMERA 권한은 app.config.ts)
+├── android/src/main/java/ai/mobi/posecamera/
+│   ├── PoseCameraModule.kt   카메라 유무·권한 요청, 뷰 등록
+│   ├── PoseCameraView.kt     미리보기 + 화면 한 장의 관절 인식 (프레임은 메모리에서만, 저장·전송 없음)
+│   └── PoseCameraErrors.kt   JS 에러 코드
+└── src/                      JS 계약 (PoseCamera.types.ts, PoseCameraModule.ts, PoseCameraView.tsx)
 src/
 ├── app/                      Expo Router 라우트 (조립만)
 │   ├── _layout.tsx           Providers + Stack
@@ -141,6 +163,7 @@ src/
 │   └── ui/                   화면(*-screen.tsx: 운전자 목록·등록·맞춤 자세·가이드 조절·주행 후 피드백), 자동 조절 진행, 운전석 그림·축 막대, 음성 피드백, 주행 감시
 └── shared/
     ├── pleos/                차량 SDK 접근 창구 (pleos.ts, pleos.types.ts, use-gear, use-ux-restrictions, use-pleos-event)
+    ├── pose-camera/          카메라·자세 인식 접근 창구 (pose-camera.ts, pose-camera.types.ts, pose-camera-view.tsx)
     ├── storage/              기기 저장 값 암호화 (encrypted-storage.ts)
     ├── config/               빌드 종류별 기능 (app-variant.ts: contest/market)
     └── ui/                   디자인 토큰(theme.ts, 주간·야간 색 세트), 색을 읽는 훅(use-theme.ts)과 공용 컴포넌트(Screen, Columns, Card, InfoRow, IconBadge, Chip, Button, TextField, StatusView)
@@ -157,7 +180,7 @@ app → core → features → shared → native(modules/*)
 ```
 
 - 서비스끼리 import 금지, features 는 core 중 `@/core/store/hooks` 만.
-- 네이티브 모듈은 `src/shared/pleos/*` 만 import 한다. `model` 과 테스트는 네이티브를 부르지 않는 `pleos.types.ts` 만 쓴다.
+- 네이티브 모듈은 모듈마다 하나인 창구만 import 한다: 차량 SDK(`modules/pleos-connect`)는 `src/shared/pleos/*`, 카메라·자세 인식(`modules/pose-camera`)은 `src/shared/pose-camera/*`. `model` 과 테스트는 네이티브를 부르지 않는 `pleos.types.ts`·`pose-camera.types.ts` 만 쓴다.
 - 색은 `src/shared/ui/theme.ts` 토큰만 (임의 색상은 ESLint 에러). 주간·야간 두 세트라 `StyleSheet.create` 대신 `themedStyles((colors) => ({...}))` 로 스타일을 만들고 컴포넌트에서 `const styles = useStyles()` 로 읽는다 (`src/shared/ui/use-theme.ts`).
 
 ## 상태 책임
@@ -176,6 +199,7 @@ app → core → features → shared → native(modules/*)
 - 차량을 움직이는 동작은 **기어 P 에서만**, 운전자 확인 후에만, 끝나면 **항상 STOP**. 기어를 알 수 없으면 주차가 아닌 것으로 본다.
 - 음성 인식 결과는 신뢰하지 않는 입력이다. 조절안으로만 만들고 운전자 확인 후에만 적용한다.
 - 체형·자세 기록은 기기 안에만 **AES-GCM 으로 암호화**해 저장한다 (`src/shared/storage/encrypted-storage.ts`, 키는 `expo-secure-store` 로 Android Keystore 가 보호). 운전자가 지울 수 있다.
+- 카메라(`modules/pose-camera`)는 운전자가 "카메라로 재기"를 눌렀을 때만, 주차 중에만 켠다. 프레임은 메모리에서 한 장만 분석하고 버린다: 파일로 쓰지 않고, 앱 코드로 전송하지 않고, JS 로도 넘기지 않는다 (JS 가 받는 것은 관절 좌표뿐이고 zod 로 검증한다). 추정값은 입력 칸을 미리 채우기만 하고 시트를 움직이지 않는다.
 - 운전자 등록 화면에서 수집 항목·목적·보관·거부 권리를 알리고 **"동의하고 등록하기"** 버튼으로만 필수 동의를 받는다. 음성 기능은 별도 선택 동의(음성은 Pleos 서버에서 처리될 수 있음)이며, 동의한 운전자에게만 마이크를 연다.
 - `EXPO_PUBLIC_*` 변수와 앱 설정 값은 APK 에 들어간다. 비밀 값을 넣지 않는다.
 

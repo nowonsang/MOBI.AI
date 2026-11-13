@@ -7,7 +7,8 @@ import globals from "globals";
 // 아키텍처 계층 강제. 의존 방향: app → core → features → shared → (native 모듈)
 // - 같은 서비스(features/<서비스>) 내부 import는 허용, 다른 서비스 import는 금지
 // - features는 core 중 store/hooks.ts(타입 지정 훅)만 사용 가능
-// - 네이티브 모듈(modules/*)은 shared 만 import 한다 (차량 SDK 접근 창구를 shared/pleos 하나로 모은다)
+// - 네이티브 모듈(modules/*)은 shared 만 import 한다. 창구는 모듈마다 하나다:
+//   차량 SDK(pleos-connect) → shared/pleos, 카메라·자세 인식(pose-camera) → shared/pose-camera
 // - src 아래에서 계층에 속하지 않는 파일은 금지 (예: src/utils/*)
 const architecture = {
   files: ["src/**/*.{ts,tsx}"],
@@ -89,10 +90,13 @@ const restrictedImports = [
   },
 ];
 
+// 네이티브 모듈을 직접 import 할 수 있는 창구 폴더 (모듈마다 하나).
+const NATIVE_GATEWAYS = ["src/shared/pleos/**", "src/shared/pose-camera/**"];
+
 const codeRules = [
   {
     files: ["src/**/*.{ts,tsx}"],
-    ignores: ["src/shared/pleos/**"],
+    ignores: NATIVE_GATEWAYS,
     rules: {
       "no-restricted-imports": [
         "error",
@@ -102,7 +106,7 @@ const codeRules = [
             {
               group: ["@modules/*", "**/modules/*"],
               message:
-                "차량 SDK(Pleos) 네이티브 모듈은 @/shared/pleos/* 를 통해서만 사용합니다.",
+                "네이티브 모듈은 창구를 통해서만 사용합니다: 차량 SDK(Pleos)는 @/shared/pleos/*, 카메라·자세 인식은 @/shared/pose-camera/*.",
             },
           ],
         },
@@ -110,7 +114,7 @@ const codeRules = [
     },
   },
   {
-    files: ["src/shared/pleos/**/*.{ts,tsx}"],
+    files: NATIVE_GATEWAYS.map((folder) => `${folder}/*.{ts,tsx}`),
     rules: {
       "no-restricted-imports": ["error", { patterns: restrictedImports }],
     },

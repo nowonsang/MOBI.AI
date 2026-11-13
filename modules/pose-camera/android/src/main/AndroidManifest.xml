@@ -1,0 +1,10 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!--
+    CAMERA 권한은 app.config.ts 의 android.permissions 에서 선언한다 (market 빌드에서는 뺀다).
+    카메라가 없는 차량·에뮬레이터에도 설치되어야 하므로 카메라를 필수 하드웨어로 요구하지 않는다.
+    (CAMERA 권한만 선언하면 android.hardware.camera 가 필수로 간주된다.)
+  -->
+  <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+  <uses-feature android:name="android.hardware.camera" android:required="false" />
+  <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+</manifest>

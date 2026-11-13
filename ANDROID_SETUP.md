@@ -94,6 +94,12 @@ export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator
 6. 기어·착석 등 차량 상태는 Virtual Console 로 바꾼다: `adb forward tcp:8088 tcp:8088` → http://127.0.0.1:8088/
 7. 음성 인식(STT)을 시험하려면 마이크 입력을 켠다: 에뮬레이터 패널 **⋯ (Extended Controls)** → **Microphone** → 호스트 오디오 입력 허용 ("Virtual microphone uses host audio input"). 끄면 음성이 들리지 않아 인식 시간 초과로 끝난다.
 
+#### 카메라 ("카메라로 재기" 확인용)
+
+AVD 설정을 바꿀 필요가 없다. Pleos Connect 이미지에는 모의 카메라가 하나 들어 있어(`adb shell dumpsys media.camera` 의 `ICameraProvider/external/0`, 운전석에 앉은 사람의 고정 사진), 기본 설정(`hw.camera.front = none`) 그대로 앱이 카메라 권한을 받고 미리보기·자세 인식을 실행할 수 있다 (2026-11-13 확인). 그 사진은 앉은 자세라 앱은 "허리 아래가 보이지 않아요"로 끝난다. 값이 나오는 장면은 카메라 화면의 "샘플 자세로 시연"으로 본다.
+
+호스트 웹캠을 연결하는 설정(`~/.android/avd/<AVD>.avd/config.ini` 의 `hw.camera.front = webcam0`)은 쓰지 않는다. 2026-11-13 에 이 설정으로 부팅해 봤는데 카메라 장치는 하나 더 생기지만 화면이 오지 않았고(에뮬레이터 로그 `Unable to obtain first video frame`), 앱이 그 카메라를 닫을 때 에뮬레이터의 카메라 HAL 이 죽으면서 Car service 와 앱이 함께 내려갔다. 확인 뒤 설정은 `none` 으로 되돌렸다 (지금 AVD 는 처음 만든 그대로다).
+
 #### 화면 크기·방향 확인 (Pleos 폼 팩터 테스트)
 
 Pleos 앱 테스트 가이드는 디스플레이 종류(예: 12.9인치 세로, 14.6인치 가로)와 방향을 바꿔 가며 화면을 확인하라고 한다. 에뮬레이터의 **FormFactorConsole** 앱에서 디스플레이와 방향을 바꾸고 아래를 본다.

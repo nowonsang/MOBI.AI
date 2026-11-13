@@ -22,6 +22,8 @@ type ScreenProps = {
    * (운전자 목록 → 맞춤 자세에서 버튼이 사라졌다).
    */
   back?: boolean;
+  /** 뒤로 가기 버튼이 할 일을 바꾼다. 화면 안에서 연 한 단계(예: 카메라로 재기)를 닫고 원래 내용으로 돌아갈 때 쓴다 */
+  onBack?: () => void;
   /** 제목 오른쪽에 두는 짧은 상태 표시 (예: 기어 상태). 좁은 창에서는 제목 아래로 내려간다 */
   aside?: ReactNode;
   /**
@@ -40,6 +42,7 @@ export function Screen({
   width = "content",
   footer,
   back = true,
+  onBack,
   aside,
   pinned,
   children,
@@ -50,8 +53,10 @@ export function Screen({
   const styles = useStyles();
   const maxWidth = width === "narrow" ? layout.narrow : layout.content;
   const gutter = compact ? layout.gutterCompact : layout.gutter;
-  const goBack = () =>
-    router.canGoBack() ? router.back() : router.replace("/");
+  const goBack = () => {
+    if (onBack) return onBack();
+    return router.canGoBack() ? router.back() : router.replace("/");
+  };
 
   const header = (
     <View style={styles.headerRow}>

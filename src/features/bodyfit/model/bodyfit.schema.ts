@@ -13,6 +13,10 @@ import {
 } from "./bodyfit-comfort";
 import { DEFAULT_DRIVE_CONTEXT, DRIVE_CONTEXTS } from "./bodyfit-drive-context";
 
+/** 키·앉은키 입력 범위 (cm). 카메라 추정(bodyfit-body-scan.ts)도 같은 범위로 자른다. */
+export const HEIGHT_CM_RANGE = { min: 120, max: 220 } as const;
+export const SITTING_HEIGHT_CM_RANGE = { min: 60, max: 120 } as const;
+
 export const bodyProfileInputSchema = z.object({
   name: z
     .string()
@@ -21,16 +25,16 @@ export const bodyProfileInputSchema = z.object({
     .max(20, "이름은 20자 이내로 입력해 주세요"),
   heightCm: z
     .number({ error: "키를 숫자로 입력해 주세요" })
-    .min(120, "키는 120~220cm 사이로 입력해 주세요")
-    .max(220, "키는 120~220cm 사이로 입력해 주세요"),
+    .min(HEIGHT_CM_RANGE.min, "키는 120~220cm 사이로 입력해 주세요")
+    .max(HEIGHT_CM_RANGE.max, "키는 120~220cm 사이로 입력해 주세요"),
   weightKg: z
     .number({ error: "몸무게를 숫자로 입력해 주세요" })
     .min(30, "몸무게는 30~200kg 사이로 입력해 주세요")
     .max(200, "몸무게는 30~200kg 사이로 입력해 주세요"),
   sittingHeightCm: z
     .number()
-    .min(60, "앉은키는 60~120cm 사이로 입력해 주세요")
-    .max(120, "앉은키는 60~120cm 사이로 입력해 주세요")
+    .min(SITTING_HEIGHT_CM_RANGE.min, "앉은키는 60~120cm 사이로 입력해 주세요")
+    .max(SITTING_HEIGHT_CM_RANGE.max, "앉은키는 60~120cm 사이로 입력해 주세요")
     .nullable(),
   // 선택 동의. 거부해도 화면만으로 모든 기능을 쓸 수 있다.
   voiceConsent: z.boolean(),
