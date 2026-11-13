@@ -125,7 +125,7 @@ description: MOBI.AI 차량 앱 디자인 규칙(현대자동차 공모전, Pleo
 | `surfaceMuted` | #F4F5F7 | 화면 바탕, 스켈레톤, 눌림 | — |
 | `fill` | #EEF0F3 | 고르지 않은 칩, 개수 표시, 막대 바탕 | — |
 | `surfaceDark` | #1C1B1B | 다크 섹션 | — |
-| `line` / `lineStrong` | #E5E7EB / #D1D5DB | 카드 안 구분선 / 보조 버튼·입력칸 테두리 | — |
+| `line` / `lineStrong` | #E5E7EB / #D1D5DB | 카드 안 구분선 / 입력칸·뒤로 가기 테두리 | — |
 | `scrim` | 60% 어두운 막 | 확인 창 뒤 화면 가리기 | — |
 | `danger` / `success` / `warning` | #D32F2F / #15803D / #B26A00 | 상태 표시 | 장식 |
 
@@ -158,7 +158,7 @@ description: MOBI.AI 차량 앱 디자인 규칙(현대자동차 공모전, Pleo
 ## 7. 컴포넌트 규칙
 
 - **주 CTA**: `<Button label="..." />` (primary). 동사형 문구("맞추기", "등록하기"). 처리 중에는 `loading` 으로 중복 입력을 막는다.
-- **보조 버튼**: `variant="secondary"` (흰 면 + 옅은 테두리). 주 CTA보다 눈에 띄면 안 된다.
+- **보조 버튼**: `variant="secondary"` (파랑 `secondaryButton` 면 + `ink` 글자, 테두리 없음. 2026-11-14 흰 면 + 테두리에서 바꿈). 주 CTA보다 눈에 띄면 안 된다.
 - **차량을 움직이는 버튼**: 누르면 `ConfirmDialog` 로 확인 → 확인 후 실행. 실행 중에는 같은 자리에 "멈추기". 시스템 `Alert` 는 글자·버튼이 차량 기준보다 작아 쓰지 않는다.
 - **입력**: `TextField` (라벨은 위, placeholder 로 라벨 대신 금지). 오류는 입력칸 아래에 이유와 고치는 방법을 함께. 숫자는 `keyboardType="decimal-pad"`.
 - **목록**: 행 높이 최소 `sizes.touchTarget` + 여백. 섹션당 7개 이하.

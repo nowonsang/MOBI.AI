@@ -68,12 +68,9 @@ const useStyles = themedStyles((colors) => ({
   pressed: { transform: [{ scale: 0.95 }] },
   primary: { backgroundColor: colors.primary },
   primaryPressed: { backgroundColor: colors.primaryStrong },
-  secondary: {
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    // 마이현대 앱처럼 옅은 테두리를 쓴다. 버튼임은 글자와 흰 면으로 알린다.
-    borderColor: colors.lineStrong,
-  },
-  secondaryPressed: { backgroundColor: colors.surfaceMuted },
+  // 테두리 없이 파랑 면으로 채운다. 흰 면 + 테두리는 옅은 회색 바탕(하단 버튼 줄) 위에서 낡아 보였고,
+  // 회색 면(fill)·primaryTint 는 바탕과 거의 같아 버튼으로 보이지 않았다. 글자는 ink (primary 글자는 대비가 모자란다).
+  secondary: { backgroundColor: colors.secondaryButton },
+  secondaryPressed: { backgroundColor: colors.primaryTint },
   inactive: { opacity: 0.4 },
 }));

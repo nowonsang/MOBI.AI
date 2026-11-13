@@ -11,6 +11,7 @@ const dayColors = {
   primary: "#1570EF", // 밝은 파랑: 주 CTA·선택 상태·요약 카드 (흰 글자 대비 4.6:1)
   primaryStrong: "#0F5BD0", // 주 CTA 눌림
   primaryTint: "#E8F1FE", // 옅은 파랑: 아바타·진행 중인 행 배경
+  secondaryButton: "#D3E3FD", // 보조 버튼 면. primaryTint 는 화면 바탕(surfaceMuted)과 거의 같아 버튼이 보이지 않았다
   accent: "#0F5BD0", // 링크·보조 강조·포커스
   highlight: "#00AAD2", // Sky Blue: 장식 전용, 글자색 금지
   onPrimary: "#FFFFFF", // primary·success·warning 면 위 글자 (AppText tone="inverse")
@@ -27,7 +28,7 @@ const dayColors = {
   fill: "#EEF0F3", // 고르지 않은 칩·개수 표시
   surfaceDark: "#1C1B1B",
   line: "#E5E7EB", // 카드 안 구분선
-  lineStrong: "#D1D5DB", // 보조 버튼·입력칸 테두리
+  lineStrong: "#D1D5DB", // 입력칸·뒤로 가기 테두리
   scrim: "rgba(17, 24, 39, 0.6)", // 확인 창 뒤 화면을 가리는 막
 
   /* 상태 */
@@ -46,6 +47,7 @@ const nightColors: Colors = {
   primary: "#5C9DFF",
   primaryStrong: "#4688EE",
   primaryTint: "#172A46",
+  secondaryButton: "#21406E",
   accent: "#8AB8FF",
   highlight: "#00AAD2",
   onPrimary: "#0B1220",
