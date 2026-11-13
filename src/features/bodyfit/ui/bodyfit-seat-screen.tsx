@@ -24,7 +24,7 @@ import { InfoRow } from "@/shared/ui/info-row";
 import { Screen } from "@/shared/ui/screen";
 import { SegmentedTabs } from "@/shared/ui/segmented-tabs";
 import { StatusView } from "@/shared/ui/status-view";
-import { radius, shadows, sizes, spacing } from "@/shared/ui/theme";
+import { radius, sizes, spacing } from "@/shared/ui/theme";
 import { themedStyles } from "@/shared/ui/use-theme";
 
 import { useAutoAdjust } from "../api/bodyfit.auto-adjust";
@@ -306,14 +306,32 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
     Math.max(SEAT_IMAGE_HEIGHT, stageHeight - spacing.md * 2),
   );
 
-  // 기어 상태는 제목 오른쪽에 크게 둔다. 시트를 움직일 수 있는지가 이 화면에서 가장 먼저 봐야 할 정보다.
-  // 상태는 점 색과 글자로 함께 알린다.
-  const statusPill = (
-    <View style={styles.status} accessibilityLiveRegion="polite">
-      <View style={[styles.dot, status.dot]} />
-      <AppText variant="secondary" style={styles.statusText}>
-        {status.label}
-      </AppText>
+  // 기어 상태는 제목 오른쪽에 둔다. 시트를 움직일 수 있는지가 이 화면에서 가장 먼저 봐야 할 정보다.
+  // 상태는 점 색과 글자로 함께 알린다. 누를 수 없는 표시라 면·그림자 없이 글자만 둔다 (버튼으로 보이지 않게).
+  // 주행 자세 관찰(카메라)을 켜 둔 운전자는 카메라가 켜지는 기능이 있다는 것을 같은 줄에 늘 보이게 둔다.
+  const statusLine = (
+    <View
+      style={styles.status}
+      accessible
+      accessibilityLabel={
+        observing ? `${status.label}, 자세 관찰 중` : status.label
+      }
+      accessibilityLiveRegion="polite"
+    >
+      <View style={styles.statusItem}>
+        <View style={[styles.dot, status.dot]} />
+        <AppText variant="secondary" style={styles.statusText}>
+          {status.label}
+        </AppText>
+      </View>
+      {observing ? (
+        <View style={styles.statusItem}>
+          <View style={[styles.dot, styles.dotObserving]} />
+          <AppText variant="secondary" style={styles.statusText}>
+            자세 관찰 중
+          </AppText>
+        </View>
+      ) : null}
     </View>
   );
 
@@ -339,24 +357,7 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
               accessibilityHint="운전자 목록으로 가요"
             />
           ) : null}
-          {observing ? (
-            // 주행 자세 관찰(카메라)을 켜 둔 운전자: 카메라가 켜지는 기능이 있다는 것을 늘 보이게 둔다. 누르면 켜고 끄는 화면으로.
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="자세 관찰 중. 눌러서 주행 자세 관찰 화면을 열어요"
-              onPress={auto.seatMoving ? undefined : openPosture}
-              style={({ pressed }) => [
-                styles.status,
-                pressed && styles.statusPressed,
-              ]}
-            >
-              <View style={[styles.dot, styles.dotObserving]} />
-              <AppText variant="secondary" style={styles.statusText}>
-                자세 관찰 중
-              </AppText>
-            </Pressable>
-          ) : null}
-          {statusPill}
+          {statusLine}
         </View>
       }
       // 제목·탭·왼쪽 요약은 자리를 지키고 탭 내용만 스크롤한다 (목록을 내려도 다른 탭으로 갈 수 있게).
@@ -671,20 +672,18 @@ const useStyles = themedStyles((colors) => ({
   },
   status: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
-    gap: spacing.sm,
+    // 줄바꿈이 있는 줄은 기본이 위쪽 정렬이라 옆 버튼과 높이 가운데를 맞춘다
+    alignContent: "center",
+    columnGap: spacing.md,
     minHeight: sizes.touchTarget,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surface,
-    ...shadows.card,
   },
+  statusItem: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   statusText: { fontWeight: "700" },
   dot: { width: 16, height: 16, borderRadius: radius.pill },
   dotParked: { backgroundColor: colors.success },
   dotObserving: { backgroundColor: colors.primary },
-  // Pleos 인터랙션 가이드: 눌린 요소는 배경색을 바꾼다.
-  statusPressed: { backgroundColor: colors.surfaceMuted },
   dotBlocked: { backgroundColor: colors.warning },
   dotIdle: { backgroundColor: colors.inkDisabled },
   // 운전석 그림을 올려 두는 옅은 무대
