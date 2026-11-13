@@ -1,13 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Fragment, useState } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 
 import { useAppDispatch, useAppSelector } from "@/core/store/hooks";
 import { canUseVoice } from "@/shared/config/app-variant";
 import { isPleosAvailable } from "@/shared/pleos/pleos";
 import { useGear } from "@/shared/pleos/use-gear";
+import { AppText } from "@/shared/ui/app-text";
 import { Card } from "@/shared/ui/card";
+import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { Divider } from "@/shared/ui/divider";
 import { IconBadge } from "@/shared/ui/icon-badge";
 import { InfoRow } from "@/shared/ui/info-row";
@@ -16,6 +18,7 @@ import { StatusView } from "@/shared/ui/status-view";
 import { radius, sizes, spacing } from "@/shared/ui/theme";
 import { themedStyles } from "@/shared/ui/use-theme";
 
+import { useDeleteBodyProfile } from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
 import { transferReadMode } from "../api/bodyfit.transfer";
 import { AUTO_START_CONFIDENCE, guessDriver } from "../model/bodyfit-identify";
@@ -43,6 +46,19 @@ export function BodyfitDriverListScreen() {
   const goToImport = () => router.push("/bodyfit/import");
   const openDriver = (profileId: string) =>
     router.push({ pathname: "/bodyfit/[profileId]", params: { profileId } });
+  // 운전자 지우기: 추가하기와 같은 곳에서 한다. "편집"을 눌러야 지우기 버튼이 보이고, 확인 창을 거친 뒤에만 지운다.
+  const remove = useDeleteBodyProfile();
+  const [editing, setEditing] = useState(false);
+  const [removing, setRemoving] = useState<{ id: string; name: string } | null>(
+    null,
+  );
+  const deleteDriver = () => {
+    if (!removing) return;
+    remove.mutate(removing.id);
+    setRemoving(null);
+    // 마지막 운전자를 지우면 빈 화면이 되니 편집도 끝낸다.
+    if ((profiles.data?.length ?? 0) <= 1) setEditing(false);
+  };
 
   // 앉은 사람을 기록으로 추측한다 (카메라 없이). 이번 탑승에서 아직 고르지 않았을 때만 보여 준다.
   const guess =
@@ -98,34 +114,81 @@ export function BodyfitDriverListScreen() {
       ) : null}
     </View>
   ) : (
-    <Card title="운전자" count={`${profiles.data.length}명`}>
+    <Card
+      title="운전자"
+      count={`${profiles.data.length}명`}
+      action={
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={editing ? "편집 끝내기" : "운전자 편집"}
+          onPress={() => setEditing((on) => !on)}
+          style={({ pressed }) => [
+            styles.textButton,
+            pressed && styles.pressed,
+          ]}
+        >
+          <AppText variant="secondary" tone="accent" style={styles.strong}>
+            {editing ? "완료" : "편집"}
+          </AppText>
+        </Pressable>
+      }
+    >
       <View>
         {profiles.data.map((profile) => (
           <Fragment key={profile.id}>
-            <View style={styles.row}>
-              <InfoRow
-                icon={
-                  <IconBadge glyph={profile.name.slice(0, 1)} tone="tint" />
-                }
-                value={profile.name}
-                detail={`${profile.heightCm}cm · ${profile.weightKg}kg`}
-                accessibilityLabel={`${profile.name}, 키 ${profile.heightCm}센티미터`}
-                onPress={() => openDriver(profile.id)}
-              />
+            <View style={[styles.row, editing && styles.editRow]}>
+              <View style={styles.rowMain}>
+                <InfoRow
+                  icon={
+                    <IconBadge glyph={profile.name.slice(0, 1)} tone="tint" />
+                  }
+                  value={profile.name}
+                  detail={`${profile.heightCm}cm · ${profile.weightKg}kg`}
+                  accessibilityLabel={`${profile.name}, 키 ${profile.heightCm}센티미터`}
+                  // 편집 중에는 행을 눌러도 화면을 옮기지 않는다 (지우기 버튼과 헷갈리지 않게).
+                  onPress={editing ? undefined : () => openDriver(profile.id)}
+                />
+              </View>
+              {editing ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`${profile.name} 지우기`}
+                  accessibilityHint="체형 정보와 자세 기록을 모두 지워요"
+                  disabled={remove.isPending}
+                  onPress={() =>
+                    setRemoving({ id: profile.id, name: profile.name })
+                  }
+                  style={({ pressed }) => [
+                    styles.textButton,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <AppText
+                    variant="secondary"
+                    tone="danger"
+                    style={styles.strong}
+                  >
+                    지우기
+                  </AppText>
+                </Pressable>
+              ) : null}
             </View>
             <Divider />
           </Fragment>
         ))}
-        {/* 운전자 행과 같은 모양으로 목록 끝에 둔다. 고르는 것이 이 화면의 주 행동이라 주 CTA 로 키우지 않는다. */}
-        <View style={styles.row}>
-          <InfoRow
-            icon={<IconBadge glyph="+" />}
-            value="운전자 추가하기"
-            valueTone="accent"
-            onPress={goToNew}
-          />
-        </View>
-        {canImport ? (
+        {/* 운전자 행과 같은 모양으로 목록 끝에 둔다. 고르는 것이 이 화면의 주 행동이라 주 CTA 로 키우지 않는다.
+            편집 중에는 지우기만 하도록 숨긴다. */}
+        {editing ? null : (
+          <View style={styles.row}>
+            <InfoRow
+              icon={<IconBadge glyph="+" />}
+              value="운전자 추가하기"
+              valueTone="accent"
+              onPress={goToNew}
+            />
+          </View>
+        )}
+        {canImport && !editing ? (
           <>
             <Divider />
             <View style={styles.row}>
@@ -145,6 +208,17 @@ export function BodyfitDriverListScreen() {
   // 첫 화면은 운전자를 고르는 한 가지 일만 한다. 꾸밈용 그림 칸 없이 목록을 가운데 한 단으로 둔다.
   return (
     <Screen title="누가 운전하나요?" back={false} width="narrow">
+      <ConfirmDialog
+        visible={removing !== null}
+        title={`${removing?.name ?? ""}님의 정보를 지울까요?`}
+        description="체형 정보와 자세 기록이 모두 지워지고 되돌릴 수 없어요"
+        confirmLabel="지우기"
+        onConfirm={deleteDriver}
+        onCancel={() => setRemoving(null)}
+      />
+      {remove.isError ? (
+        <StatusView {...describeBodyfitError(remove.error)} />
+      ) : null}
       {guess && guessed ? (
         <View style={styles.stack}>
           <BodyfitDriverGuess
@@ -179,6 +253,19 @@ const useStyles = themedStyles((colors) => ({
   stack: { gap: spacing.lg },
   // 행 위아래 여백으로 터치 대상 사이 24dp 를 확보한다 (구분선 포함).
   row: { paddingVertical: spacing.xs },
+  editRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  rowMain: { flex: 1 },
+  strong: { fontWeight: "700" },
+  // 카드 제목 옆 "편집"·행 끝 "지우기" 같은 글자 버튼. 터치 대상 76dp.
+  textButton: {
+    minHeight: sizes.touchTarget,
+    minWidth: sizes.touchTarget,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.control,
+  },
+  pressed: { backgroundColor: colors.surfaceMuted },
   skeletonRow: {
     minHeight: sizes.touchTarget + spacing.sm,
     flexDirection: "row",

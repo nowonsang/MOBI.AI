@@ -16,7 +16,7 @@ import { useUxRestrictions } from "@/shared/pleos/use-ux-restrictions";
 import { AppText } from "@/shared/ui/app-text";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
-import { ChipGroup, ToggleChip } from "@/shared/ui/chip";
+import { ChipGroup } from "@/shared/ui/chip";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { Columns } from "@/shared/ui/columns";
 import { Divider } from "@/shared/ui/divider";
@@ -28,7 +28,7 @@ import { radius, sizes, spacing } from "@/shared/ui/theme";
 import { themedStyles } from "@/shared/ui/use-theme";
 
 import { useAutoAdjust } from "../api/bodyfit.auto-adjust";
-import { useDeleteBodyProfile, useStopSeat } from "../api/bodyfit.mutations";
+import { useStopSeat } from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
 import { canTransferProfile } from "../api/bodyfit.transfer";
 import { speakQuietly } from "../api/bodyfit.voice";
@@ -41,7 +41,6 @@ import {
   describeDriveSuggestion,
   suggestDriveContext,
 } from "../model/bodyfit-drive-suggestion";
-import { guideSeat } from "../model/bodyfit-guide";
 import {
   explainOffsets,
   learningBasis,
@@ -64,8 +63,7 @@ import { BodyfitComfortCard } from "./bodyfit-comfort-card";
 import { BodyfitAutoAdjustProgress } from "./bodyfit-auto-adjust-progress";
 import { describeBodyfitError } from "./bodyfit-error-copy";
 import { BodyfitPostureLink } from "./bodyfit-posture-link";
-import { BodyfitSeatAxes, BodyfitSeatAxesLegend } from "./bodyfit-seat-axes";
-import { BodyfitSeatImage } from "./bodyfit-seat-image";
+import { BodyfitSeatStage } from "./bodyfit-seat-stage";
 import { BodyfitVoiceFeedback } from "./bodyfit-voice-feedback";
 import { BodyfitMissingDriver } from "./bodyfit-missing-driver";
 import {
@@ -84,12 +82,7 @@ const SOURCE_COPY: Record<SeatAdjustmentSource, string> = {
 
 const RECENT_RECORDS = 3;
 
-// 왼쪽 요약 카드의 그림은 작게 둔다. 자세 값은 오른쪽 축 목록이 전한다.
-const SEAT_IMAGE_HEIGHT = 180;
-// 카드가 높아져도 그림이 지나치게 커지지 않게 한다.
-const SEAT_IMAGE_MAX_HEIGHT = 360;
-
-// 오른쪽 단은 한 번에 한 갈래만 보여 준다. 축·온도·기록을 한 줄로 쌓으면 스크롤이 너무 길어진다.
+// 탭 카드는 한 번에 한 갈래만 보여 준다. 자세·온도·기록을 한 줄로 쌓으면 스크롤이 너무 길어진다.
 type HubTab = "posture" | "comfort" | "records";
 
 const CONTEXT_OPTIONS = DRIVE_CONTEXTS.map((value) => ({
@@ -103,7 +96,10 @@ function describeContextBasis(
   basis: LearningBasis,
 ): string {
   if (context === DEFAULT_DRIVE_CONTEXT) {
-    return "상황마다 그때 앉던 자세로 추천해요";
+    // 반영한 기록 수는 이 줄 한 곳에서만 알린다.
+    return basis.usedCount > 0
+      ? `기록 ${basis.usedCount}건 반영 · 상황마다 그때 앉던 자세로 추천해요`
+      : "첫 추천 · 상황마다 그때 앉던 자세로 추천해요";
   }
   const label = DRIVE_CONTEXT_LABEL[context];
   if (basis.kind === "all") {
@@ -148,11 +144,9 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
       context === DEFAULT_DRIVE_CONTEXT,
   });
   const stop = useStopSeat();
-  const remove = useDeleteBodyProfile();
-  const [confirming, setConfirming] = useState<"move" | "delete" | null>(null);
+  const [confirming, setConfirming] = useState<"move" | null>(null);
   // 어느 탭을 보고 있는지는 이 화면 안에서만 쓰는 상태다 (화면을 다시 열면 자세부터).
   const [tab, setTab] = useState<HubTab>("posture");
-  // 왼쪽 카드의 그림 무대 높이. 무대가 남는 높이를 채우면 그림도 그만큼 키운다.
 
   // 이 화면을 연 운전자를 이번 주행의 운전자로 본다 (주행 시작 자세·주행 후 질문에 쓴다).
   useEffect(() => {
@@ -183,7 +177,6 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   const parked = gear === "park" && !restrictions.noSetup;
   // C-5: 고른 상황의 기록이 충분하면 그 기록만, 아니면 전체 기록을 반영한다.
   const basis = learningBasis(adjustments.data, context);
-  const learnedCount = basis.usedCount;
   // C-4: 기록이 추천을 눈에 띄게 바꿨으면 무엇 때문인지 알려 준다.
   const reason = explainOffsets(adjustments.data, context);
   const recentRecords = [...adjustments.data]
@@ -195,19 +188,6 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
 
   // 시연 모드로 움직인 뒤에는 모의 위치를 "지금" 자세로 보여 준다 (기록·음성 조절은 차량 값만 쓴다).
   const shown = auto.demoSeat ?? current;
-
-  // B-3 변경 미리보기를 한 줄로: 지금 자세에서 몇 곳을 움직여야 하는지.
-  const guide = shown ? guideSeat(shown, recommended) : null;
-  const toAdjust = guide
-    ? guide.axes.filter((axis) => axis.status !== "ok").length
-    : 0;
-  const summary = !guide
-    ? "체형으로 계산했어요"
-    : guide.axes.length === 0
-      ? "시트 위치를 읽을 수 없어요"
-      : toAdjust === 0
-        ? "지금 자세가 딱 좋아요"
-        : `${guide.axes.length}곳 중 ${toAdjust}곳 조절`;
 
   // 운전자가 확인 창에서 "맞추기"를 누른 뒤에만 움직인다 (secure-coding 1장).
   const applyRecommendation = () => {
@@ -242,13 +222,6 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
       pathname: "/bodyfit/[profileId]/export",
       params: { profileId: driver.id },
     });
-
-  const deleteDriver = () => {
-    setConfirming(null);
-    remove.mutate(driver.id, {
-      onSuccess: () => router.dismissTo("/bodyfit"),
-    });
-  };
 
   const error = seat.error;
   // 주행 자세 관찰을 켠 운전자는 주차 중 카메라가 켜져 있고, 주행 중에도 관찰한다 (C-7).
@@ -312,29 +285,35 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
       aside={statusLine}
       // 제목·탭·왼쪽 요약은 자리를 지키고 탭 내용만 스크롤한다 (목록을 내려도 다른 탭으로 갈 수 있게).
       pinned
+      // 하단 버튼은 시트를 맞추는 자세 탭에만 둔다 (온도 탭은 카드 안 버튼, 기록 탭은 없음).
+      // 시트가 움직이는 동안에는 어느 탭에서든 멈추기를 보여 준다.
       footer={
-        <>
-          <Button
-            label="안내 받으며 맞추기"
-            // 자동 조절을 쓰는 빌드(contest)에서는 보조 버튼으로 내린다.
-            variant={canControlSeat ? "secondary" : "primary"}
-            onPress={openGuide}
-            disabled={!vehicleConnected || auto.seatMoving}
-            accessibilityHint="시트 버튼을 움직이면 화면에 축별로 보여 줘요"
-          />
-          {!canControlSeat ? null : auto.seatMoving ? (
-            // 음성 조절처럼 자동 조절 밖에서 시작한 이동도 여기서 멈출 수 있다.
-            <Button label="멈추기" onPress={() => stop.mutate()} />
-          ) : (
-            // B-4 자동 조절: 시트 제어를 쓰는 빌드(contest)의 주 버튼. 확인 창을 거친 뒤에만 움직인다.
+        tab === "posture" ? (
+          <>
             <Button
-              label="자동으로 맞추기"
-              onPress={() => setConfirming("move")}
-              disabled={!vehicleConnected || !parked}
-              accessibilityHint="기어가 P 일 때만 시트가 움직여요"
+              label="안내 받으며 맞추기"
+              // 자동 조절을 쓰는 빌드(contest)에서는 보조 버튼으로 내린다.
+              variant={canControlSeat ? "secondary" : "primary"}
+              onPress={openGuide}
+              disabled={!vehicleConnected || auto.seatMoving}
+              accessibilityHint="시트 버튼을 움직이면 화면에 축별로 보여 줘요"
             />
-          )}
-        </>
+            {!canControlSeat ? null : auto.seatMoving ? (
+              // 음성 조절처럼 자동 조절 밖에서 시작한 이동도 여기서 멈출 수 있다.
+              <Button label="멈추기" onPress={() => stop.mutate()} />
+            ) : (
+              // B-4 자동 조절: 시트 제어를 쓰는 빌드(contest)의 주 버튼. 확인 창을 거친 뒤에만 움직인다.
+              <Button
+                label="자동으로 맞추기"
+                onPress={() => setConfirming("move")}
+                disabled={!vehicleConnected || !parked}
+                accessibilityHint="기어가 P 일 때만 시트가 움직여요"
+              />
+            )}
+          </>
+        ) : canControlSeat && auto.seatMoving ? (
+          <Button label="멈추기" onPress={() => stop.mutate()} />
+        ) : undefined
       }
     >
       <ConfirmDialog
@@ -345,110 +324,58 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
         onConfirm={applyRecommendation}
         onCancel={() => setConfirming(null)}
       />
-      <ConfirmDialog
-        visible={confirming === "delete"}
-        title={`${driver.name}님의 정보를 지울까요?`}
-        description="체형 정보와 자세 기록이 모두 지워지고 되돌릴 수 없어요"
-        confirmLabel="지우기"
-        onConfirm={deleteDriver}
-        onCancel={() => setConfirming(null)}
-      />
+      {/* 운전 상황은 모든 탭의 추천에 걸리므로 탭 카드 위 한 줄에 둔다. 주행 중에는 고르지 않는다 (S-5). */}
+      {vehicleConnected ? (
+        <View style={styles.context}>
+          {parked ? (
+            <ChipGroup
+              label="운전 상황 고르기"
+              options={CONTEXT_OPTIONS}
+              selected={context}
+              onSelect={(next) => dispatch(driveContextSelected(next))}
+            />
+          ) : null}
+          <AppText
+            variant="caption"
+            tone="tertiary"
+            accessibilityLiveRegion="polite"
+            style={styles.contextText}
+          >
+            {parked
+              ? describeContextBasis(context, basis)
+              : `운전 상황 · ${DRIVE_CONTEXT_LABEL[context]} (주차 중에만 바꿀 수 있어요)`}
+          </AppText>
+          {suggestion ? (
+            // 제안만 한다. 운전자가 눌러야 상황이 바뀐다.
+            <View style={styles.suggestion}>
+              <AppText
+                variant="caption"
+                tone="secondary"
+                accessibilityLiveRegion="polite"
+              >
+                {describeDriveSuggestion(suggestion)}
+              </AppText>
+              <Button
+                label={`${DRIVE_CONTEXT_LABEL[suggestion.context]} 자세로 보기`}
+                variant="secondary"
+                onPress={() =>
+                  dispatch(driveContextSelected(suggestion.context))
+                }
+                accessibilityHint="내비게이션 경로에 맞는 상황으로 추천을 바꿔요"
+              />
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+      {/* 그림 하나가 핵심인 화면이라 2단으로 나누지 않고 탭 카드 한 장을 폭 전체로 쓴다 (ui-design 1장). */}
       <Columns
         pinned
-        // 오른쪽은 탭이 머리에 붙은 카드 한 장. 탭 내용은 상자 대신 구역으로 나눈다.
         rightPanel
-        left={
-          <Card
-            title="내 시트"
-            count={learnedCount > 0 ? `기록 ${learnedCount}건 반영` : "첫 추천"}
-            fill
-          >
-            {vehicleConnected ? (
-              <View style={styles.context}>
-                {/* 상황은 주차(P) 중에만 고른다. 주행 중에는 조작을 요구하지 않는다 (S-5). */}
-                {parked ? (
-                  <ChipGroup
-                    label="운전 상황 고르기"
-                    options={CONTEXT_OPTIONS}
-                    selected={context}
-                    onSelect={(next) => dispatch(driveContextSelected(next))}
-                    layout="grid"
-                  />
-                ) : null}
-                {suggestion ? (
-                  // 제안만 한다. 운전자가 눌러야 상황이 바뀐다.
-                  <View style={styles.suggestion}>
-                    <AppText
-                      variant="caption"
-                      tone="secondary"
-                      accessibilityLiveRegion="polite"
-                    >
-                      {describeDriveSuggestion(suggestion)}
-                    </AppText>
-                    <Button
-                      label={`${DRIVE_CONTEXT_LABEL[suggestion.context]} 자세로 보기`}
-                      variant="secondary"
-                      onPress={() =>
-                        dispatch(driveContextSelected(suggestion.context))
-                      }
-                      accessibilityHint="내비게이션 경로에 맞는 상황으로 추천을 바꿔요"
-                    />
-                  </View>
-                ) : null}
-                <AppText
-                  variant="caption"
-                  tone="tertiary"
-                  accessibilityLiveRegion="polite"
-                >
-                  {parked
-                    ? describeContextBasis(context, basis)
-                    : `운전 상황 · ${DRIVE_CONTEXT_LABEL[context]} (주차 중에만 바꿀 수 있어요)`}
-                </AppText>
-              </View>
-            ) : null}
-            {!vehicleConnected ? (
-              <AppText variant="caption" tone="tertiary" style={styles.center}>
-                Pleos Connect 에뮬레이터나 차량에서 열면 시트를 맞출 수 있어요
-              </AppText>
-            ) : null}
-            {/* 고르는 것을 위에 두고, 그림이 카드의 남는 높이를 채운다 (왼쪽 카드 바닥을 오른쪽 단과 맞춘다).
-                그림은 상자를 채우기만 하고 상자 높이를 늘리지 않는다 (재서 키우면 커지기를 되풀이해 화면이 움직였다). */}
-            <View style={styles.stage}>
-              <View style={styles.stageImage}>
-                <BodyfitSeatImage height="fill" />
-              </View>
-            </View>
-            {auto.canDemo && canControlSeat && vehicleConnected ? (
-              // 자동 조절 시연 모드: 에뮬레이터는 시트 위치가 바뀌지 않아 모의 위치로 흐름을 보여 준다.
-              // 자주 쓰는 것이 아니라 카드 맨 아래 조용한 한 줄로 둔다.
-              <View style={styles.demo}>
-                <AppText
-                  variant="caption"
-                  tone="tertiary"
-                  style={styles.demoText}
-                >
-                  {auto.demo
-                    ? "화면에서만 움직여요. 기록은 남지 않아요"
-                    : "시트는 그대로 두고 화면으로만 보여 줘요"}
-                </AppText>
-                <ToggleChip
-                  label="시연 모드"
-                  checked={auto.demo}
-                  onPress={auto.toggleDemo}
-                />
-              </View>
-            ) : null}
-          </Card>
-        }
         rightHeader={
           <SegmentedTabs
             label="시트 화면 보기"
             options={[
-              {
-                value: "posture",
-                label: "자세",
-                note: toAdjust > 0 ? `${toAdjust}곳` : undefined,
-              },
+              { value: "posture", label: "자세" },
               { value: "comfort", label: "온도·무드등" },
               {
                 value: "records",
@@ -463,23 +390,44 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
           <>
             {tab === "posture" ? (
               <>
-                <Card>
-                  {/* 카드 제목 줄을 얇게: 제목·요약·범례를 한 줄에 둔다 (세 축과 접힌 줄이 한 화면에 들어오게). */}
-                  <View style={styles.axesHeading}>
-                    <View style={styles.axesTitle}>
-                      <AppText variant="bodyStrong" accessibilityRole="header">
-                        축별 추천
-                      </AppText>
-                      <View style={styles.count}>
-                        <AppText variant="caption" tone="tertiary">
-                          {summary}
+                <BodyfitSeatStage
+                  recommended={recommended}
+                  current={shown}
+                  aside={
+                    auto.canDemo && canControlSeat && vehicleConnected ? (
+                      // 자동 조절 시연 모드: 에뮬레이터는 시트 위치가 바뀌지 않아 모의 위치로 흐름을 보여 준다.
+                      // 시연할 때만 쓰므로 그림 아래 줄의 조용한 글자 버튼으로 둔다.
+                      <Pressable
+                        accessibilityRole="switch"
+                        accessibilityState={{ checked: auto.demo }}
+                        accessibilityHint={
+                          auto.demo
+                            ? "화면에서만 움직여요. 기록은 남지 않아요"
+                            : "시트는 그대로 두고 화면으로만 보여 줘요"
+                        }
+                        onPress={auto.toggleDemo}
+                        style={({ pressed }) => [
+                          styles.quiet,
+                          pressed && styles.quietPressed,
+                        ]}
+                      >
+                        <AppText
+                          variant="secondary"
+                          tone={auto.demo ? "accent" : "tertiary"}
+                          style={styles.strong}
+                        >
+                          {auto.demo ? "✓ 시연 모드" : "시연 모드"}
                         </AppText>
-                      </View>
-                    </View>
-                    <BodyfitSeatAxesLegend />
-                  </View>
-                  <BodyfitSeatAxes recommended={recommended} current={shown} />
-                </Card>
+                      </Pressable>
+                    ) : undefined
+                  }
+                />
+                {!vehicleConnected ? (
+                  <AppText variant="caption" tone="tertiary">
+                    Pleos Connect 에뮬레이터나 차량에서 열면 시트를 맞출 수
+                    있어요
+                  </AppText>
+                ) : null}
 
                 {/* 주행 자세 관찰을 켠 운전자: 마지막 주행 결과를 자세 탭에서 바로 본다 (기록 탭까지 내려가지 않게). */}
                 {observing ? (
@@ -487,6 +435,7 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                     driver={driver}
                     afterDrive={false}
                     postureAt={null}
+                    compact
                   />
                 ) : null}
 
@@ -527,14 +476,16 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                   ) : (
                     <View style={styles.records}>
                       {recentRecords.map((record) => (
+                        // 한 줄: 무엇이 남았는지는 왼쪽, 언제(어떤 상황)인지는 오른쪽 끝
                         <InfoRow
                           key={`${record.at}-${record.source}`}
-                          label={formatDay(record.at)}
                           value={SOURCE_COPY[record.source]}
-                          detail={
-                            record.context === DEFAULT_DRIVE_CONTEXT
-                              ? undefined
-                              : DRIVE_CONTEXT_LABEL[record.context]
+                          trailing={
+                            <AppText variant="secondary" tone="tertiary">
+                              {record.context === DEFAULT_DRIVE_CONTEXT
+                                ? formatDay(record.at)
+                                : `${formatDay(record.at)} · ${DRIVE_CONTEXT_LABEL[record.context]}`}
+                            </AppText>
                           }
                         />
                       ))}
@@ -547,7 +498,6 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                   {/* D-2: 주행 후 질문. 화면 제목과 같은 말로 부른다 */}
                   <InfoRow
                     value="오늘 운전 자세는 편하셨나요?"
-                    detail="답하면 다음 추천에 반영돼요"
                     onPress={auto.seatMoving ? undefined : openFeedback}
                   />
                   {/* 주행 중 카메라 관찰이 연결되기 전에는 예시 기록뿐이라 시연용 빌드에서만 연다.
@@ -557,7 +507,6 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                       <Divider />
                       <InfoRow
                         value="주행 자세 관찰"
-                        detail="주행 중 자세가 언제 흐트러지는지 봐요"
                         onPress={auto.seatMoving ? undefined : openPosture}
                       />
                     </>
@@ -568,36 +517,11 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                       <Divider />
                       <InfoRow
                         value="다른 차로 가져가기"
-                        detail="QR 코드로 내 자세를 옮겨요"
                         onPress={auto.seatMoving ? undefined : openExport}
                       />
                     </>
                   ) : null}
                 </Card>
-                {/* 되돌릴 수 없는 일이라 카드 밖 맨 아래에 조용한 글자 버튼으로 둔다. 누르면 확인 창을 거친다. */}
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="운전자 정보 지우기"
-                  accessibilityHint="체형 정보와 자세 기록을 모두 지워요"
-                  accessibilityState={{
-                    disabled: remove.isPending,
-                    busy: remove.isPending,
-                  }}
-                  disabled={remove.isPending}
-                  onPress={() => setConfirming("delete")}
-                  style={({ pressed }) => [
-                    styles.remove,
-                    pressed && styles.removePressed,
-                  ]}
-                >
-                  <AppText
-                    variant="secondary"
-                    tone="danger"
-                    style={styles.strong}
-                  >
-                    {remove.isPending ? "지우고 있어요" : "운전자 정보 지우기"}
-                  </AppText>
-                </Pressable>
               </>
             ) : null}
           </>
@@ -630,65 +554,23 @@ const useStyles = themedStyles((colors) => ({
   dotObserving: { backgroundColor: colors.primary },
   dotBlocked: { backgroundColor: colors.warning },
   dotIdle: { backgroundColor: colors.inkDisabled },
-  // 운전석 그림을 올려 두는 옅은 무대
-  stage: {
-    flexGrow: 1,
-    justifyContent: "center",
-    paddingVertical: spacing.md,
-    borderRadius: radius.control,
-    backgroundColor: colors.surfaceMuted,
-  },
-  // 그림 상자: 남는 높이를 받되 작게는 SEAT_IMAGE_HEIGHT, 크게는 SEAT_IMAGE_MAX_HEIGHT 까지
-  stageImage: {
-    flexGrow: 1,
-    minHeight: SEAT_IMAGE_HEIGHT,
-    maxHeight: SEAT_IMAGE_MAX_HEIGHT,
-  },
-  center: { textAlign: "center" },
   strong: { fontWeight: "700" },
-  context: { gap: spacing.xs },
+  // 칩과 설명을 한 줄에 두고, 넘치면 다음 줄로 (세로 공간을 탭 카드에 남긴다).
+  context: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    columnGap: spacing.md,
+    rowGap: spacing.xs,
+  },
+  contextText: { flexShrink: 1 },
   suggestion: { alignItems: "flex-start", gap: spacing.xs },
   records: { gap: spacing.xs },
-  demo: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.line,
-  },
-  demoText: { flex: 1, minWidth: 160 },
-  axesHeading: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  axesTitle: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-    flexShrink: 1,
-  },
-  count: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-    backgroundColor: colors.fill,
-  },
-  remove: {
-    alignSelf: "flex-start",
+  quiet: {
     minHeight: sizes.touchTarget,
+    justifyContent: "center",
     paddingHorizontal: spacing.sm,
     borderRadius: radius.control,
-    justifyContent: "center",
   },
-  // Pleos 인터랙션 가이드: 눌린 요소는 95% 로 줄이고 배경색을 바꾼다.
-  removePressed: {
-    backgroundColor: colors.fill,
-    transform: [{ scale: 0.95 }],
-  },
+  quietPressed: { backgroundColor: colors.surfaceMuted },
 }));

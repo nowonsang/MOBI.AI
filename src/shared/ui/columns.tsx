@@ -7,8 +7,11 @@ import { usePinnedLayout } from "./use-pinned-layout";
 import { themedStyles } from "./use-theme";
 
 type ColumnsProps = {
-  /** 요약·그림 (넓은 창에서 왼쪽 40%) */
-  left: ReactNode;
+  /**
+   * 요약·그림 (넓은 창에서 왼쪽 40%).
+   * 그림 하나가 핵심인 화면은 비워 두고 오른쪽 단 하나를 폭 전체로 쓴다 (ui-design 1장).
+   */
+  left?: ReactNode;
   /** 목록·선택지 (넓은 창에서 오른쪽 60%) */
   right: ReactNode;
   /** 오른쪽 단 맨 위에 두는 것 (예: 탭 막대). pinned 일 때 스크롤해도 자리를 지킨다 */
@@ -46,14 +49,16 @@ export function Columns({
   if (pin) {
     return (
       <View style={styles.pinnedRow}>
-        <View style={styles.left}>
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-          >
-            {left}
-          </ScrollView>
-        </View>
+        {left ? (
+          <View style={styles.left}>
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+            >
+              {left}
+            </ScrollView>
+          </View>
+        ) : null}
         {rightPanel ? (
           <View style={[styles.right, styles.panel]}>
             <View style={styles.panelClip}>
@@ -87,7 +92,9 @@ export function Columns({
     <View
       style={wide ? [styles.row, stretch && styles.rowStretch] : styles.stack}
     >
-      <View style={[styles.column, wide && styles.left]}>{left}</View>
+      {left ? (
+        <View style={[styles.column, wide && styles.left]}>{left}</View>
+      ) : null}
       {rightPanel ? (
         <View style={[styles.panel, wide && styles.right]}>
           <PanelContext.Provider value>

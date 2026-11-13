@@ -23,7 +23,7 @@ description: MOBI.AI 차량 앱 디자인 규칙(현대자동차 공모전, Pleo
 
 1. **터치 대상은 최소 76×76dp** (`sizes.touchTarget`), 주 버튼 높이 88dp (`sizes.primaryButton`). 터치 대상 사이는 최소 24dp (`spacing.md`).
 2. **글자는 주요 정보 32dp 이상, 보조 정보 24dp 이상.** `typography.caption`(24)보다 작게 쓰지 않는다.
-3. 화면은 가로로 넓다. 본문은 `Screen` 의 폭 제한(`layout.content` 1440, 한 작업 화면은 `width="narrow"` 880) 안에 가운데 정렬하고 좌우 여백은 `layout.gutter`(48). 넓은 창(`layout.twoColumnWidth` 1000dp 이상)에서는 `Columns` 로 2단(왼쪽 40%: 요약·그림, 오른쪽 60%: 목록·선택지)으로 나누고, 좁은 창에서는 위아래로 쌓는다. 목록이 한 화면을 넘는 화면은 `Screen` 과 `Columns` 에 `pinned` 를 주어 제목·왼쪽 요약·탭(`rightHeader`)을 고정하고 오른쪽 내용만 스크롤한다 (넓고 높은 창에서만 켜지고, 그 밖에서는 화면 전체를 스크롤한다).
+3. 화면은 가로로 넓다. 본문은 `Screen` 의 폭 제한(`layout.content` 1440, 한 작업 화면은 `width="narrow"` 880) 안에 가운데 정렬하고 좌우 여백은 `layout.gutter`(48). 넓은 창(`layout.twoColumnWidth` 1000dp 이상)에서는 `Columns` 로 2단(왼쪽 40%: 요약·그림, 오른쪽 60%: 목록·선택지)으로 나누고, 좁은 창에서는 위아래로 쌓는다 단, 요약과 목록이 함께 있을 때만 2단이다. **그림 하나가 핵심인 화면은 한 단**으로 두고(`Columns` 의 `left` 를 비운다) 고르는 것은 제목 아래 한 줄로 올린다 (예: 시트 화면의 자세 탭, 2026-11-14 결정). 목록이 한 화면을 넘는 화면은 `Screen` 과 `Columns` 에 `pinned` 를 주어 제목·왼쪽 요약·탭(`rightHeader`)을 고정하고 오른쪽 내용만 스크롤한다 (넓고 높은 창에서만 켜지고, 그 밖에서는 화면 전체를 스크롤한다).
 4. 고정 크기 대신 `flex`·`flexWrap`·`gap` 으로 배치해 해상도가 달라도 깨지지 않게 한다. 가로 스크롤이 생기면 안 된다. 여러 해상도를 확인할 때는 `useWindowDimensions` 로 분기한다.
 5. 주 행동은 `Screen` 의 `footer`(하단 고정)에 둔다. 운전자가 화면 아래쪽을 손으로 찾기 쉽다.
 6. 안전 영역과 뒤로 가기는 `Screen` 이 처리한다 (네이티브 헤더는 끈다: 안전 영역 여백이 두 번 들어간다). 첫 화면은 `back={false}`. 화면 루트에서 직접 여백을 계산하지 않는다.

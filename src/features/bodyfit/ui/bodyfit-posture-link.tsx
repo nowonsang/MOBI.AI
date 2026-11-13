@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 
 import { AppText } from "@/shared/ui/app-text";
+import { InfoRow } from "@/shared/ui/info-row";
 import { Card } from "@/shared/ui/card";
 
 import { bodyfitQueries } from "../api/bodyfit.queries";
@@ -24,12 +25,15 @@ export function BodyfitPostureLink({
   driver,
   afterDrive,
   postureAt,
+  compact = false,
 }: {
   driver: BodyProfile;
   /** 주행이 끝나 자동으로 뜬 질문인지 */
   afterDrive: boolean;
   /** 이번 주행을 카메라로 살펴 남긴 기록의 출발 시각. 없으면 null */
   postureAt: number | null;
+  /** 다른 내용 아래 덧붙일 때: 리포트가 있으면 한 줄로만, 없으면 아무것도 그리지 않는다 */
+  compact?: boolean;
 }) {
   const router = useRouter();
   const drives = useQuery({
@@ -42,6 +46,27 @@ export function BodyfitPostureLink({
     postureAt === null
       ? null
       : (all.find((item) => item.startedAt === postureAt) ?? null);
+
+  if (compact) {
+    const drive = latest;
+    if (!driver.postureConsent || !drive) return null;
+    const headline = postureHeadline(summarizePostureDrive(drive));
+    return (
+      <InfoRow
+        value={`주행 자세 · ${headline}`}
+        onPress={() =>
+          router.push({
+            pathname: "/bodyfit/[profileId]/posture/report",
+            params: {
+              profileId: driver.id,
+              startedAt: String(drive.startedAt),
+            },
+          })
+        }
+        accessibilityLabel={`${headline}. 눌러서 주행 자세 리포트를 봐요`}
+      />
+    );
+  }
 
   if (!driver.postureConsent) {
     return (

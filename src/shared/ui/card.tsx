@@ -14,6 +14,8 @@ type CardProps = {
   count?: string;
   /** 누르면 다른 화면으로 가는 카드. 제목 오른쪽에 › 를 그린다 */
   onPress?: () => void;
+  /** 제목 오른쪽 끝에 둘 작은 글자 버튼 (예: "편집"). onPress 가 있는 카드에는 쓰지 않는다 */
+  action?: ReactNode;
   accessibilityLabel?: string;
   /** 남는 높이를 채운다 (단마다 스크롤하는 Columns 에서 카드 바닥을 단 바닥에 맞출 때) */
   fill?: boolean;
@@ -25,6 +27,7 @@ export function Card({
   title,
   count,
   onPress,
+  action,
   accessibilityLabel,
   fill,
   children,
@@ -51,7 +54,9 @@ export function Card({
         <AppText variant="title" tone="tertiary">
           ›
         </AppText>
-      ) : null}
+      ) : (
+        action
+      )}
     </View>
   ) : null;
 
