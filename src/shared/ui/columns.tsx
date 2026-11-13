@@ -1,13 +1,10 @@
 import type { ReactNode } from "react";
-import {
-  ScrollView,
-  StyleSheet,
-  View,
-  useWindowDimensions,
-} from "react-native";
+import { ScrollView, View, useWindowDimensions } from "react-native";
 
-import { layout, spacing } from "./theme";
+import { PanelContext } from "./panel";
+import { layout, radius, shadows, spacing } from "./theme";
 import { usePinnedLayout } from "./use-pinned-layout";
+import { themedStyles } from "./use-theme";
 
 type ColumnsProps = {
   /** 요약·그림 (넓은 창에서 왼쪽 40%) */
@@ -26,6 +23,11 @@ type ColumnsProps = {
    * 왼쪽·오른쪽 카드의 아래 끝이 나란히 맞는다. 좁은 창에서는 위아래로 쌓으므로 영향이 없다.
    */
   stretch?: boolean;
+  /**
+   * 오른쪽 단을 카드 한 장(패널)으로 그린다. rightHeader(탭)가 패널 머리에 붙고,
+   * 안의 Card 는 상자 대신 구역이 된다 (카드 안 카드로 네모가 겹치지 않게).
+   */
+  rightPanel?: boolean;
 };
 
 // 가로로 넓은 차량 화면을 2단으로 나눈다. 좁은 창(세로 분할 창, 휴대폰)에서는 위아래로 쌓는다.
@@ -35,9 +37,11 @@ export function Columns({
   rightHeader,
   pinned,
   stretch = false,
+  rightPanel = false,
 }: ColumnsProps) {
   const wide = useWindowDimensions().width >= layout.twoColumnWidth;
   const pin = usePinnedLayout() && pinned;
+  const styles = useStyles();
 
   if (pin) {
     return (
@@ -50,15 +54,31 @@ export function Columns({
             {left}
           </ScrollView>
         </View>
-        <View style={[styles.right, styles.column]}>
-          {rightHeader}
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-          >
-            {right}
-          </ScrollView>
-        </View>
+        {rightPanel ? (
+          <View style={[styles.right, styles.panel]}>
+            <View style={styles.panelClip}>
+              <PanelContext.Provider value>
+                {rightHeader}
+                <ScrollView
+                  style={styles.panelScroll}
+                  contentContainerStyle={styles.panelContent}
+                >
+                  {right}
+                </ScrollView>
+              </PanelContext.Provider>
+            </View>
+          </View>
+        ) : (
+          <View style={[styles.right, styles.column]}>
+            {rightHeader}
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+            >
+              {right}
+            </ScrollView>
+          </View>
+        )}
       </View>
     );
   }
@@ -68,10 +88,19 @@ export function Columns({
       style={wide ? [styles.row, stretch && styles.rowStretch] : styles.stack}
     >
       <View style={[styles.column, wide && styles.left]}>{left}</View>
-      <View style={[styles.column, wide && styles.right]}>
-        {rightHeader}
-        {right}
-      </View>
+      {rightPanel ? (
+        <View style={[styles.panel, wide && styles.right]}>
+          <PanelContext.Provider value>
+            {rightHeader}
+            <View style={styles.panelContent}>{right}</View>
+          </PanelContext.Provider>
+        </View>
+      ) : (
+        <View style={[styles.column, wide && styles.right]}>
+          {rightHeader}
+          {right}
+        </View>
+      )}
     </View>
   );
 }
@@ -79,7 +108,7 @@ export function Columns({
 // 스크롤 영역이 카드 그림자를 자르지 않게 안쪽에 여백을 주고 그만큼 바깥으로 넓힌다.
 const BLEED = spacing.sm;
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => ({
   row: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
   rowStretch: { alignItems: "stretch" },
   pinnedRow: { flex: 1, flexDirection: "row", gap: spacing.md },
@@ -101,4 +130,13 @@ const styles = StyleSheet.create({
     paddingTop: BLEED,
     paddingHorizontal: BLEED,
   },
-});
+  // 오른쪽 단 카드 한 장. 그림자는 바깥 상자에, 둥근 모서리 자르기는 안쪽 상자에 둔다 (자르면 그림자도 잘린다).
+  panel: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    ...shadows.card,
+  },
+  panelClip: { flex: 1, borderRadius: radius.card, overflow: "hidden" },
+  panelScroll: { flex: 1 },
+  panelContent: { flexGrow: 1, paddingHorizontal: spacing.lg },
+}));

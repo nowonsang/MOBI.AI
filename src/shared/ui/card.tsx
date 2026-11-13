@@ -3,6 +3,7 @@ import { Pressable, View } from "react-native";
 
 import { AppText } from "./app-text";
 import { radius, shadows, sizes, spacing } from "./theme";
+import { useInPanel } from "./panel";
 import { useCompact } from "./use-compact";
 import { themedStyles } from "./use-theme";
 
@@ -30,9 +31,10 @@ export function Card({
 }: CardProps) {
   const compact = useCompact();
   const styles = useStyles();
+  const inPanel = useInPanel();
 
   const heading = title ? (
-    <View style={styles.heading}>
+    <View style={[styles.heading, inPanel && styles.headingInPanel]}>
       <View style={styles.titleGroup}>
         <AppText variant="heading" accessibilityRole="header">
           {title}
@@ -53,11 +55,13 @@ export function Card({
     </View>
   ) : null;
 
-  const boxStyle = [
-    styles.box,
-    { padding: compact ? spacing.md : spacing.lg },
-    fill && styles.fill,
-  ];
+  const boxStyle = inPanel
+    ? [styles.section, fill && styles.fill]
+    : [
+        styles.box,
+        { padding: compact ? spacing.md : spacing.lg },
+        fill && styles.fill,
+      ];
 
   if (onPress) {
     return (
@@ -162,6 +166,14 @@ const useStyles = themedStyles((colors) => ({
     ...shadows.card,
   },
   fill: { flexGrow: 1 },
+  // 패널 안: 상자 없이 구역으로. 구역 사이는 아래 옅은 선으로 나눈다 (패널이 좌우 여백을 준다).
+  section: {
+    gap: spacing.md,
+    paddingVertical: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  headingInPanel: { paddingBottom: 0, borderBottomWidth: 0 },
   // Pleos 인터랙션 가이드: 눌린 요소는 줄이고 배경색을 바꾼다. 큰 면은 95% 면 너무 출렁여 98% 로 둔다.
   pressed: {
     backgroundColor: colors.surfaceMuted,

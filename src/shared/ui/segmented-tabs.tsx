@@ -2,6 +2,7 @@ import { Pressable, View } from "react-native";
 
 import { AppText } from "./app-text";
 import { radius, shadows, sizes, spacing } from "./theme";
+import { useInPanel } from "./panel";
 import { themedStyles } from "./use-theme";
 
 type TabOption<T extends string> = {
@@ -30,9 +31,10 @@ export function SegmentedTabs<T extends string>({
   onSelect,
 }: SegmentedTabsProps<T>) {
   const styles = useStyles();
+  const inPanel = useInPanel();
   return (
     <View
-      style={styles.bar}
+      style={inPanel ? styles.barInPanel : styles.bar}
       accessibilityRole="tablist"
       accessibilityLabel={label}
     >
@@ -86,6 +88,15 @@ const useStyles = themedStyles((colors) => ({
     borderRadius: radius.card,
     backgroundColor: colors.surface,
     ...shadows.card,
+  },
+  // 패널 머리: 면은 패널이 깔고, 아래 선이 탭 줄과 내용을 나눈다.
+  barInPanel: {
+    flexDirection: "row",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
   },
   tab: {
     flex: 1,

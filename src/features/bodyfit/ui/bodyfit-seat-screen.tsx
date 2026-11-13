@@ -355,6 +355,8 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
       />
       <Columns
         pinned
+        // 오른쪽은 탭이 머리에 붙은 카드 한 장. 탭 내용은 상자 대신 구역으로 나눈다.
+        rightPanel
         left={
           <Card
             title="내 시트"
