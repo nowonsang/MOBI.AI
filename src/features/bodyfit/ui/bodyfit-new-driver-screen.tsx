@@ -31,8 +31,7 @@ const SCAN_NOTE = {
   notParked: "카메라로 재기는 주차(P) 중에만 쓸 수 있어요",
   denied:
     "카메라 권한이 없어요. 직접 입력하거나 차량 설정의 앱 권한에서 카메라를 허용해 주세요",
-  sampleOnly:
-    "이 기기에는 카메라가 없어요. 샘플 자세 데이터로 흐름만 보여 드려요",
+  sampleOnly: "이 기기에는 카메라가 없어요. 샘플 자세로 대신 보여 줘요",
   camera: "카메라로 추정한 값이에요. 다르면 고쳐 주세요",
   sample: "샘플 자세로 채운 예시 값이에요. 실제 앉은키로 고쳐 주세요",
 } as const;
@@ -79,7 +78,7 @@ export function BodyfitNewDriverScreen() {
         ...current,
         heightCm: values.heightCm.trim()
           ? "키는 120~220cm 사이로 입력해 주세요"
-          : "키를 먼저 입력해 주세요. 키와 관절 비율로 앉은키를 추정해요",
+          : "키를 먼저 입력해 주세요",
       }));
       heightRef.current?.focus();
       return;
@@ -170,7 +169,7 @@ export function BodyfitNewDriverScreen() {
   return (
     <Screen
       title="운전자 등록"
-      description="키와 몸무게만 있으면 첫 자세를 바로 추천해요"
+      description="키와 몸무게만 입력하면 돼요"
       width="narrow"
       footer={
         <>
@@ -260,7 +259,7 @@ export function BodyfitNewDriverScreen() {
               onPress={openScan}
               disabled={!parked}
               loading={permission.isPending}
-              accessibilityHint="카메라로 서 있는 모습 한 장을 읽어 앉은키를 추정해요. 화면은 저장하지 않아요"
+              accessibilityHint="서 있는 모습을 찍어 앉은키를 추정해요"
             />
           ) : null}
         </View>

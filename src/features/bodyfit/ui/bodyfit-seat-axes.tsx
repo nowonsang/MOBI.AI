@@ -3,7 +3,6 @@ import { Pressable, View } from "react-native";
 
 import { SEAT_AXES } from "@/shared/pleos/pleos.types";
 import { AppText } from "@/shared/ui/app-text";
-import { IconBadge } from "@/shared/ui/icon-badge";
 import { radius, sizes, spacing } from "@/shared/ui/theme";
 import { themedStyles } from "@/shared/ui/use-theme";
 
@@ -143,7 +142,6 @@ function AxisRow({ axis, target, now, last }: AxisRowViewProps) {
       accessible
       accessibilityLabel={`${copy.label}, ${value}. ${copy.min}에서 ${copy.max} 사이`}
     >
-      <IconBadge glyph={copy.glyph} tone="muted" />
       <View style={styles.body}>
         <View style={styles.heading}>
           <AppText variant="bodyStrong">{copy.label}</AppText>

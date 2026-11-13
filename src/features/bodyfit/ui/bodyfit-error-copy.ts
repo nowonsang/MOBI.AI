@@ -64,8 +64,8 @@ export function describeBodyfitError(error: unknown): Copy {
       };
     case "ERR_NO_SPEECH":
       return {
-        title: "말씀을 듣지 못했어요",
-        description: "'말로 알려 주기'를 누르고 다시 말씀해 주세요",
+        title: "잘 듣지 못했어요",
+        description: "'말로 알려 주기'를 누르고 다시 말해 주세요",
       };
     case "ERR_PLEOS_SERVICE":
       return {

@@ -206,7 +206,7 @@ export function BodyfitComfortCard({
     apply.mutate(latest, {
       onSuccess: () => {
         setNotice("평소 설정으로 맞췄어요");
-        void speakQuietly("평소 좋아하시는 설정으로 맞췄어요");
+        void speakQuietly("평소 설정으로 맞췄어요");
       },
     });
   };

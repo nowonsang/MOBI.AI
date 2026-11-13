@@ -153,7 +153,7 @@ export function BodyfitImportScreen() {
       <Screen title={TITLE} width="narrow">
         <StatusView
           title="이 차량에서는 QR 로 가져올 수 없어요"
-          description="운전자를 직접 등록해 주세요. 키와 몸무게만 알려 주시면 돼요"
+          description="운전자를 직접 등록해 주세요"
           action={{ label: "운전자 등록하기", onPress: goToNew }}
         />
       </Screen>
@@ -247,9 +247,7 @@ export function BodyfitImportScreen() {
                 ) : null}
               </View>
               <AppText variant="caption" tone="tertiary">
-                {source === "sample"
-                  ? "샘플 코드예요. 실제로 읽은 코드가 아니라 예시 값이에요. "
-                  : ""}
+                {source === "sample" ? "샘플 코드의 예시 값이에요. " : ""}
                 추천 자세는 이 차의 시트 범위로 다시 계산해요. 시트는 맞춤 자세
                 화면에서 확인한 뒤에만 움직여요
               </AppText>
@@ -327,14 +325,14 @@ export function BodyfitImportScreen() {
                 label="샘플 코드로 시연"
                 variant="secondary"
                 onPress={readSample}
-                accessibilityHint="카메라 대신 샘플 코드로 흐름을 보여 줘요"
+                accessibilityHint="카메라 대신 샘플 코드를 써요"
               />
             ) : null}
             <Button
               label="카메라로 읽기"
               onPress={startCamera}
               loading={permission.isPending}
-              accessibilityHint="카메라를 켜고 QR 코드를 찾아요. 화면은 저장하지 않아요"
+              accessibilityHint="카메라를 켜고 QR 코드를 찾아요"
             />
           </>
         ) : (
@@ -379,7 +377,7 @@ export function BodyfitImportScreen() {
                 ) : (
                   <AppText variant="caption" tone="tertiary">
                     {read.isPending
-                      ? "QR 코드를 찾고 있어요. 화면은 저장하지 않고 코드만 읽어요"
+                      ? "QR 코드를 찾고 있어요"
                       : "카메라를 켜는 중이에요"}
                   </AppText>
                 )}
@@ -399,18 +397,10 @@ export function BodyfitImportScreen() {
             </View>
           ) : (
             <Card fill>
-              <AppText variant="heading">내 자세를 그대로 가져와요</AppText>
-              <AppText variant="secondary" tone="tertiary">
-                체형과 학습한 보정만 옮기고, 추천 자세는 이 차의 시트에 맞게
-                다시 계산해요
+              <AppText variant="secondary" tone="secondary">
+                자세는 이 차의 시트에 맞게 다시 계산해요. 저장하기 전에 내용을
+                확인할 수 있어요
               </AppText>
-              <Divider />
-              <InfoRow
-                icon={<IconBadge glyph="✓" tone="tint" />}
-                label="가져오기 전에"
-                value="내용을 먼저 보여 드려요"
-                detail="확인해야 저장하고, 시트는 움직이지 않아요"
-              />
               {permissionDenied || mode === "sample" ? (
                 <AppText
                   variant="caption"
@@ -419,7 +409,7 @@ export function BodyfitImportScreen() {
                 >
                   {permissionDenied
                     ? "카메라 권한이 없어요. 차량 설정의 앱 권한에서 카메라를 허용하거나 운전자를 직접 등록해 주세요"
-                    : "이 기기에는 카메라가 없어요. 샘플 코드로 흐름만 보여 드려요"}
+                    : "이 기기에는 카메라가 없어요. 샘플 코드로 대신 보여 줘요"}
                 </AppText>
               ) : null}
             </Card>

@@ -82,7 +82,7 @@ export function BodyfitConsentNotice({
             onChange={onVoiceConsentChange}
             label="음성 기능 사용에 동의해요 (선택)"
             accessibilityLabel="음성 기능 사용에 동의해요, 선택"
-            detail="착좌감을 말로 답할 때 써요. 음성은 Pleos 음성 인식(현대자동차그룹)에서 처리될 수 있어요. 동의하지 않아도 화면으로 쓸 수 있어요"
+            detail="앉은 느낌을 말로 답할 때 써요. 음성은 Pleos 음성 인식(현대자동차그룹)에서 처리될 수 있어요. 동의하지 않아도 화면으로 쓸 수 있어요"
           />
         </>
       ) : null}

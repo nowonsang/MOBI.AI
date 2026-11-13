@@ -249,13 +249,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
               style={[styles.focus, done && styles.focusDone]}
               accessibilityLiveRegion="polite"
             >
-              {/* 기호는 라벨 줄에 두어 큰 문구가 카드 폭을 다 쓰게 한다. */}
               <View style={styles.focusHead}>
-                <View style={styles.focusGlyph} accessible={false}>
-                  <AppText variant="bodyStrong" tone="inverse">
-                    {focus ? AXIS_COPY[focus.axis].glyph : "✓"}
-                  </AppText>
-                </View>
                 <AppText
                   variant="secondary"
                   tone="inverse"
@@ -400,7 +394,6 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
 
 const GAUGE_TRACK = 12;
 const GAUGE_DOT = 32;
-const FOCUS_GLYPH = 56;
 
 const useStyles = themedStyles((colors) => ({
   skeleton: {
@@ -421,16 +414,6 @@ const useStyles = themedStyles((colors) => ({
     gap: spacing.sm,
   },
   focusLabel: { flex: 1 },
-  // 지금 맞출 축의 기호. 파란 면 위 흰 원이 너무 밝지 않게 테두리만 둔다.
-  focusGlyph: {
-    width: FOCUS_GLYPH,
-    height: FOCUS_GLYPH,
-    borderRadius: radius.pill,
-    borderWidth: 2,
-    borderColor: colors.onPrimary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   focusWords: {
     flexDirection: "row",
     flexWrap: "wrap",

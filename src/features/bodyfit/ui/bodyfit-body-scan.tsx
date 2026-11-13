@@ -183,9 +183,7 @@ export function BodyfitBodyScan({
                   }
                 />
                 <AppText variant="caption" tone="tertiary">
-                  {sample
-                    ? "샘플 자세 데이터예요. 실제로 찍은 화면이 아니에요"
-                    : "화면은 저장하지 않고 관절 위치만 읽었어요"}
+                  {sample ? "샘플 자세예요" : "사진은 저장하지 않았어요"}
                 </AppText>
               </View>
             ) : null
@@ -202,8 +200,8 @@ export function BodyfitBodyScan({
                   </AppText>
                   <AppText variant="caption" tone="tertiary">
                     {sample
-                      ? `샘플 자세와 입력한 키 ${heightCm}cm 로 계산한 예시 값이에요. 실제 앉은키가 아니에요`
-                      : `입력한 키 ${heightCm}cm 와 화면 속 상체·다리 비율로 추정한 값이라 실제와 다를 수 있어요`}
+                      ? "샘플 자세로 계산한 예시 값이에요"
+                      : `키 ${heightCm}cm와 몸 비율로 추정했어요. 실제와 다를 수 있어요`}
                   </AppText>
                 </Card>
               ) : failure ? (
@@ -231,7 +229,7 @@ export function BodyfitBodyScan({
       description={
         usingCamera
           ? "주차 중에만 쓸 수 있어요. 누르면 5초 뒤에 한 장을 읽어요"
-          : "이 기기에서는 샘플 자세 데이터로 흐름만 보여 드려요"
+          : "이 기기에서는 샘플 자세로 대신 보여 줘요"
       }
       onBack={onClose}
       footer={
@@ -242,7 +240,7 @@ export function BodyfitBodyScan({
                 label="샘플 자세로 시연"
                 variant="secondary"
                 onPress={() => setMode("sample")}
-                accessibilityHint="카메라 대신 샘플 자세 데이터로 흐름을 보여 줘요"
+                accessibilityHint="카메라 대신 샘플 자세를 써요"
               />
             ) : null}
             {counting ? (
@@ -322,7 +320,7 @@ export function BodyfitBodyScan({
                 ) : (
                   <AppText variant="caption" tone="tertiary">
                     {camera.ready
-                      ? "화면은 저장하지 않아요. 한 장만 읽고 바로 버려요"
+                      ? "사진은 저장하지 않아요"
                       : "카메라를 켜는 중이에요"}
                   </AppText>
                 )}

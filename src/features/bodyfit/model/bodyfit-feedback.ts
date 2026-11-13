@@ -4,18 +4,38 @@ import type {
   SeatNudge,
 } from "./bodyfit.types";
 
-type Rule = { pattern: RegExp; axis: SeatAxis; direction: SeatNudge["direction"] };
+type Rule = {
+  pattern: RegExp;
+  axis: SeatAxis;
+  direction: SeatNudge["direction"];
+};
 
 // 앱 안 음성 인식(STT) 결과의 해석. 방향이 분명한 표현만 다룬다.
 // 자유로운 문장 이해는 차량 음성 AI(Gleo)가 맡고, 그 결과는 bodyfit-gleo.ts 로 들어온다.
 const BACKREST_RULES: Rule[] = [
-  { pattern: /(세워|일으켜|똑바로|앞으로)/, axis: "backrest", direction: "increase" },
-  { pattern: /(눕혀|눕히|젖혀|젖히|뒤로)/, axis: "backrest", direction: "decrease" },
+  {
+    pattern: /(세워|일으켜|똑바로|앞으로)/,
+    axis: "backrest",
+    direction: "increase",
+  },
+  {
+    pattern: /(눕혀|눕히|젖혀|젖히|뒤로)/,
+    axis: "backrest",
+    direction: "decrease",
+  },
 ];
 
 const SEAT_RULES: Rule[] = [
-  { pattern: /(페달|핸들|운전대).*(멀|안 ?닿)/, axis: "foreAft", direction: "increase" },
-  { pattern: /(다리|무릎).*(끼|닿|답답|좁)/, axis: "foreAft", direction: "decrease" },
+  {
+    pattern: /(페달|핸들|운전대).*(멀|안 ?닿)/,
+    axis: "foreAft",
+    direction: "increase",
+  },
+  {
+    pattern: /(다리|무릎).*(끼|닿|답답|좁)/,
+    axis: "foreAft",
+    direction: "decrease",
+  },
   { pattern: /(앞으로|당겨)/, axis: "foreAft", direction: "increase" },
   { pattern: /(뒤로|밀어)/, axis: "foreAft", direction: "decrease" },
   { pattern: /(높여|높게|올려|올리)/, axis: "height", direction: "increase" },
@@ -55,9 +75,8 @@ const UNSUPPORTED_PART_REPLY =
   "헤드레스트와 안전벨트, 좌판 길이, 허리 지지대는 말로 바꾸지 않아요. 화면 안내를 보며 맞춰 주세요";
 
 const SATISFIED_PATTERN = /(괜찮|좋았|좋아|편했|편해|편안|없어|없었)/;
-const SATISFIED_REPLY = "알겠어요. 다음에도 지금 자세로 맞출게요";
-const UNCLEAR_REPLY =
-  "어떻게 바꿀지 잘 모르겠어요. '시트를 조금 앞으로'처럼 말해 주세요";
+const SATISFIED_REPLY = "다음에도 지금 자세로 맞출게요";
+const UNCLEAR_REPLY = "잘 못 알아들었어요. '시트 조금 앞으로'처럼 말해 주세요";
 
 const PHRASES: Record<
   SeatAxis,
@@ -69,10 +88,18 @@ const PHRASES: Record<
   tilt: { object: "좌판 앞쪽을", increase: "올려", decrease: "내려" },
   // 아래 다섯 축은 음성 해석 규칙이 없다 (말로 바꾸지 않는다). 조절안을 읽어 주는 문구만 갖춘다.
   depth: { object: "좌판을", increase: "늘려", decrease: "줄여" },
-  headrestHeight: { object: "헤드레스트를", increase: "높여", decrease: "낮춰" },
+  headrestHeight: {
+    object: "헤드레스트를",
+    increase: "높여",
+    decrease: "낮춰",
+  },
   beltHeight: { object: "안전벨트를", increase: "높여", decrease: "낮춰" },
   lumbar: { object: "허리 지지대를", increase: "내밀어", decrease: "넣어" },
-  headrestAngle: { object: "헤드레스트를", increase: "앞으로 세워", decrease: "뒤로 젖혀" },
+  headrestAngle: {
+    object: "헤드레스트를",
+    increase: "앞으로 세워",
+    decrease: "뒤로 젖혀",
+  },
 };
 
 /** 예: "시트를 조금 앞으로 옮겨 보고, 등받이를 세워 볼게요" */

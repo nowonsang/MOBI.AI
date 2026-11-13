@@ -200,7 +200,7 @@ export function BodyfitFeedbackScreen({
         title={
           answered === "adjusted"
             ? "다음 추천에 반영했어요"
-            : "알겠어요. 지금 자세를 기억할게요"
+            : "지금 자세를 기억할게요"
         }
         description={
           answered === "adjusted"

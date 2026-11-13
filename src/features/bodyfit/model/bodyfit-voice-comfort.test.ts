@@ -299,7 +299,7 @@ describe("planVoiceComfort: 평소 온도", () => {
       { key: "cabinTarget", from: 22, to: 24 },
       { key: "fanDirection", from: "face", to: "floor" },
     ]);
-    expect(result.reply).toBe("평소 좋아하시는 온도로 맞출게요");
+    expect(result.reply).toBe("평소 온도로 맞출게요");
   });
 
   it("기록이 없으면 바꾸지 않는다", () => {

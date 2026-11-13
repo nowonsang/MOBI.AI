@@ -68,9 +68,9 @@ const HVAC_POWER_REPLY =
 // "차 안 더워요" 의 "안" 은 부정이 아니다.
 const CONTENT_PATTERN =
   /(?<!차 ?)안 ?(추|춥|더|덥)|(춥|덥)지 ?(않|안)|(추|더)운 ?건 ?아니/;
-const CONTENT_REPLY = "알겠어요. 지금 온도 그대로 둘게요";
+const CONTENT_REPLY = "지금 온도 그대로 둘게요";
 const UNCLEAR_REPLY =
-  "어떻게 바꿀지 잘 모르겠어요. '추워요'나 '핸들 열선 켜 줘'처럼 말해 주세요";
+  "잘 못 알아들었어요. '추워요'나 '핸들 열선 켜 줘'처럼 말해 주세요";
 const USUAL_PATTERN = /(평소|평상시|원래|늘 ?하던|좋아하는)[^,.]{0,6}온도/;
 
 type Subject = StepTarget | "heater" | "aircon";
@@ -491,7 +491,7 @@ export function planVoiceComfort(
     items.length === 0
       ? []
       : usualChanges && Object.keys(usualChanges).length > 0
-        ? ["평소 좋아하시는 온도로 맞출게요"]
+        ? ["평소 온도로 맞출게요"]
         : [
             items
               .map((item, index) =>

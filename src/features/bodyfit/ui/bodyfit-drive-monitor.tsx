@@ -128,7 +128,7 @@ export function BodyfitDriveMonitor() {
           },
           onSuccess: (answer) => {
             if (answer === "no") {
-              void speakQuietly("알겠어요. 이번에는 그대로 둘게요");
+              void speakQuietly("이번에는 그대로 둘게요");
               return;
             }
             if (answer !== "yes") {

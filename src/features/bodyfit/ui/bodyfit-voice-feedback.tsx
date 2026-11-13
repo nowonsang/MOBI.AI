@@ -118,8 +118,8 @@ export function BodyfitVoiceFeedback({
     applyComfort.mutate(pendingComfort.changes, {
       onSuccess: () => {
         dispatch(comfortDismissed());
-        setMessage({ text: "말씀하신 대로 온도를 맞췄어요", done: true });
-        void speakQuietly("말씀하신 대로 온도를 맞췄어요");
+        setMessage({ text: "온도를 바꿨어요", done: true });
+        void speakQuietly("온도를 바꿨어요");
       },
     });
   };
@@ -134,7 +134,7 @@ export function BodyfitVoiceFeedback({
         record.mutate({ profile, source: "voice", context });
         dispatch(feedbackDismissed());
         setMessage({
-          text: "말씀하신 대로 조절했어요. 다음 추천에 반영할게요",
+          text: "시트를 조절했어요. 다음 추천에도 반영할게요",
           done: true,
         });
       },
@@ -248,7 +248,7 @@ export function BodyfitVoiceFeedback({
                 onPress={applyPendingComfort}
                 disabled={!parked}
                 loading={applyComfort.isPending}
-                accessibilityHint="보여 드린 대로 열선과 온도, 바람을 바꿔요"
+                accessibilityHint="보이는 대로 열선과 온도, 바람을 바꿔요"
               />
             </View>
           </View>
@@ -279,8 +279,8 @@ export function BodyfitVoiceFeedback({
           }
           accessibilityHint={
             canControlComfort
-              ? "자세나 온도를 말로 알려 주시면 조절안을 먼저 보여 드려요"
-              : "말로 알려 주시면 조절안을 먼저 보여 드려요"
+              ? "자세나 온도를 말하면 바꿀 내용을 먼저 보여 줘요"
+              : "말하면 바꿀 내용을 먼저 보여 줘요"
           }
           onPress={startListening}
           style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}

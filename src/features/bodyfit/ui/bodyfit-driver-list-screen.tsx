@@ -7,7 +7,6 @@ import { useAppDispatch, useAppSelector } from "@/core/store/hooks";
 import { canUseVoice } from "@/shared/config/app-variant";
 import { isPleosAvailable } from "@/shared/pleos/pleos";
 import { useGear } from "@/shared/pleos/use-gear";
-import { AppText } from "@/shared/ui/app-text";
 import { Card } from "@/shared/ui/card";
 import { Columns } from "@/shared/ui/columns";
 import { Divider } from "@/shared/ui/divider";
@@ -85,14 +84,13 @@ export function BodyfitDriverListScreen() {
     <View style={styles.stack}>
       <StatusView
         title="아직 등록된 운전자가 없어요"
-        description="키와 몸무게만 있으면 첫 자세를 바로 추천해요"
+        description="키와 몸무게만 입력하면 돼요"
         action={{ label: "운전자 등록하기", onPress: goToNew }}
       />
       {/* 등록이 주 행동이다. 가져오기는 다른 차에서 쓰던 사람만 쓰는 길이라 아래에 조용한 행으로 둔다. */}
       {canImport ? (
         <Card>
           <InfoRow
-            icon={<IconBadge glyph="↓" />}
             value="QR 로 가져오기"
             valueTone="accent"
             detail="다른 차에서 쓰던 내 자세를 가져와요"
@@ -134,7 +132,6 @@ export function BodyfitDriverListScreen() {
             <Divider />
             <View style={styles.row}>
               <InfoRow
-                icon={<IconBadge glyph="↓" />}
                 value="QR 로 가져오기"
                 valueTone="accent"
                 detail="다른 차에서 쓰던 내 자세를 가져와요"
@@ -148,31 +145,15 @@ export function BodyfitDriverListScreen() {
   );
 
   return (
-    <Screen
-      title="누가 운전하나요?"
-      back={false}
-      description="운전자를 고르면 몸에 맞는 시트 자세로 바로 가요"
-    >
+    <Screen title="누가 운전하나요?" back={false}>
       <Columns
         stretch
         left={
+          // 소개 문구 없이 그림만 둔다. 저장 방식은 등록할 때 동의 안내에서 알린다.
           <Card fill>
             <View style={styles.seat}>
               <BodyfitSeatImage height={260} />
             </View>
-            <View style={styles.intro}>
-              <AppText variant="heading">체형에 맞춰 시트를 추천해요</AppText>
-              <AppText variant="secondary" tone="tertiary">
-                키와 몸무게로 첫 자세를 계산하고, 탈수록 취향을 배워요
-              </AppText>
-            </View>
-            <Divider />
-            <InfoRow
-              icon={<IconBadge glyph="✓" tone="tint" />}
-              label="개인정보"
-              value="이 차량 안에만 저장해요"
-              detail="암호화해 저장하고, 언제든 지울 수 있어요"
-            />
           </Card>
         }
         right={
@@ -217,7 +198,6 @@ const useStyles = themedStyles((colors) => ({
     backgroundColor: colors.surfaceMuted,
     padding: spacing.sm,
   },
-  intro: { gap: spacing.xs },
   // 왼쪽 단과 높이를 맞출 때 운전자 목록 카드가 남는 높이를 채우게 한다.
   stack: { flexGrow: 1, gap: spacing.lg },
   // 행 위아래 여백으로 터치 대상 사이 24dp 를 확보한다 (구분선 포함).

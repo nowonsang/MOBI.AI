@@ -121,7 +121,7 @@ export function BodyfitPostureReportScreen({
       <Screen title={TITLE} width="narrow">
         <StatusView
           title="아직 지켜본 주행이 없어요"
-          description="주행 자세 관찰을 켜고 한 번 주행하면, 주차할 때 여기에 결과가 나와요"
+          description="주행 자세 관찰을 켜고 달리면 여기에 결과가 나와요"
           action={{ label: "돌아가기", onPress: () => router.back() }}
         />
       </Screen>
@@ -285,7 +285,6 @@ export function BodyfitPostureReportScreen({
               {comparison ? (
                 <Card fill>
                   <InfoRow
-                    icon={<IconBadge glyph="⇄" />}
                     label={comparisonLead(comparison)}
                     value={comparisonShort(comparison)}
                     onPress={() =>
@@ -316,7 +315,6 @@ export function BodyfitPostureReportScreen({
                     />
                   ) : (
                     <InfoRow
-                      icon={<IconBadge glyph="↑" tone="tint" />}
                       label={nextDrivePhrase(drive.context)}
                       value={nudgeQuestion(nudge)}
                       detail={
@@ -324,7 +322,7 @@ export function BodyfitPostureReportScreen({
                           ? "Pleos Connect 에뮬레이터나 차량에서 열면 반영할 수 있어요"
                           : gear !== null && !parked
                             ? "차를 세우고 기어를 P로 바꾸면 반영할 수 있어요"
-                            : "반영해도 지금은 시트가 움직이지 않아요. 다음 추천에만 써요"
+                            : "지금 시트는 움직이지 않아요"
                       }
                     />
                   )}

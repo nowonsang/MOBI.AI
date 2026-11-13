@@ -37,7 +37,7 @@ const FAILURE_COPY: Record<TransferReadFailure, Copy> = {
       "코드가 잘렸거나 손상돼 가져오지 않았어요. 원래 차에서 코드를 다시 찍어 와 주세요",
   },
   outOfRange: {
-    title: "코드의 값이 허용 범위를 벗어났어요",
+    title: "코드에 맞지 않는 값이 있어요",
     description:
       "안전을 위해 가져오지 않았어요. 원래 차에서 코드를 다시 만들거나 운전자를 직접 등록해 주세요",
   },
@@ -88,7 +88,7 @@ export function describeTransferLearning(transfer: PostureTransfer): {
   if (count === 0) {
     return {
       value: "학습 기록이 아직 없어요",
-      detail: "체형으로 첫 자세를 추천하고, 타면서 취향을 배워요",
+      detail: "체형으로 계산한 자세부터 시작해요",
     };
   }
   return {

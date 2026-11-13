@@ -110,7 +110,7 @@ export function BodyfitExportScreen({ profileId }: { profileId: string }) {
   return (
     <Screen
       title="다른 차로 가져가기"
-      description="렌터카나 다른 차에서도 내 몸에 맞는 자세로 다시 계산해요"
+      description="다른 차에서 이 코드를 읽으면 내 자세를 그대로 쓸 수 있어요"
       footer={<Button label="다 찍었어요" onPress={() => router.back()} />}
     >
       <Columns

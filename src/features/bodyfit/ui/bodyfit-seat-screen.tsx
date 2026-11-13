@@ -20,7 +20,6 @@ import { ChipGroup, ToggleChip } from "@/shared/ui/chip";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { Columns } from "@/shared/ui/columns";
 import { Divider } from "@/shared/ui/divider";
-import { IconBadge } from "@/shared/ui/icon-badge";
 import { InfoRow } from "@/shared/ui/info-row";
 import { Screen } from "@/shared/ui/screen";
 import { SegmentedTabs } from "@/shared/ui/segmented-tabs";
@@ -81,16 +80,13 @@ const DEMO_MOVE_CONFIRM = {
     "화면에서만 움직이고 실제 시트는 그대로예요. 기록에도 남지 않아요",
 };
 
-const SOURCE_COPY: Record<
-  SeatAdjustmentSource,
-  { glyph: string; label: string }
-> = {
-  "drive-start": { glyph: "→", label: "출발할 때 자세" },
-  saved: { glyph: "✓", label: "직접 기억한 자세" },
-  touch: { glyph: "↔", label: "주행 후 피드백" },
-  voice: { glyph: "♪", label: "음성 피드백" },
-  camera: { glyph: "◎", label: "카메라로 본 자세" },
-  imported: { glyph: "↓", label: "다른 차에서 가져온 보정" },
+const SOURCE_COPY: Record<SeatAdjustmentSource, string> = {
+  "drive-start": "출발할 때 자세",
+  saved: "직접 기억한 자세",
+  touch: "주행 후 고른 자세",
+  voice: "말로 고친 자세",
+  camera: "카메라로 본 자세",
+  imported: "다른 차에서 가져온 자세",
 };
 
 const RECENT_RECORDS = 3;
@@ -290,11 +286,7 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
         run={auto.run}
         demoSeat={auto.demoSeat}
         onStop={auto.stop}
-        onDone={() =>
-          void speakQuietly(
-            "추천 자세로 맞췄어요. 불편한 곳이 있으면 말로 알려 주세요",
-          )
-        }
+        onDone={() => void speakQuietly("추천 자세로 맞췄어요")}
         onClose={auto.dismiss}
       />
     );
@@ -338,7 +330,7 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
         reason ??
         (learnedCount > 0
           ? `체형과 자세 기록 ${learnedCount}건으로 추천해요`
-          : "체형으로 잡은 첫 추천이에요. 탈수록 더 잘 맞아요")
+          : "체형으로 계산한 첫 추천이에요")
       }
       aside={
         // 운전자 이름 칩은 상황 칩과 모양이 같아 헷갈렸다. 운전자는 제목 옆 버튼 하나로 목록에서 바꾼다.
@@ -560,20 +552,15 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                 <Card title="자세 기록" count={`${adjustments.data.length}건`}>
                   {recentRecords.length === 0 ? (
                     <AppText variant="secondary" tone="secondary">
-                      아직 기록이 없어요. 출발할 때의 자세부터 자동으로 기억해요
+                      아직 기록이 없어요. 출발하면 자세가 기록돼요
                     </AppText>
                   ) : (
                     <View style={styles.records}>
                       {recentRecords.map((record) => (
                         <InfoRow
                           key={`${record.at}-${record.source}`}
-                          icon={
-                            <IconBadge
-                              glyph={SOURCE_COPY[record.source].glyph}
-                            />
-                          }
                           label={formatDay(record.at)}
-                          value={SOURCE_COPY[record.source].label}
+                          value={SOURCE_COPY[record.source]}
                           detail={
                             record.context === DEFAULT_DRIVE_CONTEXT
                               ? undefined
@@ -589,7 +576,6 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                 <Card>
                   {/* D-2: 주행 후 질문. 화면 제목과 같은 말로 부른다 */}
                   <InfoRow
-                    icon={<IconBadge glyph="↔" tone="tint" />}
                     value="오늘 운전 자세는 편하셨나요?"
                     detail="답하면 다음 추천에 반영돼요"
                     onPress={auto.seatMoving ? undefined : openFeedback}
@@ -599,7 +585,6 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                     <>
                       <Divider />
                       <InfoRow
-                        icon={<IconBadge glyph="◎" tone="tint" />}
                         value="주행 자세 관찰"
                         detail="주행 중 자세가 언제 흐트러지는지 봐요"
                         onPress={auto.seatMoving ? undefined : openPosture}
@@ -611,9 +596,8 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                     <>
                       <Divider />
                       <InfoRow
-                        icon={<IconBadge glyph="QR" tone="tint" />}
                         value="다른 차로 가져가기"
-                        detail="렌터카에서도 내 체형과 자세를 QR 코드로 옮겨요"
+                        detail="QR 코드로 내 자세를 옮겨요"
                         onPress={auto.seatMoving ? undefined : openExport}
                       />
                     </>

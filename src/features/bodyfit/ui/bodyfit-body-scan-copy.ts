@@ -8,7 +8,7 @@ type Copy = { title: string; description: string };
 const FAILURE_COPY: Record<BodyScanFailure, Copy> = {
   heightMissing: {
     title: "키를 먼저 입력해 주세요",
-    description: "입력한 키와 관절 비율로 앉은키를 추정해요",
+    description: "키를 알아야 앉은키를 추정할 수 있어요",
   },
   invalidData: {
     title: "자세를 읽지 못했어요",
@@ -33,10 +33,10 @@ const FAILURE_COPY: Record<BodyScanFailure, Copy> = {
   },
   tooSmall: {
     title: "너무 멀리 있어요",
-    description: "몸 전체가 화면을 절반 넘게 채우도록 가까이 와 주세요",
+    description: "조금 더 가까이 와 주세요",
   },
   implausible: {
-    title: "관절 위치가 어긋나게 잡혔어요",
+    title: "자세가 제대로 잡히지 않았어요",
     description: "다시 찍거나 앉은키를 직접 입력해 주세요",
   },
 };
