@@ -4,6 +4,7 @@ import { pleos } from "@/shared/pleos/pleos";
 
 import { shouldRereadSeat } from "../model/bodyfit-seat";
 
+import { findPostureDrives } from "./bodyfit.posture";
 import {
   findBodyProfile,
   findBodyProfiles,
@@ -27,6 +28,8 @@ export const bodyfitKeys = {
     [...bodyfitKeys.all, "comfort-records", profileId] as const,
   comfort: () => [...bodyfitKeys.all, "comfort"] as const,
   naviRoute: () => [...bodyfitKeys.all, "navi-route"] as const,
+  postureDrives: (profileId: string) =>
+    [...bodyfitKeys.all, "posture-drives", profileId] as const,
 };
 
 export const bodyfitQueries = {
@@ -59,6 +62,12 @@ export const bodyfitQueries = {
     queryOptions({
       queryKey: bodyfitKeys.comfortRecords(profileId),
       queryFn: () => findComfortRecords(profileId),
+    }),
+  /** 주행 자세 기록 (출발 자세와 비교한 주행 중 변화). 지금은 시연용 예시 기록이다 */
+  postureDrives: (profileId: string) =>
+    queryOptions({
+      queryKey: bodyfitKeys.postureDrives(profileId),
+      queryFn: () => findPostureDrives(profileId),
     }),
   /** 운전석 열선·공조 상태와 지금 실내 온도. 운전자가 버튼으로 바꿀 수 있어 항상 다시 읽는다. */
   comfort: () =>

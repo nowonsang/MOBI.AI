@@ -142,3 +142,23 @@ export const comfortRecordSchema = z.object({
     .nullable(),
   settings: comfortSettingsSchema,
 });
+
+// 주행 중 자세 관찰 값 (카메라 분석이 넘겨준다). 사람 몸이 앉은 채로 움직일 수 없는 값은 받지 않는다.
+const POSTURE_MAX_MINUTES = 24 * 60;
+
+export const postureSampleSchema = z.object({
+  minute: z.number().min(0).max(POSTURE_MAX_MINUTES),
+  headForwardCm: z.number().min(-40).max(40),
+  shoulderDropCm: z.number().min(-40).max(40),
+  backLeanDeg: z.number().min(-60).max(60),
+});
+
+export const postureDriveSchema = z.object({
+  profileId: z.string().min(1),
+  startedAt: z.number(),
+  context: driveContext,
+  durationMin: z.number().min(1).max(POSTURE_MAX_MINUTES),
+  // 1분에 한 번씩 남겨도 하루치를 넘지 않는다
+  samples: z.array(postureSampleSchema).max(POSTURE_MAX_MINUTES),
+  sample: z.boolean().default(false),
+});
