@@ -22,7 +22,7 @@ const REQUIRED_NOTICE = [
 // 자세 인식 도구(Google ML Kit)는 사진을 보내지 않지만 사용 통계는 보낼 수 있어 함께 알린다 (ML Kit 약관의 고지 의무).
 const CAMERA_NOTICE = {
   label: "카메라 (선택)",
-  text: "'카메라로 재기'를 누를 때와, 아래 주행 자세 관찰에 동의한 경우 주행하는 동안에만 켜요. 촬영한 화면은 저장하지 않고 이 차량 안에서만 분석하며, 추정한 앉은키와 분마다의 자세 변화만 저장해요. 자세 인식 도구(Google ML Kit)가 기기 종류·성능 같은 사용 통계를 Google 에 보낼 수 있지만 화면과 관절 값은 보내지 않아요",
+  text: "'카메라로 재기'를 누를 때와 주행 자세 관찰에 동의했을 때만 켜요. 화면은 저장하지 않고 이 차량 안에서만 분석해 숫자(앉은키, 자세 변화)만 남겨요. 자세 인식 도구(Google ML Kit)가 사용 통계를 Google 에 보낼 수 있지만 화면과 관절 값은 보내지 않아요",
 } as const;
 
 type Props = {
@@ -95,7 +95,7 @@ export function BodyfitConsentNotice({
             onChange={onPostureConsentChange}
             label="주행 자세 관찰에 동의해요 (선택)"
             accessibilityLabel="주행 자세 관찰에 동의해요, 선택. 체크하면 카메라 권한을 물어요"
-            detail="주행하는 동안 카메라로 머리·어깨·등 위치만 살펴, 주차하면 자세가 언제부터 흐트러졌는지 알려 드려요. 영상은 저장하지 않고 분마다의 변화만 남겨요. 나중에 주행 자세 관찰 화면에서 끌 수 있어요"
+            detail="주행 중 머리·어깨·등 위치를 살펴, 주차하면 자세가 언제부터 흐트러졌는지 알려 드려요. 언제든 끌 수 있어요"
           />
           {postureNote ? (
             <AppText

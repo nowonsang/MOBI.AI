@@ -63,6 +63,7 @@ import type {
 import { BodyfitComfortCard } from "./bodyfit-comfort-card";
 import { BodyfitAutoAdjustProgress } from "./bodyfit-auto-adjust-progress";
 import { describeBodyfitError } from "./bodyfit-error-copy";
+import { BodyfitPostureLink } from "./bodyfit-posture-link";
 import { BodyfitSeatAxes, BodyfitSeatAxesLegend } from "./bodyfit-seat-axes";
 import { BodyfitSeatImage } from "./bodyfit-seat-image";
 import { BodyfitVoiceFeedback } from "./bodyfit-voice-feedback";
@@ -528,6 +529,15 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                   </View>
                   <BodyfitSeatAxes recommended={recommended} current={shown} />
                 </Card>
+
+                {/* 주행 자세 관찰을 켠 운전자: 마지막 주행 결과를 자세 탭에서 바로 본다 (기록 탭까지 내려가지 않게). */}
+                {observing ? (
+                  <BodyfitPostureLink
+                    driver={driver}
+                    afterDrive={false}
+                    postureAt={null}
+                  />
+                ) : null}
 
                 {error ? <StatusView {...describeBodyfitError(error)} /> : null}
 
