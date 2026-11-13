@@ -165,7 +165,6 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   // 어느 탭을 보고 있는지는 이 화면 안에서만 쓰는 상태다 (화면을 다시 열면 자세부터).
   const [tab, setTab] = useState<HubTab>("posture");
   // 왼쪽 카드의 그림 무대 높이. 무대가 남는 높이를 채우면 그림도 그만큼 키운다.
-  const [stageHeight, setStageHeight] = useState(0);
 
   // 이 화면을 연 운전자를 이번 주행의 운전자로 본다 (주행 시작 자세·주행 후 질문에 쓴다).
   useEffect(() => {
@@ -302,10 +301,6 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   }
 
   const moveConfirm = auto.demo ? DEMO_MOVE_CONFIRM : MOVE_CONFIRM;
-  const seatImageHeight = Math.min(
-    SEAT_IMAGE_MAX_HEIGHT,
-    Math.max(SEAT_IMAGE_HEIGHT, stageHeight - spacing.md * 2),
-  );
 
   // 기어 상태는 제목 오른쪽에 둔다. 시트를 움직일 수 있는지가 이 화면에서 가장 먼저 봐야 할 정보다.
   // 상태는 점 색과 글자로 함께 알린다. 누를 수 없는 표시라 면·그림자 없이 글자만 둔다 (버튼으로 보이지 않게).
@@ -459,14 +454,12 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                 Pleos Connect 에뮬레이터나 차량에서 열면 시트를 맞출 수 있어요
               </AppText>
             ) : null}
-            {/* 고르는 것을 위에 두고, 그림이 카드의 남는 높이를 채운다 (왼쪽 카드 바닥을 오른쪽 단과 맞춘다). */}
-            <View
-              style={styles.stage}
-              onLayout={(event) =>
-                setStageHeight(event.nativeEvent.layout.height)
-              }
-            >
-              <BodyfitSeatImage height={seatImageHeight} />
+            {/* 고르는 것을 위에 두고, 그림이 카드의 남는 높이를 채운다 (왼쪽 카드 바닥을 오른쪽 단과 맞춘다).
+                그림은 상자를 채우기만 하고 상자 높이를 늘리지 않는다 (재서 키우면 커지기를 되풀이해 화면이 움직였다). */}
+            <View style={styles.stage}>
+              <View style={styles.stageImage}>
+                <BodyfitSeatImage height="fill" />
+              </View>
             </View>
             {auto.canDemo && canControlSeat && vehicleConnected ? (
               // 자동 조절 시연 모드: 에뮬레이터는 시트 위치가 바뀌지 않아 모의 위치로 흐름을 보여 준다.
@@ -690,11 +683,16 @@ const useStyles = themedStyles((colors) => ({
   // 운전석 그림을 올려 두는 옅은 무대
   stage: {
     flexGrow: 1,
-    alignItems: "center",
     justifyContent: "center",
     paddingVertical: spacing.md,
     borderRadius: radius.control,
     backgroundColor: colors.surfaceMuted,
+  },
+  // 그림 상자: 남는 높이를 받되 작게는 SEAT_IMAGE_HEIGHT, 크게는 SEAT_IMAGE_MAX_HEIGHT 까지
+  stageImage: {
+    flexGrow: 1,
+    minHeight: SEAT_IMAGE_HEIGHT,
+    maxHeight: SEAT_IMAGE_MAX_HEIGHT,
   },
   center: { textAlign: "center" },
   strong: { fontWeight: "700" },
