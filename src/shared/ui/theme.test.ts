@@ -20,7 +20,6 @@ const TEXT_ON: [ColorToken, ColorToken][] = [
   ["ink", "surfaceMuted"],
   ["ink", "fill"],
   ["ink", "primaryTint"],
-  ["ink", "secondaryButton"],
   ["inkSecondary", "surface"],
   ["inkSecondary", "surfaceMuted"],
   ["inkSecondary", "fill"],
