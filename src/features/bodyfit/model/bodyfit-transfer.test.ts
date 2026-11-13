@@ -180,6 +180,23 @@ describe("정상 왕복", () => {
     expect(transferRecordCount(transfer)).toBe(3);
   });
 
+  it("미리보기 기록 수는 가져온 뒤 이 차에 남는 기록 수와 같다 (상황마다 최대 CONTEXT_FULL_RECORDS 건)", () => {
+    const records = Array.from({ length: 5 }, (_, i) =>
+      record(i + 1, { backrest: 0.05 }, "usual"),
+    ).concat([
+      record(6, { backrest: -0.1 }, "long"),
+      record(7, { backrest: -0.1 }, "long"),
+    ]);
+    const transfer = buildTransfer(profile, records);
+    expect(transfer.learning.reduce((sum, item) => sum + item.count, 0)).toBe(
+      7,
+    );
+    expect(transferRecordCount(transfer)).toBe(
+      toImportedAdjustments(transfer, profile, 1_000).length,
+    );
+    expect(transferRecordCount(transfer)).toBe(5);
+  });
+
   it("차량 원시 값이나 시트 위치 자체가 아니라 보정(차이)만 담는다", () => {
     const transfer = buildTransfer(profile, [record(1, { foreAft: -0.05 })]);
     // 위치(baseline + offset)가 아니라 차이다.

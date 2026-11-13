@@ -254,9 +254,16 @@ export function decodeTransfer(text: unknown): TransferDecodeResult {
   };
 }
 
-/** 미리보기에 보여 줄 "학습 기록 ○건" */
+/**
+ * 한 상황의 기록이 이 차에 몇 건으로 되살아나는지 (toImportedAdjustments 와 같은 수).
+ * 미리보기 숫자가 가져온 뒤 기록 탭의 숫자와 같아야 하므로 원래 차의 기록 수가 아니라 이 값을 보여 준다.
+ */
+export const importedRecordCount = (item: TransferLearning): number =>
+  Math.min(item.count, CONTEXT_FULL_RECORDS);
+
+/** 미리보기에 보여 줄 "학습 기록 ○건": 가져오면 이 차에 남는 기록 수 */
 export const transferRecordCount = (transfer: PostureTransfer): number =>
-  transfer.learning.reduce((sum, item) => sum + item.count, 0);
+  transfer.learning.reduce((sum, item) => sum + importedRecordCount(item), 0);
 
 /**
  * 가져온 학습 요약을 이 차의 자세 기록 모양으로 되살린다. 그러면 기존 학습(C-2, C-5)이 그대로 읽고,
@@ -294,7 +301,7 @@ export function toImportedAdjustments(
     }
     if (Object.keys(final).length === 0) continue;
 
-    const copies = Math.min(item.count, CONTEXT_FULL_RECORDS);
+    const copies = importedRecordCount(item);
     for (let copy = 0; copy < copies; copy += 1) {
       records.push({
         profileId: profile.id,

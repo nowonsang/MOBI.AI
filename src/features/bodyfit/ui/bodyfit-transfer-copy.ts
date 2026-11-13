@@ -3,6 +3,7 @@ import { poseCameraErrorCode } from "@/shared/pose-camera/pose-camera";
 import type { TransferReadFailure } from "../api/bodyfit.transfer";
 import { DRIVE_CONTEXT_LABEL } from "../model/bodyfit-drive-context";
 import {
+  importedRecordCount,
   transferRecordCount,
   type PostureTransfer,
 } from "../model/bodyfit-transfer";
@@ -94,7 +95,7 @@ export function describeTransferLearning(transfer: PostureTransfer): {
   return {
     value: `학습 기록 ${count}건 반영`,
     detail: transfer.learning
-      .map((item) => `${DRIVE_CONTEXT_LABEL[item.context]} ${item.count}건`)
+      .map((item) => `${DRIVE_CONTEXT_LABEL[item.context]} ${importedRecordCount(item)}건`)
       .join(" · "),
   };
 }
