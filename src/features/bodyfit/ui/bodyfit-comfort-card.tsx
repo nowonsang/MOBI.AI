@@ -64,9 +64,6 @@ const isFanRow = (key: ComfortKey) =>
 
 const COMFORT_REREAD_MS = 5000;
 
-// 카드 안쪽 폭이 이만큼이면 두 단으로 나눠 한 화면에 들어오게 한다.
-const TWO_COLUMN_WIDTH = 720;
-
 type Tile = {
   id: string;
   label: string;
@@ -158,8 +155,6 @@ export function BodyfitComfortCard({
   });
   const apply = useApplyComfort();
   const [notice, setNotice] = useState<string | null>(null);
-  // 넓으면 두 단으로 나누려고 카드 안쪽 폭을 잰다 (높이는 재지 않아 다시 재기가 되풀이되지 않는다).
-  const [gridWidth, setGridWidth] = useState(0);
 
   // 주행을 마치고 주차로 돌아오면 기다리지 않고 바로 다시 읽는다.
   const { refetch: rereadComfort } = comfort;
@@ -282,12 +277,6 @@ export function BodyfitComfortCard({
         ? `${changeCount}곳이 평소와 달라요`
         : "✓ 평소와 같아요";
 
-  const twoColumns = gridWidth >= TWO_COLUMN_WIDTH;
-  const half = Math.ceil(tiles.length / 2);
-  const columns = twoColumns
-    ? [tiles.slice(0, half), tiles.slice(half)]
-    : [tiles];
-
   const renderRow = (tile: Tile, index: number) => (
     <View
       key={tile.id}
@@ -310,10 +299,7 @@ export function BodyfitComfortCard({
 
   return (
     <Card title={title}>
-      <View
-        style={styles.body}
-        onLayout={(event) => setGridWidth(event.nativeEvent.layout.width)}
-      >
+      <View style={styles.body}>
         {records.isPending ? (
           <View accessibilityLabel="불러오는 중">
             {ROWS.slice(0, 3).map(({ key }) => (
@@ -327,13 +313,8 @@ export function BodyfitComfortCard({
           </AppText>
         ) : (
           <>
-            <View style={styles.columns}>
-              {columns.map((column, index) => (
-                <View key={index} style={styles.column}>
-                  {column.map(renderRow)}
-                </View>
-              ))}
-            </View>
+            {/* 두 단으로 나누면 왼쪽 값과 오른쪽 이름이 붙어 한 줄로 읽혀서 한 단으로 둔다 (폭은 탭이 좁혀 준다). */}
+            <View>{tiles.map(renderRow)}</View>
             {notes.length > 0 ? (
               <AppText variant="caption" tone="tertiary">
                 {notes.join(" · ")}
@@ -383,8 +364,6 @@ export function BodyfitComfortCard({
 
 const useStyles = themedStyles((colors) => ({
   body: { gap: spacing.md },
-  columns: { flexDirection: "row", gap: spacing.xl },
-  column: { flex: 1 },
   // 이름은 왼쪽, 값은 오른쪽 끝에 맞춘 한 줄
   row: {
     minHeight: sizes.touchTarget,

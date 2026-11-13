@@ -24,7 +24,7 @@ import { InfoRow } from "@/shared/ui/info-row";
 import { Screen } from "@/shared/ui/screen";
 import { SegmentedTabs } from "@/shared/ui/segmented-tabs";
 import { StatusView } from "@/shared/ui/status-view";
-import { radius, sizes, spacing } from "@/shared/ui/theme";
+import { layout, radius, sizes, spacing } from "@/shared/ui/theme";
 import { themedStyles } from "@/shared/ui/use-theme";
 
 import { useAutoAdjust } from "../api/bodyfit.auto-adjust";
@@ -452,15 +452,18 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
             ) : null}
 
             {tab === "comfort" ? (
-              <BodyfitComfortCard
-                profileId={driver.id}
-                vehicleConnected={vehicleConnected}
-                parked={parked}
-              />
+              // 목록 탭은 넓은 카드 끝까지 늘이지 않고 가운데 한 작업 폭으로 모은다 (이름과 값이 멀어지지 않게).
+              <View style={styles.listTab}>
+                <BodyfitComfortCard
+                  profileId={driver.id}
+                  vehicleConnected={vehicleConnected}
+                  parked={parked}
+                />
+              </View>
             ) : null}
 
             {tab === "records" ? (
-              <>
+              <View style={styles.listTab}>
                 <Card
                   title="최근 기록"
                   count={
@@ -522,7 +525,7 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                     </>
                   ) : null}
                 </Card>
-              </>
+              </View>
             ) : null}
           </>
         }
@@ -566,6 +569,12 @@ const useStyles = themedStyles((colors) => ({
   contextText: { flexShrink: 1 },
   suggestion: { alignItems: "flex-start", gap: spacing.xs },
   records: { gap: spacing.xs },
+  listTab: {
+    width: "100%",
+    maxWidth: layout.narrow,
+    alignSelf: "center",
+    gap: spacing.md,
+  },
   quiet: {
     minHeight: sizes.touchTarget,
     justifyContent: "center",
