@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { View, useWindowDimensions } from "react-native";
+import { View } from "react-native";
 
 import { useAppSelector } from "@/core/store/hooks";
 import { isPleosAvailable } from "@/shared/pleos/pleos";
@@ -9,10 +9,9 @@ import { useUxRestrictions } from "@/shared/pleos/use-ux-restrictions";
 import { AppText } from "@/shared/ui/app-text";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
-import { Columns } from "@/shared/ui/columns";
 import { Screen } from "@/shared/ui/screen";
 import { StatusView } from "@/shared/ui/status-view";
-import { radius, shadows, spacing } from "@/shared/ui/theme";
+import { radius, spacing } from "@/shared/ui/theme";
 import { themedStyles } from "@/shared/ui/use-theme";
 
 import { canDemoSeat } from "../api/bodyfit.auto-adjust";
@@ -34,7 +33,7 @@ import { selectDriveContext } from "../model/bodyfit-session.slice";
 import type { SeatAxis, SeatRatios } from "../model/bodyfit.types";
 import { AXIS_COPY } from "./bodyfit-axis-copy";
 import { describeBodyfitError } from "./bodyfit-error-copy";
-import { BodyfitSeatImage } from "./bodyfit-seat-image";
+import { BodyfitSeatPicture, type SeatMark } from "./bodyfit-seat-picture";
 import { BodyfitStepList, type BodyfitStep } from "./bodyfit-step-list";
 import { BodyfitMissingDriver } from "./bodyfit-missing-driver";
 
@@ -67,10 +66,6 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
   const [notice, setNotice] = useState<string | null>(null);
   // 시연 모드: 에뮬레이터가 시트 위치를 0 으로만 돌려줄 때 화면 버튼으로 움직이는 모의 위치 (한 화면 안의 상태).
   const [demo, setDemo] = useState<DemoSeat | null>(null);
-  // 한 화면에 들어오게 운전석 그림은 남는 높이만큼만 쓴다. 낮은 창이나 시연 버튼이 있을 때는 뺀다 (꾸밈용 그림이다).
-  const windowHeight = useWindowDimensions().height;
-  const pictureHeight =
-    windowHeight >= 1000 ? 240 : windowHeight >= 820 && !demo ? 150 : 0;
 
   const vehicleSeat = seat.data ? toSeatRatios(seat.data) : null;
   const current = demo ? demo.seat : vehicleSeat;
@@ -227,112 +222,120 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
       };
     });
     const headline = focus ? describeAxis(focus) : "추천 자세에 다 맞췄어요";
+    const marks: SeatMark[] = guide.axes.map((axis) => {
+      const label = AXIS_COPY[axis.axis].label;
+      if (axis.status === "ok")
+        return { axis: axis.axis, text: `✓ ${label}`, tone: "done" };
+      const text = axis.direction
+        ? AXIS_COPY[axis.axis].stage[axis.direction]
+        : label;
+      return {
+        axis: axis.axis,
+        text,
+        tone: axis.axis === guide.focus ? "active" : "todo",
+      };
+    });
     return (
-      <Columns
-        stretch
-        left={
-          <>
-            {/* 지금 할 일 하나만 크게 보여 준다 (이 화면의 강조는 여기 한 곳). */}
-            <View
-              style={[styles.focus, done && styles.focusDone]}
-              accessibilityLiveRegion="polite"
+      <View style={styles.body}>
+        {/* 지금 할 일 하나만 크게 보여 준다 (이 화면의 강조는 여기 한 곳). */}
+        <View
+          style={[styles.focus, done && styles.focusDone]}
+          accessibilityLiveRegion="polite"
+        >
+          <View style={styles.focusHead}>
+            <AppText
+              variant="secondary"
+              tone="inverse"
+              style={styles.focusLabel}
             >
-              <View style={styles.focusHead}>
-                <AppText
-                  variant="secondary"
-                  tone="inverse"
-                  style={styles.focusLabel}
-                >
-                  {focus
-                    ? `지금 맞출 곳 · ${AXIS_COPY[focus.axis].label}`
-                    : "완료"}
-                </AppText>
-              </View>
-              {/* 낱말 단위로 줄을 바꾼다 (한 글자만 다음 줄로 넘어가지 않게). */}
-              <View
-                style={styles.focusWords}
-                accessible
-                accessibilityLabel={headline}
+              {focus ? `지금 맞출 곳 · ${AXIS_COPY[focus.axis].label}` : "완료"}
+            </AppText>
+          </View>
+          {/* 낱말 단위로 줄을 바꾼다 (한 글자만 다음 줄로 넘어가지 않게). */}
+          <View
+            style={styles.focusWords}
+            accessible
+            accessibilityLabel={headline}
+          >
+            {headline.split(" ").map((word, index) => (
+              <AppText
+                key={`${index}-${word}`}
+                variant="display"
+                tone="inverse"
               >
-                {headline.split(" ").map((word, index) => (
-                  <AppText
-                    key={`${index}-${word}`}
-                    variant="display"
-                    tone="inverse"
-                  >
-                    {word}
-                  </AppText>
-                ))}
+                {word}
+              </AppText>
+            ))}
+          </View>
+          {focus ? (
+            // 실시간 막대: 흰 점이 지금 위치, 밝은 띠가 목표 구간(맞춘 것으로 보는 범위).
+            <View style={styles.gauge} accessible={false}>
+              <View style={styles.gaugeTrack}>
+                <View
+                  style={[
+                    styles.gaugeZone,
+                    {
+                      left: `${percent(Math.max(0, focus.target - GUIDE_TOLERANCE))}%`,
+                      width: `${percent(GUIDE_TOLERANCE * 2)}%`,
+                    },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.gaugeDot,
+                    { left: `${percent(focus.current)}%` },
+                  ]}
+                />
               </View>
-              {focus ? (
-                // 실시간 막대: 흰 점이 지금 위치, 밝은 띠가 목표 구간(맞춘 것으로 보는 범위).
-                <View style={styles.gauge} accessible={false}>
-                  <View style={styles.gaugeTrack}>
-                    <View
-                      style={[
-                        styles.gaugeZone,
-                        {
-                          left: `${percent(Math.max(0, focus.target - GUIDE_TOLERANCE))}%`,
-                          width: `${percent(GUIDE_TOLERANCE * 2)}%`,
-                        },
-                      ]}
-                    />
-                    <View
-                      style={[
-                        styles.gaugeDot,
-                        { left: `${percent(focus.current)}%` },
-                      ]}
-                    />
-                  </View>
-                  <View style={styles.gaugeLabels}>
-                    <AppText variant="caption" tone="inverse">
-                      {`지금 ${percent(focus.current)}%`}
-                    </AppText>
-                    <AppText variant="caption" tone="inverse">
-                      {`목표 ${percent(focus.target)}%`}
-                    </AppText>
-                  </View>
-                </View>
-              ) : null}
-              {focus && demo ? (
-                <View style={styles.press}>
-                  {(["decrease", "increase"] as const).map((direction) => (
-                    <Button
-                      key={direction}
-                      label={AXIS_COPY[focus.axis].press[direction]}
-                      variant="secondary"
-                      onPress={() => press(focus.axis, direction)}
-                      accessibilityHint={`${AXIS_COPY[focus.axis].label}를 시트 버튼처럼 한 번 움직여요`}
-                    />
-                  ))}
-                </View>
-              ) : null}
-              {done ? (
-                <AppText variant="secondary" tone="inverse">
-                  {demo
-                    ? "시연 모드라 이 자세는 기록하지 않아요"
-                    : "이 자세를 기억해 두면 다음 추천에 써요"}
+              <View style={styles.gaugeLabels}>
+                <AppText variant="caption" tone="inverse">
+                  {`지금 ${percent(focus.current)}%`}
                 </AppText>
-              ) : null}
-            </View>
-            {pictureHeight > 0 ? (
-              <View style={styles.stage}>
-                <BodyfitSeatImage height={pictureHeight} />
+                <AppText variant="caption" tone="inverse">
+                  {`목표 ${percent(focus.target)}%`}
+                </AppText>
               </View>
-            ) : null}
-          </>
-        }
-        right={
-          // 축이 많아도 한 화면에 들어오게 지금 맞출 곳만 펼치고 나머지는 접는다.
-          <Card fill title="맞추는 순서">
-            <BodyfitStepList
-              steps={steps}
-              doneNoun="맞춘 곳"
-              todoNoun="남은 곳"
-            />
-          </Card>
-        }
-      />
+            </View>
+          ) : null}
+          {focus && demo ? (
+            <View style={styles.press}>
+              {(["decrease", "increase"] as const).map((direction) => (
+                <Button
+                  key={direction}
+                  label={AXIS_COPY[focus.axis].press[direction]}
+                  variant="secondary"
+                  onPress={() => press(focus.axis, direction)}
+                  accessibilityHint={`${AXIS_COPY[focus.axis].label}를 시트 버튼처럼 한 번 움직여요`}
+                />
+              ))}
+            </View>
+          ) : null}
+          {done ? (
+            <AppText variant="secondary" tone="inverse">
+              {demo
+                ? "시연 모드라 이 자세는 기록하지 않아요"
+                : "이 자세를 기억해 두면 다음 추천에 써요"}
+            </AppText>
+          ) : null}
+        </View>
+        <Card>
+          {/* 자세 탭과 같은 그림: 지금 맞출 곳만 파랗게, 맞춘 곳은 초록 ✓, 남은 곳은 회색. */}
+          <BodyfitSeatPicture
+            marks={marks}
+            accessibilityLabel={steps
+              .map((step) => `${step.label} ${step.value}`)
+              .join(", ")}
+            // 좁은 창에서는 그림 양옆에 라벨 자리가 없어 순서 목록으로 보여 준다.
+            fallback={
+              <BodyfitStepList
+                steps={steps}
+                doneNoun="맞춘 곳"
+                todoNoun="남은 곳"
+              />
+            }
+          />
+        </Card>
+      </View>
     );
   })();
 
@@ -417,13 +420,6 @@ const useStyles = themedStyles((colors) => ({
     backgroundColor: colors.onPrimary,
   },
   gaugeLabels: { flexDirection: "row", justifyContent: "space-between" },
-  // 그림은 꾸밈용이라 카드 제목·여백 없이 낮게 둔다.
-  stage: {
-    alignItems: "center",
-    padding: spacing.sm,
-    borderRadius: radius.card,
-    backgroundColor: colors.surface,
-    ...shadows.card,
-  },
+  body: { gap: spacing.md },
   press: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
 }));

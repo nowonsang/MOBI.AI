@@ -1,12 +1,11 @@
 import { useEffect, useEffectEvent } from "react";
-import { View, useWindowDimensions } from "react-native";
+import { View } from "react-native";
 
 import { AppText } from "@/shared/ui/app-text";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
-import { Columns } from "@/shared/ui/columns";
 import { Screen } from "@/shared/ui/screen";
-import { radius, shadows, spacing } from "@/shared/ui/theme";
+import { radius, spacing } from "@/shared/ui/theme";
 import { themedStyles } from "@/shared/ui/use-theme";
 
 import { useLiveDriverSeat } from "../api/bodyfit.seat-live";
@@ -19,7 +18,8 @@ import {
 import { toSeatRatios } from "../model/bodyfit-seat";
 import type { SeatAxis, SeatRatios } from "../model/bodyfit.types";
 import { describeBodyfitError } from "./bodyfit-error-copy";
-import { BodyfitSeatImage } from "./bodyfit-seat-image";
+import { AXIS_COPY as SEAT_COPY } from "./bodyfit-axis-copy";
+import { BodyfitSeatPicture, type SeatMark } from "./bodyfit-seat-picture";
 import { BodyfitStepList, type BodyfitStep } from "./bodyfit-step-list";
 
 const AXIS_COPY: Record<
@@ -116,7 +116,8 @@ function describeRun(run: AutoAdjustRun, axes: AutoAdjustAxis[]): Headline {
         step: run.stopping
           ? "멈추는 중이에요"
           : active
-            ? `${describeAxis(active, false)}이에요`
+            ? // 어느 곳을 움직이는지도 이 한 줄에 쓴다 (따로 "지금 움직이는 곳" 줄을 두지 않는다).
+              `${AXIS_COPY[active.axis].label} ${describeAxis(active, false)}이에요`
             : "시트 위치를 확인하고 있어요",
       };
     }
@@ -147,10 +148,6 @@ export function BodyfitAutoAdjustProgress({
   onClose,
 }: BodyfitAutoAdjustProgressProps) {
   const styles = useStyles();
-  // 진행 문구와 멈추기가 한 화면에 함께 보이게 운전석 그림은 남는 높이만큼만 쓴다 (낮은 창에서는 뺀다).
-  const windowHeight = useWindowDimensions().height;
-  const pictureHeight =
-    windowHeight >= 1000 ? 240 : windowHeight >= 820 ? 150 : 0;
   // 실제 이동: 시트가 움직이는 동안 오는 위치 알림으로 "지금" 값을 따라간다.
   const seat = useLiveDriverSeat({ enabled: !run.demo });
   const current = run.demo
@@ -162,48 +159,11 @@ export function BodyfitAutoAdjustProgress({
   const moving = run.outcome === null;
   const done = run.outcome === "done";
   const headline = describeRun(run, axes);
-  const active = axes.find((axis) => axis.status === "moving");
 
   const announceDone = useEffectEvent(() => onDone?.());
   useEffect(() => {
     if (done) announceDone();
   }, [done]);
-
-  const summary = (
-    <>
-      <Card>
-        {run.demo ? (
-          <View style={styles.demo}>
-            <AppText variant="caption" tone="secondary">
-              시연 모드 · 실제 시트는 움직이지 않아요
-            </AppText>
-          </View>
-        ) : null}
-        <View style={styles.now} accessibilityLiveRegion="polite">
-          <AppText variant="secondary" tone="tertiary">
-            {active
-              ? `지금 움직이는 곳 · ${AXIS_COPY[active.axis].label}`
-              : moving
-                ? "자동 조절"
-                : "결과"}
-          </AppText>
-          <AppText variant="display">{headline.step}</AppText>
-        </View>
-        {axes.length > 0 ? (
-          <View style={styles.count}>
-            <AppText variant="caption" tone="secondary">
-              {countAdjusted(run)}/{axes.length} 맞춤
-            </AppText>
-          </View>
-        ) : null}
-      </Card>
-      {pictureHeight > 0 ? (
-        <View style={styles.stage}>
-          <BodyfitSeatImage height={pictureHeight} />
-        </View>
-      ) : null}
-    </>
-  );
 
   const stepItems: BodyfitStep[] = axes.map((axis, index) => {
     const text = describeAxis(axis, !moving);
@@ -227,22 +187,33 @@ export function BodyfitAutoAdjustProgress({
     };
   });
 
-  // 움직일 축을 받기 전에는 스켈레톤을 보여 준다. 축 없이 끝났으면(자동 조절을 지원하지 않는 차량) 목록을 그리지 않는다.
-  // 축이 많아도 멈추기와 함께 한 화면에 들어오게 지금 움직이는 곳만 펼치고 나머지는 접는다.
-  const steps =
-    axes.length === 0 && !moving ? null : (
-      <Card title="움직이는 순서">
-        {axes.length === 0 ? (
-          <View style={styles.skeleton} accessibilityLabel="불러오는 중" />
-        ) : (
-          <BodyfitStepList
-            steps={stepItems}
-            doneNoun="맞춘 곳"
-            todoNoun={moving ? "남은 곳" : "움직이지 않은 곳"}
-          />
-        )}
-      </Card>
-    );
+  // 그림 위 라벨: 지금 움직이는 곳만 파랗게, 맞춘 곳은 초록 ✓, 기다리는 곳은 회색 (자세 탭과 같은 그림).
+  const marks: SeatMark[] = axes.map((axis) => {
+    const label = AXIS_COPY[axis.axis].label;
+    const toward = axis.direction
+      ? SEAT_COPY[axis.axis].stage[axis.direction]
+      : label;
+    switch (axis.status) {
+      case "done":
+        return { axis: axis.axis, text: `✓ ${label}`, tone: "done" };
+      case "moving":
+        return {
+          axis: axis.axis,
+          text: axis.direction ? toward : `${label} 확인 중`,
+          tone: "active",
+        };
+      case "stopped":
+        return { axis: axis.axis, text: `${label} · 멈춤`, tone: "issue" };
+      case "failed":
+        return { axis: axis.axis, text: `${label} · 못 감`, tone: "issue" };
+      case "waiting":
+        return moving
+          ? { axis: axis.axis, text: toward, tone: "todo" }
+          : { axis: axis.axis, text: `${label} · 그대로`, tone: "issue" };
+    }
+  });
+  const total = axes.length;
+  const adjusted = countAdjusted(run);
 
   return (
     <Screen
@@ -264,7 +235,58 @@ export function BodyfitAutoAdjustProgress({
         </View>
       }
     >
-      {steps ? <Columns left={summary} right={steps} /> : summary}
+      <Card>
+        {run.demo ? (
+          <View style={styles.demo}>
+            <AppText variant="caption" tone="secondary">
+              시연 모드 · 실제 시트는 움직이지 않아요
+            </AppText>
+          </View>
+        ) : null}
+        {/* 맨 위 한 줄이 지금 하는 일, 그 아래 막대가 전체 진행이다. */}
+        <View style={styles.now} accessibilityLiveRegion="polite">
+          <AppText variant="heading" style={styles.nowText}>
+            {headline.step}
+          </AppText>
+          {total > 0 ? (
+            <AppText variant="secondary" tone="secondary">
+              {`${adjusted} / ${total}곳`}
+            </AppText>
+          ) : null}
+        </View>
+        {total > 0 ? (
+          <View style={styles.bar} accessible={false}>
+            <View
+              style={[
+                styles.barFill,
+                done && styles.barDone,
+                { width: `${Math.round((adjusted / total) * 100)}%` },
+              ]}
+            />
+          </View>
+        ) : null}
+        {total === 0 ? (
+          moving ? (
+            // 움직일 축을 받기 전에는 그림 자리를 비워 둔다 (축 없이 끝났으면 그리지 않는다).
+            <View style={styles.skeleton} accessibilityLabel="불러오는 중" />
+          ) : null
+        ) : (
+          <BodyfitSeatPicture
+            marks={marks}
+            accessibilityLabel={stepItems
+              .map((item) => `${item.label} ${item.value}`)
+              .join(", ")}
+            // 좁은 창에서는 그림 양옆에 라벨 자리가 없어 순서 목록으로 보여 준다.
+            fallback={
+              <BodyfitStepList
+                steps={stepItems}
+                doneNoun="맞춘 곳"
+                todoNoun={moving ? "남은 곳" : "움직이지 않은 곳"}
+              />
+            }
+          />
+        )}
+      </Card>
     </Screen>
   );
 }
@@ -282,25 +304,28 @@ const useStyles = themedStyles((colors) => ({
     borderColor: colors.warning,
     backgroundColor: colors.surface,
   },
-  now: { gap: spacing.xs },
-  count: {
-    alignSelf: "flex-start",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+  now: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    flexWrap: "wrap",
+    gap: spacing.md,
+  },
+  nowText: { flex: 1 },
+  bar: {
+    height: 12,
     borderRadius: radius.pill,
     backgroundColor: colors.fill,
+    overflow: "hidden",
   },
+  barFill: {
+    height: "100%",
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
+  },
+  barDone: { backgroundColor: colors.success },
   skeleton: {
     height: 320,
     borderRadius: radius.control,
     backgroundColor: colors.surfaceMuted,
-  },
-  // 그림은 꾸밈용이라 카드 제목·여백 없이 낮게 둔다.
-  stage: {
-    alignItems: "center",
-    padding: spacing.sm,
-    borderRadius: radius.card,
-    backgroundColor: colors.surface,
-    ...shadows.card,
   },
 }));
