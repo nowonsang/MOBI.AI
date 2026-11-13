@@ -32,7 +32,8 @@ export function BodyfitBoardingMonitor() {
     lastOccupied.current = next;
     if (!shouldReselectDriver({ changed, gear, seatMoving })) return;
     dispatch(occupantChanged());
-    router.navigate("/bodyfit");
+    // navigate 는 목록을 새로 쌓는다. 그러면 뒤로 가기로 앞사람 시트 화면에 돌아가므로 쌓인 목록까지 되돌린다.
+    router.dismissTo("/bodyfit");
   });
 
   useEffect(() => {

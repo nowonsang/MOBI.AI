@@ -246,7 +246,7 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   const deleteDriver = () => {
     setConfirming(null);
     remove.mutate(driver.id, {
-      onSuccess: () => router.replace("/bodyfit"),
+      onSuccess: () => router.dismissTo("/bodyfit"),
     });
   };
 

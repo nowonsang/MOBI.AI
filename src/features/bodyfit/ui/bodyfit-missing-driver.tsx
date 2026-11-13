@@ -16,7 +16,7 @@ export function BodyfitMissingDriver() {
         description="목록에서 운전자를 다시 골라 주세요"
         action={{
           label: "운전자 목록으로",
-          onPress: () => router.replace("/bodyfit"),
+          onPress: () => router.dismissTo("/bodyfit"),
         }}
       />
     </Screen>
