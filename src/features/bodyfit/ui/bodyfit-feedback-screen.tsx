@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Pressable, View, useWindowDimensions } from "react-native";
 
 import { useAppDispatch, useAppSelector } from "@/core/store/hooks";
+import { canUseCamera } from "@/shared/config/app-variant";
 import { isPleosAvailable } from "@/shared/pleos/pleos";
 import { useGear } from "@/shared/pleos/use-gear";
 import { useUxRestrictions } from "@/shared/pleos/use-ux-restrictions";
@@ -36,6 +37,7 @@ import {
 } from "../model/bodyfit-touch-feedback";
 import type { DriveContext, SeatAxis } from "../model/bodyfit.types";
 import { describeBodyfitError } from "./bodyfit-error-copy";
+import { BodyfitPostureCard } from "./bodyfit-posture-card";
 import { BodyfitSeatImage } from "./bodyfit-seat-image";
 
 // 선택지 앞에 붙이는 방향 기호. 뜻은 옆 글자가 전한다. 모든 줄이 같은 가는 화살표를 쓴다.
@@ -260,25 +262,37 @@ export function BodyfitFeedbackScreen({
       ) : (
         <Columns
           left={
-            <Card>
-              {context !== DEFAULT_DRIVE_CONTEXT ? (
-                <View style={styles.contextTag}>
-                  <AppText variant="caption">
-                    {DRIVE_CONTEXT_LABEL[context]} 기록으로 남겨요
-                  </AppText>
-                </View>
+            <View style={styles.leftStack}>
+              {canUseCamera ? (
+                <BodyfitPostureCard
+                  driver={driver}
+                  context={context}
+                  canAnswer={canAnswer}
+                />
               ) : null}
-              <View style={styles.stage}>
-                <BodyfitSeatImage height={pictureHeight} />
-              </View>
-              <AppText
-                variant="secondary"
-                tone="secondary"
-                style={styles.center}
-              >
-                시트는 움직이지 않아요
-              </AppText>
-            </Card>
+              <Card>
+                {context !== DEFAULT_DRIVE_CONTEXT ? (
+                  <View style={styles.contextTag}>
+                    <AppText variant="caption">
+                      {DRIVE_CONTEXT_LABEL[context]} 기록으로 남겨요
+                    </AppText>
+                  </View>
+                ) : null}
+                {/* 카메라 카드가 함께 있으면 꾸밈용 그림은 빼서 한 화면에 들어오게 한다. */}
+                {canUseCamera ? null : (
+                  <View style={styles.stage}>
+                    <BodyfitSeatImage height={pictureHeight} />
+                  </View>
+                )}
+                <AppText
+                  variant="secondary"
+                  tone="secondary"
+                  style={styles.center}
+                >
+                  시트는 움직이지 않아요
+                </AppText>
+              </Card>
+            </View>
           }
           right={
             <Card title="바꾸고 싶은 곳" count="한 줄에 하나">
@@ -352,6 +366,8 @@ const useStyles = themedStyles((colors) => ({
   pair: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   cell: { flexGrow: 1, flexBasis: "40%", minWidth: 180 },
   grow: { flex: 1 },
+  // 카드 사이는 24dp
+  leftStack: { gap: spacing.md },
   // 접힌 줄은 누르는 것임이 보이게 보조 버튼과 같은 테두리를 두른다.
   more: {
     minHeight: sizes.touchTarget,

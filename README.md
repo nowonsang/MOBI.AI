@@ -61,6 +61,7 @@ npm run verify         # 위 4개 전부 — push 전 필수
 | `pleos.car.permission.NAVI_ROUTE` | 목적지 도착 이벤트 (장거리 주행 후 착좌감 질문), 목적지까지 남은 거리·시간 읽기 (주차 중 운전 상황 제안) |
 
 | `android.permission.CAMERA` (Android 표준, contest 빌드만) | 운전자 등록의 "카메라로 재기": 주차 중 버튼을 눌렀을 때만 켜서 화면 한 장의 관절 위치로 앉은키를 추정한다. 화면은 저장·전송하지 않는다. `app.config.ts` 에서 선언하고 권한 창도 그 버튼을 눌렀을 때 띄운다 |
+| `android.permission.FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_CAMERA` (Android 표준, contest 빌드만) | 주행 중 자세 살펴보기(C-7): 주행 중에는 앱 화면이 가려지므로 화면 없이 도는 카메라 서비스(`PostureWatchService`)로 5초마다 상반신 관절 위치만 모은다. 운전자가 "켜기"로 동의했을 때만, 앱이 보이는 주차 중에 시작한다 (Android 14 제한). 주행이 끝나면 요약만 기기에 남기고 관절 값은 버린다 |
 
 > Pleos 권한은 Pleos App Market 과 사전 협의·승인된 범위에서만 쓸 수 있다. 쓰지 않는 권한은 넣지 않는다.
 
@@ -145,10 +146,11 @@ modules/pleos-connect/        Pleos Connect SDK 로컬 Expo 모듈
 └── src/                      JS 계약 (PleosConnect.types.ts, PleosConnectModule.ts)
 modules/pose-camera/          Android 표준 카메라 + 기기 안 자세 인식 로컬 Expo 모듈 (Pleos SDK 아님)
 ├── android/build.gradle      CameraX · ML Kit Pose Detection 의존성
-├── android/src/main/AndroidManifest.xml   카메라를 필수 하드웨어로 요구하지 않는다는 선언 (CAMERA 권한은 app.config.ts)
+├── android/src/main/AndroidManifest.xml   카메라를 필수 하드웨어로 요구하지 않는다는 선언, 자세 관찰 서비스 등록 (권한은 app.config.ts)
 ├── android/src/main/java/ai/mobi/posecamera/
 │   ├── PoseCameraModule.kt   카메라 유무·권한 요청, 뷰 등록
 │   ├── PoseCameraView.kt     미리보기 + 화면 한 장의 관절 인식 (프레임은 메모리에서만, 저장·전송 없음)
+│   ├── PostureWatchService.kt  주행 중 자세 관찰 카메라 포그라운드 서비스 (5초마다 상반신 관절만 메모리에 모음)
 │   └── PoseCameraErrors.kt   JS 에러 코드
 └── src/                      JS 계약 (PoseCamera.types.ts, PoseCameraModule.ts, PoseCameraView.tsx)
 src/
@@ -165,7 +167,7 @@ src/
     ├── pleos/                차량 SDK 접근 창구 (pleos.ts, pleos.types.ts, use-gear, use-ux-restrictions, use-pleos-event)
     ├── pose-camera/          카메라·자세 인식 접근 창구 (pose-camera.ts, pose-camera.types.ts, pose-camera-view.tsx)
     ├── storage/              기기 저장 값 암호화 (encrypted-storage.ts)
-    ├── config/               빌드 종류별 기능 (app-variant.ts: contest/market)
+    ├── config/               빌드 종류별 기능 (app-variant.ts: contest/market), 에뮬레이터 여부 (emulator.ts)
     └── ui/                   디자인 토큰(theme.ts, 주간·야간 색 세트), 색을 읽는 훅(use-theme.ts)과 공용 컴포넌트(Screen, Columns, Card, InfoRow, IconBadge, Chip, Button, TextField, StatusView)
 scripts/                      개발 도구 (비밀 검사, env 권한, 마이그레이션 검사, Supabase 점검)
 scripts/android/              Android 스크립트 (점검·기기 목록·prebuild·빌드·에뮬레이터·실기기 실행, 공용 lib.mjs)
@@ -200,6 +202,7 @@ app → core → features → shared → native(modules/*)
 - 음성 인식 결과는 신뢰하지 않는 입력이다. 조절안으로만 만들고 운전자 확인 후에만 적용한다.
 - 체형·자세 기록은 기기 안에만 **AES-GCM 으로 암호화**해 저장한다 (`src/shared/storage/encrypted-storage.ts`, 키는 `expo-secure-store` 로 Android Keystore 가 보호). 운전자가 지울 수 있다.
 - 카메라(`modules/pose-camera`)는 운전자가 "카메라로 재기"를 눌렀을 때만, 주차 중에만 켠다. 프레임은 메모리에서 한 장만 분석하고 버린다: 파일로 쓰지 않고, 앱 코드로 전송하지 않고, JS 로도 넘기지 않는다 (JS 가 받는 것은 관절 좌표뿐이고 zod 로 검증한다). 추정값은 입력 칸을 미리 채우기만 하고 시트를 움직이지 않는다.
+- 주행 중 자세 살펴보기(C-7)는 운전자가 주행 후 질문 화면에서 "켜기"로 동의한 경우에만 켠다. 화면 없이 도는 서비스도 프레임은 메모리에서 분석하고 버리며, 관절 표본은 주행이 끝날 때 꺼내 zod 로 검증하고 요약(언제부터·어떻게 흐트러졌는지)만 암호화 저장소에 남긴다. 결과는 운전자가 "다음 추천에 반영하기"를 눌러야 기록에 들어가고 시트는 움직이지 않는다. 끄면 카메라를 끄고 결과를 지운다.
 - 운전자 등록 화면에서 수집 항목·목적·보관·거부 권리를 알리고 **"동의하고 등록하기"** 버튼으로만 필수 동의를 받는다. 음성 기능은 별도 선택 동의(음성은 Pleos 서버에서 처리될 수 있음)이며, 동의한 운전자에게만 마이크를 연다.
 - `EXPO_PUBLIC_*` 변수와 앱 설정 값은 APK 에 들어간다. 비밀 값을 넣지 않는다.
 

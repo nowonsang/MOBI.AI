@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+import { SEAT_AXES } from "@/shared/pleos/pleos.types";
+import { POSE_LANDMARK_NAMES } from "@/shared/pose-camera/pose-camera.types";
+
 import {
   AMBIENT_BRIGHTNESS_RANGE,
   AMBIENT_COLOR_RANGE,
@@ -38,6 +41,8 @@ export const bodyProfileInputSchema = z.object({
     .nullable(),
   // 선택 동의. 거부해도 화면만으로 모든 기능을 쓸 수 있다.
   voiceConsent: z.boolean(),
+  // 주행 중 카메라로 자세 살펴보기(C-7) 선택 동의. 동의 칸이 생기기 전 운전자는 동의하지 않은 것으로 읽는다.
+  postureConsent: z.boolean().default(false),
 });
 
 // 저장된 목록은 배열 전체를 한 번에 검증한다. 동의 필드가 생기기 전에 저장된 운전자 하나 때문에
@@ -78,7 +83,7 @@ export const seatAdjustmentSchema = z.object({
   at: z.number(),
   baseline: seatRatiosSchema,
   final: seatRatiosSchema,
-  source: z.enum(["drive-start", "voice", "saved", "touch"]),
+  source: z.enum(["drive-start", "voice", "saved", "touch", "camera"]),
   context: driveContext,
 });
 
@@ -141,4 +146,39 @@ export const comfortRecordSchema = z.object({
     .max(CABIN_TEMP_RANGE.max)
     .nullable(),
   settings: comfortSettingsSchema,
+});
+
+// 카메라(네이티브)에서 온 관절 표본. 신뢰하지 않는 입력이라 형식과 범위를 검사한다 (C-7).
+const finite = z.number().finite();
+export const postureSampleSchema = z.object({
+  at: finite,
+  width: finite.positive(),
+  height: finite.positive(),
+  landmarks: z
+    .array(
+      z.object({
+        name: z.enum(POSE_LANDMARK_NAMES),
+        x: finite,
+        y: finite,
+        likelihood: finite.min(0).max(1),
+      }),
+    )
+    .max(POSE_LANDMARK_NAMES.length),
+});
+
+const seatNudgeSchema = z.object({
+  axis: z.enum(SEAT_AXES),
+  direction: z.enum(["increase", "decrease"]),
+  amount: z.enum(["small", "medium"]),
+});
+
+export const postureReportSchema = z.object({
+  profileId: z.string().min(1),
+  endedAt: z.number(),
+  driveMs: z.number().nonnegative(),
+  sampleCount: z.number().int().nonnegative(),
+  driftAfterMs: z.number().nonnegative().nullable(),
+  signs: z.array(z.enum(["headForward", "slumped"])).max(2),
+  nudges: z.array(seatNudgeSchema).max(SEAT_AXES.length),
+  demo: z.boolean(),
 });

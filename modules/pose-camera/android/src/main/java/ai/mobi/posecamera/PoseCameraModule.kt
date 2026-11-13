@@ -2,6 +2,7 @@ package ai.mobi.posecamera
 
 import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.hardware.camera2.CameraManager
 import expo.modules.interfaces.permissions.Permissions
 import expo.modules.kotlin.Promise
@@ -36,6 +37,21 @@ class PoseCameraModule : Module() {
       AsyncFunction("requestCameraPermission") { promise: Promise ->
         Permissions.askForPermissionsWithPermissionsManager(appContext.permissions, promise, Manifest.permission.CAMERA)
       }
+
+      // 주행 중 자세 관찰. 앱이 화면에 보이는 주차(P) 중에 시작해야 한다 (Android 14 카메라 포그라운드 서비스 제한).
+      Function("startPostureWatch") {
+        if (context.checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+          throw CameraPermissionException()
+        }
+        PostureWatchService.start(context)
+      }
+
+      Function("stopPostureWatch") { PostureWatchService.stop(context) }
+
+      Function("getPostureWatchStatus") { PostureWatchStore.status() }
+
+      // 모은 관절 표본을 넘기고 비운다. 사진은 없고 관절 좌표와 시각뿐이다.
+      Function("drainPostureSamples") { PostureWatchStore.drain() }
 
       View(PoseCameraView::class) {
         Events("onCameraReady", "onCameraError")

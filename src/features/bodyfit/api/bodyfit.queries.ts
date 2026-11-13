@@ -9,6 +9,7 @@ import {
   findBodyProfiles,
   findBoardings,
   findComfortRecords,
+  findPostureReport,
   findSeatAdjustments,
 } from "./bodyfit.storage";
 
@@ -27,9 +28,17 @@ export const bodyfitKeys = {
     [...bodyfitKeys.all, "comfort-records", profileId] as const,
   comfort: () => [...bodyfitKeys.all, "comfort"] as const,
   naviRoute: () => [...bodyfitKeys.all, "navi-route"] as const,
+  postureReport: (profileId: string) =>
+    [...bodyfitKeys.all, "posture-report", profileId] as const,
 };
 
 export const bodyfitQueries = {
+  /** 마지막 주행을 카메라로 살펴본 요약 (C-7). 없으면 null */
+  postureReport: (profileId: string) =>
+    queryOptions({
+      queryKey: bodyfitKeys.postureReport(profileId),
+      queryFn: () => findPostureReport(profileId),
+    }),
   profiles: () =>
     queryOptions({
       queryKey: bodyfitKeys.profiles(),

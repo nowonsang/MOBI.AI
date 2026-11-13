@@ -3,6 +3,8 @@ import { PoseCamera } from "@modules/pose-camera/src/PoseCameraModule";
 import type {
   CameraPermission,
   PoseCameraErrorCode,
+  PostureSample,
+  PostureWatchStatus,
 } from "./pose-camera.types";
 
 // 카메라 + 기기 안 자세 인식 접근 창구. 앱 코드는 네이티브 모듈을 직접 import 하지 않고 여기를 거친다 (ESLint 로 강제).
@@ -31,6 +33,32 @@ export async function requestCameraPermission(): Promise<CameraPermission> {
   return toPermission(await PoseCamera.requestCameraPermission());
 }
 
+/** 주행 중 자세 관찰을 시작한다. 카메라 권한이 있고 앱이 화면에 보이는 주차 중에만 부른다. */
+export function startPostureWatch(): void {
+  PoseCamera?.startPostureWatch();
+}
+
+export function stopPostureWatch(): void {
+  PoseCamera?.stopPostureWatch();
+}
+
+const IDLE: PostureWatchStatus = {
+  running: false,
+  startedAt: 0,
+  sampleCount: 0,
+  lastSampleAt: null,
+  error: null,
+};
+
+export function getPostureWatchStatus(): PostureWatchStatus {
+  return PoseCamera?.getPostureWatchStatus() ?? IDLE;
+}
+
+/** 모은 관절 표본을 넘기고 비운다. 네이티브에서 온 값이라 쓰는 쪽에서 zod 로 검증한다. */
+export function drainPostureSamples(): PostureSample[] {
+  return PoseCamera?.drainPostureSamples() ?? [];
+}
+
 const KNOWN_CODES: readonly PoseCameraErrorCode[] = [
   "ERR_CAMERA_PERMISSION",
   "ERR_NO_CAMERA",
@@ -40,7 +68,9 @@ const KNOWN_CODES: readonly PoseCameraErrorCode[] = [
   "ERR_POSE_FAILED",
 ];
 
-export function poseCameraErrorCode(error: unknown): PoseCameraErrorCode | null {
+export function poseCameraErrorCode(
+  error: unknown,
+): PoseCameraErrorCode | null {
   const code = (error as { code?: unknown } | null)?.code;
   return KNOWN_CODES.find((known) => known === code) ?? null;
 }

@@ -10,6 +10,7 @@ import {
 import { recommendComfort, toComfortRecord } from "../model/bodyfit-comfort";
 import { interpretByRules } from "../model/bodyfit-feedback";
 import { interpretYesNo } from "../model/bodyfit-voice-answer";
+import { analyzePosture, demoPostureSamples } from "../model/bodyfit-posture";
 import { recommendBaseline } from "../model/bodyfit-recommend";
 import {
   interpretVoiceRequest,
@@ -28,6 +29,7 @@ import type {
   DriveContext,
   DriveSession,
   FeedbackInterpretation,
+  PostureReport,
   SeatAdjustmentSource,
   SeatNudge,
   SeatRatios,
@@ -37,11 +39,20 @@ import {
   createBodyProfile,
   createComfortRecord,
   createDriveSession,
+  createPostureReport,
   createSeatAdjustment,
   deleteBodyProfile,
   deleteDriveSession,
+  deletePostureReport,
   findDriveSession,
+  updateBodyProfile,
 } from "./bodyfit.storage";
+import {
+  askPostureCamera,
+  isPostureWatching,
+  stopPostureWatching,
+  takePostureSamples,
+} from "./bodyfit.posture";
 import { askByVoice } from "./bodyfit.voice";
 
 export function useCreateBodyProfile() {
@@ -65,6 +76,9 @@ export function useDeleteBodyProfile() {
         }),
         queryClient.invalidateQueries({
           queryKey: bodyfitKeys.comfortRecords(id),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: bodyfitKeys.postureReport(id),
         }),
       ]),
   });
@@ -278,4 +292,87 @@ export function useVoiceDriverConfirm() {
 
 export function useStopListening() {
   return useMutation({ mutationFn: () => pleos().stopListening() });
+}
+
+/**
+ * 주행 중 카메라로 자세 살펴보기(C-7) 동의를 켜고 끈다. 켤 때는 카메라 권한 창을 띄우고, 거부하면 켜지 않는다.
+ * 끄면 카메라를 바로 끄고 그 운전자의 결과도 지운다 (동의 철회 시 데이터 삭제).
+ */
+export function useUpdatePostureConsent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      profileId,
+      postureConsent,
+    }: {
+      profileId: string;
+      postureConsent: boolean;
+    }): Promise<{ granted: boolean }> => {
+      if (postureConsent && !(await askPostureCamera()))
+        return { granted: false };
+      if (!postureConsent) stopPostureWatching();
+      await updateBodyProfile(profileId, { postureConsent });
+      return { granted: true };
+    },
+    onSettled: (_data, _error, { profileId }) =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: bodyfitKeys.profiles() }),
+        queryClient.invalidateQueries({
+          queryKey: bodyfitKeys.postureReport(profileId),
+        }),
+      ]),
+  });
+}
+
+/**
+ * 주행이 끝났을 때 그 주행 동안 모은 관절 표본으로 자세 변화를 분석하고 요약만 남긴다 (C-7).
+ * 관찰이 켜져 있지 않았으면 아무것도 하지 않는다. 표본은 꺼내는 순간 네이티브에서 지워진다.
+ * 시연 빌드를 에뮬레이터에서 돌리면 시연용 모의 표본으로 바꾸고 결과에 표시한다.
+ */
+export function useAnalyzeDrivePosture() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      profileId,
+      startedAt,
+      endedAt,
+      demo,
+    }: {
+      profileId: string;
+      startedAt: number;
+      endedAt: number;
+      /** 시연용 모의 표본을 쓴다 (에뮬레이터 카메라는 고정 사진이라 자세가 변하지 않는다) */
+      demo: boolean;
+    }): Promise<PostureReport | null> => {
+      if (!isPostureWatching()) return null;
+      // 모의 표본을 쓰더라도 카메라 표본은 꺼내서 버린다 (네이티브에 쌓아 두지 않는다).
+      const captured = takePostureSamples();
+      const samples = demo ? demoPostureSamples(startedAt, endedAt) : captured;
+      const report = analyzePosture({
+        profileId,
+        samples,
+        startedAt,
+        endedAt,
+        demo,
+      });
+      if (report) await createPostureReport(report);
+      return report;
+    },
+    onSettled: (_data, _error, { profileId }) =>
+      queryClient.invalidateQueries({
+        queryKey: bodyfitKeys.postureReport(profileId),
+      }),
+  });
+}
+
+/** 자세 요약을 반영했거나 넘겼을 때 지운다. */
+export function useDismissPostureReport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (profileId: string) => deletePostureReport(profileId),
+    onSettled: (_data, _error, profileId) =>
+      queryClient.invalidateQueries({
+        queryKey: bodyfitKeys.postureReport(profileId),
+      }),
+  });
 }

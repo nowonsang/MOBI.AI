@@ -12,6 +12,7 @@ import {
   bodyProfileSchema,
   comfortRecordSchema,
   driveSessionSchema,
+  postureReportSchema,
   seatAdjustmentSchema,
 } from "../model/bodyfit.schema";
 import type {
@@ -19,6 +20,7 @@ import type {
   BodyProfileInput,
   ComfortRecord,
   DriveSession,
+  PostureReport,
   SeatAdjustment,
 } from "../model/bodyfit.types";
 
@@ -27,6 +29,8 @@ const PROFILES_KEY = "bodyfit:profiles";
 const ADJUSTMENTS_KEY = "bodyfit:adjustments";
 const DRIVE_SESSION_KEY = "bodyfit:drive-session";
 const COMFORT_KEY = "bodyfit:comfort";
+// 마지막 주행의 카메라 자세 요약 (C-7). 영상·관절 좌표는 저장하지 않는다. 반영하거나 넘기면 지운다.
+const POSTURE_REPORT_KEY = "bodyfit:posture-report";
 // 학습에는 최근 기록만 쓰므로 운전자별로 이 개수만 남긴다.
 const MAX_ADJUSTMENTS_PER_PROFILE = 50;
 // 자세 기록은 운전자·상황마다 이 개수만 남긴다 (가끔 고르는 상황의 기록이 밀려나지 않게, C-5).
@@ -76,6 +80,24 @@ export async function createBodyProfile(
   return profile;
 }
 
+/** 선택 동의처럼 등록 뒤에 바꿀 수 있는 값만 고친다. 운전자가 없으면 null. */
+export async function updateBodyProfile(
+  id: string,
+  changes: Pick<Partial<BodyProfile>, "postureConsent">,
+): Promise<BodyProfile | null> {
+  const profiles = await findBodyProfiles();
+  const current = profiles.find((profile) => profile.id === id);
+  if (!current) return null;
+  const updated = { ...current, ...changes };
+  await writeList(
+    PROFILES_KEY,
+    profiles.map((profile) => (profile.id === id ? updated : profile)),
+  );
+  // 동의를 거두면 카메라로 만든 결과도 지운다.
+  if (changes.postureConsent === false) await deletePostureReport(id);
+  return updated;
+}
+
 /** 프로필과 그 운전자의 자세·온도 기록, 진행 중이던 주행을 함께 지운다. */
 export async function deleteBodyProfile(id: string): Promise<void> {
   const [profiles, adjustments, comfort, session] = await Promise.all([
@@ -97,6 +119,7 @@ export async function deleteBodyProfile(id: string): Promise<void> {
     comfort.filter((record) => record.profileId !== id),
   );
   if (session?.profileId === id) await deleteDriveSession();
+  await deletePostureReport(id);
 }
 
 /** 진행 중인 주행. 없거나 형식이 다르면 null. */
@@ -162,4 +185,33 @@ export async function createComfortRecord(
     .slice(-MAX_ADJUSTMENTS_PER_PROFILE);
   const others = records.filter((item) => item.profileId !== record.profileId);
   await writeList(COMFORT_KEY, [...others, ...mine]);
+}
+
+/** 이 운전자의 마지막 주행 자세 요약. 없거나 형식이 다르면 null. */
+export async function findPostureReport(
+  profileId: string,
+): Promise<PostureReport | null> {
+  const raw = await getEncryptedItem(POSTURE_REPORT_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = postureReportSchema.safeParse(JSON.parse(raw));
+    return parsed.success && parsed.data.profileId === profileId
+      ? parsed.data
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 요약은 마지막 주행 하나만 둔다. */
+export async function createPostureReport(
+  report: PostureReport,
+): Promise<void> {
+  await setEncryptedItem(POSTURE_REPORT_KEY, JSON.stringify(report));
+}
+
+/** profileId 를 주면 그 운전자의 요약일 때만 지운다. */
+export async function deletePostureReport(profileId?: string): Promise<void> {
+  if (profileId !== undefined && !(await findPostureReport(profileId))) return;
+  await removeEncryptedItem(POSTURE_REPORT_KEY);
 }

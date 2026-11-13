@@ -11,6 +11,8 @@ export type BodyProfile = {
   sittingHeightCm: number | null;
   /** 음성 기능 선택 동의. 음성은 Pleos 음성 인식 서버에서 처리될 수 있다. */
   voiceConsent: boolean;
+  /** 주행 중 카메라로 자세 살펴보기(C-7) 선택 동의. 영상은 저장하지 않고 분석 결과만 남긴다. */
+  postureConsent: boolean;
   createdAt: number;
   /** 체형 정보 수집·이용 필수 동의 시각. 등록 버튼("동의하고 등록하기")을 누른 때다. */
   consentedAt: number;
@@ -37,10 +39,11 @@ export type SeatRatios = Partial<Record<SeatAxis, number>>;
 export type DriveContext = "usual" | "commute" | "long" | "city";
 
 /**
- * drive-start: 주행을 시작할 때의 자세, saved: 직접 저장한 자세,
+ * drive-start: 주행을 시작할 때의 자세, saved: 직접 저장한 자세, camera: 주행 중 카메라로 본 자세 변화(C-7)를 운전자가 반영한 것,
  * touch: 주행 후 터치 피드백(지금 자세 + 고른 방향, 시트는 움직이지 않음), voice: 음성 피드백으로 조절한 자세
  */
-export type SeatAdjustmentSource = "drive-start" | "voice" | "saved" | "touch";
+export type SeatAdjustmentSource =
+  "drive-start" | "voice" | "saved" | "touch" | "camera";
 
 /** 체형만으로 계산한 기본 추천(baseline)과 운전자가 최종으로 받아들인 자세(final). 개인 보정의 학습 데이터다. */
 export type SeatAdjustment = {
@@ -103,4 +106,26 @@ export type ComfortRecord = {
   /** 탈 때 실내 온도(섭씨). 차량이 알려 주지 않으면 null */
   cabinTemp: number | null;
   settings: ComfortSettings;
+};
+
+/** headForward: 머리가 앞으로 나옴 (거북목), slumped: 몸이 시트에서 아래로 미끄러짐 */
+export type PostureSign = "headForward" | "slumped";
+
+/**
+ * 한 번의 주행을 카메라로 살펴본 결과 (C-7). 영상·관절 좌표는 남기지 않고 이 요약만 저장한다.
+ * 운전자가 반영하거나 넘기면 지운다.
+ */
+export type PostureReport = {
+  profileId: string;
+  endedAt: number;
+  driveMs: number;
+  /** 분석에 쓴 표본 수 */
+  sampleCount: number;
+  /** 출발 후 무너지기 시작한 때. 끝까지 유지했으면 null */
+  driftAfterMs: number | null;
+  signs: PostureSign[];
+  /** 다음 자세 조절안. 운전자가 반영해야 기록에 들어간다 */
+  nudges: SeatNudge[];
+  /** 시연용 모의 표본으로 만든 결과 (에뮬레이터) */
+  demo: boolean;
 };

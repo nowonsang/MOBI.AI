@@ -81,6 +81,7 @@ const SOURCE_COPY: Record<
   saved: { glyph: "✓", label: "직접 기억한 자세" },
   touch: { glyph: "↔", label: "주행 후 피드백" },
   voice: { glyph: "♪", label: "음성 피드백" },
+  camera: { glyph: "◎", label: "카메라로 본 자세" },
 };
 
 const RECENT_RECORDS = 3;
