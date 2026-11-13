@@ -253,7 +253,9 @@ export function BodyfitBodyScan({
               />
             ) : null}
             <Button
-              label={counting ? `${countdown}초 뒤에 읽어요` : "5초 뒤 촬영하기"}
+              label={
+                counting ? `${countdown}초 뒤에 읽어요` : "5초 뒤 촬영하기"
+              }
               onPress={() => setCountdown(COUNTDOWN_SECONDS)}
               disabled={!camera.ready || counting}
               loading={isPending}
@@ -269,6 +271,7 @@ export function BodyfitBodyScan({
       }
     >
       <Columns
+        stretch
         left={
           usingCamera ? (
             <View style={styles.figure}>
@@ -329,7 +332,11 @@ export function BodyfitBodyScan({
                   label="다른 카메라로 바꾸기"
                   variant="secondary"
                   onPress={() => {
-                    setCamera({ ready: false, count: camera.count, error: null });
+                    setCamera({
+                      ready: false,
+                      count: camera.count,
+                      error: null,
+                    });
                     setCameraIndex((index) => index + 1);
                   }}
                 />
@@ -349,7 +356,12 @@ export function BodyfitBodyScan({
           ) : null
         }
         right={
-          <Card title={usingCamera ? "이렇게 찍어 주세요" : "실제로는 이렇게 찍어요"}>
+          <Card
+            fill
+            title={
+              usingCamera ? "이렇게 찍어 주세요" : "실제로는 이렇게 찍어요"
+            }
+          >
             {GUIDE.map((step, index) => (
               <InfoRow
                 key={step.value}

@@ -94,8 +94,9 @@ export function BodyfitPostureBaselineScreen({
       }
     >
       <Columns
+        stretch
         left={
-          <Card>
+          <Card fill>
             <BodyfitPostureImage
               pose="upright"
               height={pictureHeight}
@@ -129,7 +130,7 @@ export function BodyfitPostureBaselineScreen({
                 ))}
               </View>
             </Card>
-            <BodyfitPostureWatchToggle driver={driver} />
+            <BodyfitPostureWatchToggle driver={driver} fill />
           </>
         }
       />

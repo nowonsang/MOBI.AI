@@ -308,6 +308,8 @@ export function BodyfitFeedbackScreen({
         />
       ) : (
         <Columns
+          // 왼쪽·오른쪽 카드의 아래 끝을 맞춘다 (마지막 카드가 남는 높이를 채운다).
+          stretch
           left={
             <View style={styles.leftStack}>
               {canUseCamera ? (
@@ -317,7 +319,7 @@ export function BodyfitFeedbackScreen({
                   postureAt={postureAt}
                 />
               ) : null}
-              <Card>
+              <Card fill>
                 {context !== DEFAULT_DRIVE_CONTEXT ? (
                   <View style={styles.contextTag}>
                     <AppText variant="caption">
@@ -339,7 +341,7 @@ export function BodyfitFeedbackScreen({
             </View>
           }
           right={
-            <Card title="바꾸고 싶은 곳" count="한 줄에 하나">
+            <Card fill title="바꾸고 싶은 곳" count="한 줄에 하나">
               {fromCamera ? (
                 // 카메라 제안을 미리 골라 둔 상태임을 알린다. 그대로 반영하거나 바꿀 수 있다.
                 <AppText
@@ -422,7 +424,8 @@ const useStyles = themedStyles((colors) => ({
   cell: { flexGrow: 1, flexBasis: "40%", minWidth: 180 },
   grow: { flex: 1 },
   // 카드 사이는 24dp
-  leftStack: { gap: spacing.md },
+  // 오른쪽 단과 높이를 맞출 때 마지막 카드가 남는 높이를 채우게 단 전체를 채운다.
+  leftStack: { flexGrow: 1, gap: spacing.md },
   // 접힌 줄은 누르는 것임이 보이게 보조 버튼과 같은 테두리를 두른다.
   more: {
     minHeight: sizes.touchTarget,

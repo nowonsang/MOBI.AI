@@ -241,6 +241,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
     const headline = focus ? describeAxis(focus) : "추천 자세에 다 맞췄어요";
     return (
       <Columns
+        stretch
         left={
           <>
             {/* 지금 할 일 하나만 크게 보여 준다 (이 화면의 강조는 여기 한 곳). */}
@@ -341,7 +342,7 @@ export function BodyfitGuideScreen({ profileId }: { profileId: string }) {
         }
         right={
           // 축이 많아도 한 화면에 들어오게 지금 맞출 곳만 펼치고 나머지는 접는다.
-          <Card title="맞추는 순서">
+          <Card fill title="맞추는 순서">
             <BodyfitStepList
               steps={steps}
               doneNoun="맞춘 곳"

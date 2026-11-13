@@ -21,10 +21,21 @@ type ColumnsProps = {
    * 긴 목록을 내려도 왼쪽 요약과 오른쪽 탭이 화면에 남는다. 좁거나 낮은 창에서는 꺼진다.
    */
   pinned?: boolean;
+  /**
+   * 넓은 창에서 두 단의 높이를 맞춘다. 단 안 마지막 카드에 Card 의 fill 을 주면 남는 높이를 채워
+   * 왼쪽·오른쪽 카드의 아래 끝이 나란히 맞는다. 좁은 창에서는 위아래로 쌓으므로 영향이 없다.
+   */
+  stretch?: boolean;
 };
 
 // 가로로 넓은 차량 화면을 2단으로 나눈다. 좁은 창(세로 분할 창, 휴대폰)에서는 위아래로 쌓는다.
-export function Columns({ left, right, rightHeader, pinned }: ColumnsProps) {
+export function Columns({
+  left,
+  right,
+  rightHeader,
+  pinned,
+  stretch = false,
+}: ColumnsProps) {
   const wide = useWindowDimensions().width >= layout.twoColumnWidth;
   const pin = usePinnedLayout() && pinned;
 
@@ -53,7 +64,9 @@ export function Columns({ left, right, rightHeader, pinned }: ColumnsProps) {
   }
 
   return (
-    <View style={wide ? styles.row : styles.stack}>
+    <View
+      style={wide ? [styles.row, stretch && styles.rowStretch] : styles.stack}
+    >
       <View style={[styles.column, wide && styles.left]}>{left}</View>
       <View style={[styles.column, wide && styles.right]}>
         {rightHeader}
@@ -68,6 +81,7 @@ const BLEED = spacing.sm;
 
 const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
+  rowStretch: { alignItems: "stretch" },
   pinnedRow: { flex: 1, flexDirection: "row", gap: spacing.md },
   stack: { gap: spacing.md },
   column: { gap: spacing.md },

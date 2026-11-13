@@ -138,6 +138,7 @@ export function BodyfitPostureCompareScreen({
     >
       {latest.sample ? <BodyfitPostureSampleNotice /> : null}
       <Columns
+        stretch
         left={
           <>
             <SummaryCard
@@ -145,7 +146,7 @@ export function BodyfitPostureCompareScreen({
               label={comparisonLead(comparison)}
               value={comparisonHeadline(comparison)}
             />
-            <Card title="출발 자세 유지">
+            <Card fill title="출발 자세 유지">
               <View style={styles.stats}>
                 <View
                   style={styles.stat}
@@ -203,7 +204,7 @@ export function BodyfitPostureCompareScreen({
                 previousDriftStartMin={previous.driftStartMin}
               />
             </Card>
-            <Card>
+            <Card fill>
               {current.driftStartMin === null ? (
                 <InfoRow
                   icon={<IconBadge glyph="✓" tone="success" />}

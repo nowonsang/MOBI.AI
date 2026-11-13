@@ -15,7 +15,14 @@ import type { BodyProfile } from "../model/bodyfit.types";
  * 주행 중 카메라 관찰(C-7)을 켜고 끄는 카드. 선택 동의라 수집 항목·처리 방법을 알리고 "켜기"를 눌러야 켠다.
  * 켤 때 카메라 권한 창이 뜨고, 끄면 카메라를 끄고 이 운전자의 주행 자세 기록을 지운다.
  */
-export function BodyfitPostureWatchToggle({ driver }: { driver: BodyProfile }) {
+export function BodyfitPostureWatchToggle({
+  driver,
+  fill = false,
+}: {
+  driver: BodyProfile;
+  /** 2단 화면에서 단의 남는 높이를 채운다 (Columns 의 stretch 와 함께) */
+  fill?: boolean;
+}) {
   const styles = useStyles();
   const consent = useUpdatePostureConsent();
   const [denied, setDenied] = useState(false);
@@ -30,7 +37,7 @@ export function BodyfitPostureWatchToggle({ driver }: { driver: BodyProfile }) {
 
   if (driver.postureConsent) {
     return (
-      <Card title="주행 자세 관찰">
+      <Card fill={fill} title="주행 자세 관찰">
         <AppText variant="secondary" accessibilityLiveRegion="polite">
           켜져 있어요. 주차하면 이번 주행의 리포트가 생겨요
         </AppText>
@@ -48,7 +55,7 @@ export function BodyfitPostureWatchToggle({ driver }: { driver: BodyProfile }) {
   }
 
   return (
-    <Card title="주행 자세 관찰 (선택)">
+    <Card fill={fill} title="주행 자세 관찰 (선택)">
       <AppText variant="secondary">
         주행하는 동안 카메라로 머리·어깨·등 위치만 살펴봐요
       </AppText>

@@ -102,7 +102,7 @@ export function BodyfitDriverListScreen() {
       ) : null}
     </View>
   ) : (
-    <Card title="운전자" count={`${profiles.data.length}명`}>
+    <Card fill title="운전자" count={`${profiles.data.length}명`}>
       <View>
         {profiles.data.map((profile) => (
           <Fragment key={profile.id}>
@@ -154,8 +154,9 @@ export function BodyfitDriverListScreen() {
       description="운전자를 고르면 몸에 맞는 시트 자세로 바로 가요"
     >
       <Columns
+        stretch
         left={
-          <Card>
+          <Card fill>
             <View style={styles.seat}>
               <BodyfitSeatImage height={260} />
             </View>
@@ -214,7 +215,8 @@ const useStyles = themedStyles((colors) => ({
     padding: spacing.sm,
   },
   intro: { gap: spacing.xs },
-  stack: { gap: spacing.lg },
+  // 왼쪽 단과 높이를 맞출 때 운전자 목록 카드가 남는 높이를 채우게 한다.
+  stack: { flexGrow: 1, gap: spacing.lg },
   // 행 위아래 여백으로 터치 대상 사이 24dp 를 확보한다 (구분선 포함).
   row: { paddingVertical: spacing.xs },
   skeletonRow: {

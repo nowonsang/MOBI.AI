@@ -347,6 +347,7 @@ export function BodyfitImportScreen() {
       }
     >
       <Columns
+        stretch
         left={
           scanning ? (
             <View style={styles.stack}>
@@ -397,7 +398,7 @@ export function BodyfitImportScreen() {
               ) : null}
             </View>
           ) : (
-            <Card>
+            <Card fill>
               <AppText variant="heading">내 자세를 그대로 가져와요</AppText>
               <AppText variant="secondary" tone="tertiary">
                 체형과 학습한 보정만 옮기고, 추천 자세는 이 차의 시트에 맞게
@@ -425,7 +426,7 @@ export function BodyfitImportScreen() {
           )
         }
         right={
-          <Card title="이렇게 가져와요">
+          <Card fill title="이렇게 가져와요">
             {GUIDE.map((step, index) => (
               <InfoRow
                 key={step.value}

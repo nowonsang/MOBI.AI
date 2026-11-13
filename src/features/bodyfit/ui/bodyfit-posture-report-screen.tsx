@@ -213,7 +213,9 @@ export function BodyfitPostureReportScreen({
       }
     >
       {drive.sample ? <BodyfitPostureSampleNotice /> : null}
+      {/* 두 줄로 나눠 왼쪽·오른쪽 카드의 위아래 끝을 맞춘다: 1줄 = 요약·그림 | 자세 변화, 2줄 = 지난번 비교 | 제안 */}
       <Columns
+        stretch
         left={
           <>
             <SummaryCard
@@ -221,7 +223,7 @@ export function BodyfitPostureReportScreen({
               label={driveName}
               value={postureHeadline(report)}
             />
-            <Card>
+            <Card fill>
               <BodyfitPostureImage
                 pose={drifted ? "drift" : "upright"}
                 height={pictureHeight}
@@ -233,27 +235,12 @@ export function BodyfitPostureReportScreen({
               />
               {drifted ? <BodyfitPostureImageLegend /> : null}
             </Card>
-            {comparison ? (
-              <Card>
-                <InfoRow
-                  icon={<IconBadge glyph="⇄" />}
-                  label={comparisonLead(comparison)}
-                  value={comparisonShort(comparison)}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/bodyfit/[profileId]/posture/compare",
-                      params: { profileId: driver.id, context: drive.context },
-                    })
-                  }
-                  accessibilityLabel={`지난번과 비교. ${comparisonLead(comparison)} ${comparisonHeadline(comparison)}`}
-                />
-              </Card>
-            ) : null}
           </>
         }
         right={
           <>
             <Card
+              fill
               title="주행 중 자세 변화"
               count={formatMinutes(report.durationMin)}
             >
@@ -287,34 +274,66 @@ export function BodyfitPostureReportScreen({
                 </View>
               ) : null}
             </Card>
-            {nudge ? (
-              <Card>
-                {alreadyApplied ? (
-                  // 반영한 뒤에는 묻지 않고 반영한 내용을 완료 표시로 보여 준다.
-                  <InfoRow
-                    icon={<IconBadge glyph="✓" tone="success" />}
-                    label="다음 추천에 반영했어요"
-                    value={nudgeApplied(nudge, drive.context)}
-                  />
-                ) : (
-                  <InfoRow
-                    icon={<IconBadge glyph="↑" tone="tint" />}
-                    label={nextDrivePhrase(drive.context)}
-                    value={nudgeQuestion(nudge)}
-                    detail={
-                      !vehicleConnected
-                        ? "Pleos Connect 에뮬레이터나 차량에서 열면 반영할 수 있어요"
-                        : gear !== null && !parked
-                          ? "차를 세우고 기어를 P로 바꾸면 반영할 수 있어요"
-                          : "반영해도 지금은 시트가 움직이지 않아요. 다음 추천에만 써요"
-                    }
-                  />
-                )}
-              </Card>
-            ) : null}
           </>
         }
       />
+      {comparison || nudge ? (
+        <Columns
+          stretch
+          left={
+            <>
+              {comparison ? (
+                <Card fill>
+                  <InfoRow
+                    icon={<IconBadge glyph="⇄" />}
+                    label={comparisonLead(comparison)}
+                    value={comparisonShort(comparison)}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/bodyfit/[profileId]/posture/compare",
+                        params: {
+                          profileId: driver.id,
+                          context: drive.context,
+                        },
+                      })
+                    }
+                    accessibilityLabel={`지난번과 비교. ${comparisonLead(comparison)} ${comparisonHeadline(comparison)}`}
+                  />
+                </Card>
+              ) : null}
+            </>
+          }
+          right={
+            <>
+              {nudge ? (
+                <Card fill>
+                  {alreadyApplied ? (
+                    // 반영한 뒤에는 묻지 않고 반영한 내용을 완료 표시로 보여 준다.
+                    <InfoRow
+                      icon={<IconBadge glyph="✓" tone="success" />}
+                      label="다음 추천에 반영했어요"
+                      value={nudgeApplied(nudge, drive.context)}
+                    />
+                  ) : (
+                    <InfoRow
+                      icon={<IconBadge glyph="↑" tone="tint" />}
+                      label={nextDrivePhrase(drive.context)}
+                      value={nudgeQuestion(nudge)}
+                      detail={
+                        !vehicleConnected
+                          ? "Pleos Connect 에뮬레이터나 차량에서 열면 반영할 수 있어요"
+                          : gear !== null && !parked
+                            ? "차를 세우고 기어를 P로 바꾸면 반영할 수 있어요"
+                            : "반영해도 지금은 시트가 움직이지 않아요. 다음 추천에만 써요"
+                      }
+                    />
+                  )}
+                </Card>
+              ) : null}
+            </>
+          }
+        />
+      ) : null}
       {record.error ? (
         <StatusView {...describeBodyfitError(record.error)} />
       ) : null}

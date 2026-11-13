@@ -93,9 +93,7 @@ export function BodyfitExportScreen({ profileId }: { profileId: string }) {
     return (
       <Screen title="다른 차로 가져가기">
         <StatusView
-          title={
-            transfer ? "코드를 만들지 못했어요" : "운전자를 찾지 못했어요"
-          }
+          title={transfer ? "코드를 만들지 못했어요" : "운전자를 찾지 못했어요"}
           description={
             transfer
               ? "잠시 후 다시 시도해 주세요"
@@ -116,8 +114,9 @@ export function BodyfitExportScreen({ profileId }: { profileId: string }) {
       footer={<Button label="다 찍었어요" onPress={() => router.back()} />}
     >
       <Columns
+        stretch
         left={
-          <Card>
+          <Card fill>
             <View
               style={styles.code}
               onLayout={(event) => setBoxWidth(event.nativeEvent.layout.width)}
@@ -135,8 +134,8 @@ export function BodyfitExportScreen({ profileId }: { profileId: string }) {
                 이 코드에는 체형 정보가 들어 있어요
               </AppText>
               <AppText variant="caption" tone="tertiary">
-                찍은 사진은 본인만 보관하고, 다 쓴 뒤에는 지워 주세요. 코드는
-                이 화면에만 보이고 서버로 보내지 않아요
+                찍은 사진은 본인만 보관하고, 다 쓴 뒤에는 지워 주세요. 코드는 이
+                화면에만 보이고 서버로 보내지 않아요
               </AppText>
             </View>
           </Card>
@@ -167,7 +166,7 @@ export function BodyfitExportScreen({ profileId }: { profileId: string }) {
                 기록 시각은 담지 않아요
               </AppText>
             </Card>
-            <Card title="이렇게 가져가요">
+            <Card fill title="이렇게 가져가요">
               {STEPS.map((step, index) => (
                 <InfoRow
                   key={step.value}
