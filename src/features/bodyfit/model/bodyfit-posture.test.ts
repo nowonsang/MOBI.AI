@@ -1,245 +1,236 @@
-import type {
-  PoseLandmarkName,
-  PostureSample,
-} from "@/shared/pose-camera/pose-camera.types";
-
 import {
-  analyzePosture,
-  demoPostureSamples,
-  describeElapsed,
-  describePosture,
-  nudgesForSigns,
-  postureFeatures,
+  POSTURE_SUSTAIN_MIN,
+  comparePostureDrives,
+  latestPostureDrive,
+  samplePostureDrives,
+  suggestForPosture,
+  suggestRestMin,
+  summarizePostureDrive,
+  type PostureDrive,
+  type PostureSample,
 } from "./bodyfit-posture";
-import { postureReportSchema, postureSampleSchema } from "./bodyfit.schema";
+import { postureDriveSchema } from "./bodyfit.schema";
 
-const MINUTE = 60 * 1000;
-const START = 1_000_000;
+const still = (minute: number): PostureSample => ({
+  minute,
+  headForwardCm: 0,
+  shoulderDropCm: 0,
+  backLeanDeg: 0,
+});
 
-type Pose = {
-  earY?: number;
-  earHalf?: number;
-  shoulderY?: number;
-  likelihood?: number;
-  ears?: boolean;
-};
+const forward = (minute: number): PostureSample => ({
+  minute,
+  headForwardCm: 4,
+  shoulderDropCm: 1,
+  backLeanDeg: 6,
+});
 
-const sample = (at: number, pose: Pose = {}): PostureSample => {
-  const {
-    earY = 180,
-    earHalf = 40,
-    shoulderY = 300,
-    likelihood = 0.99,
-    ears = true,
-  } = pose;
-  const point = (name: PoseLandmarkName, x: number, y: number) => ({
-    name,
-    x,
-    y,
-    likelihood,
-  });
-  return {
-    at,
-    width: 640,
-    height: 480,
-    landmarks: [
-      point("nose", 320, earY + 10),
-      ...(ears
-        ? [
-            point("leftEar", 320 - earHalf, earY),
-            point("rightEar", 320 + earHalf, earY),
-          ]
-        : []),
-      point("leftShoulder", 220, shoulderY),
-      point("rightShoulder", 420, shoulderY),
-    ],
-  };
-};
-
-/** 주행 시간 동안 5초마다 표본을 만든다. poseAt 으로 시각별 자세를 정한다. */
 const drive = (
-  driveMs: number,
-  poseAt: (progress: number) => Pose = () => ({}),
-): PostureSample[] => {
-  const samples: PostureSample[] = [];
-  for (let t = 0; t <= driveMs; t += 5000) {
-    // 사람은 가만히 있어도 조금씩 흔들린다.
-    const jitter = (t / 5000) % 2 === 0 ? 0 : 1;
-    const pose = poseAt(t / driveMs);
-    samples.push(
-      sample(START + t, { ...pose, earY: (pose.earY ?? 180) + jitter }),
+  samples: PostureSample[],
+  overrides: Partial<PostureDrive> = {},
+): PostureDrive => ({
+  profileId: "p1",
+  startedAt: 1_000,
+  context: "long",
+  durationMin: 100,
+  samples,
+  sample: false,
+  ...overrides,
+});
+
+describe("주행 자세 리포트", () => {
+  it("끝까지 출발 자세였으면 쏠림이 없다", () => {
+    const report = summarizePostureDrive(
+      drive([still(0), still(30), still(60), still(100)]),
     );
-  }
-  return samples;
-};
-
-describe("postureFeatures", () => {
-  it("어깨 폭에 대한 비율로 목 높이·머리 크기를 계산한다", () => {
-    const features = postureFeatures(sample(0));
-    expect(features?.neck).toBeCloseTo(0.6);
-    expect(features?.headScale).toBeCloseTo(0.4);
-    expect(features?.shoulderLevel).toBeCloseTo(300 / 480);
+    expect(report).toEqual({
+      durationMin: 100,
+      driftStartMin: null,
+      heldMin: 100,
+      driftMin: 0,
+      change: { headForwardCm: 0, shoulderDropCm: 0, backLeanDeg: 0 },
+    });
   });
 
-  it("귀가 안 보이면 코로 목 높이를 재고 머리 크기는 비워 둔다", () => {
-    const features = postureFeatures(sample(0, { ears: false }));
-    expect(features?.neck).toBeCloseTo((300 - 190) / 200);
-    expect(features?.headScale).toBeNull();
+  it("쏠리기 시작한 때부터 도착까지를 쏠림으로 보고, 그 뒤의 평균 변화를 낸다", () => {
+    const report = summarizePostureDrive(
+      drive([still(0), still(40), forward(50), forward(70), forward(100)]),
+    );
+    expect(report.driftStartMin).toBe(50);
+    expect(report.heldMin).toBe(50);
+    expect(report.driftMin).toBe(50);
+    expect(report.change).toEqual({
+      headForwardCm: 4,
+      shoulderDropCm: 1,
+      backLeanDeg: 6,
+    });
   });
 
-  it("어깨가 보이지 않거나 확실하지 않으면 쓰지 않는다", () => {
-    expect(postureFeatures(sample(0, { likelihood: 0.3 }))).toBeNull();
+  it("잠깐 숙였다가 바로 돌아온 것은 쏠림으로 보지 않는다", () => {
+    const report = summarizePostureDrive(
+      drive([
+        still(0),
+        forward(20),
+        still(20 + POSTURE_SUSTAIN_MIN - 1),
+        still(100),
+      ]),
+    );
+    expect(report.driftStartMin).toBeNull();
+  });
+
+  it("오래 쏠렸다가 돌아왔으면 처음 쏠린 때를 시작으로 본다", () => {
+    const report = summarizePostureDrive(
+      drive([still(0), forward(30), forward(45), still(60), still(100)]),
+    );
+    expect(report.driftStartMin).toBe(30);
+    expect(report.heldMin).toBe(30);
+  });
+
+  it("도착 직전에 잠깐 쏠린 것은 쏠림으로 보지 않는다", () => {
+    const report = summarizePostureDrive(
+      drive([still(0), still(90), forward(100 - POSTURE_SUSTAIN_MIN + 1)]),
+    );
+    expect(report.driftStartMin).toBeNull();
+  });
+
+  it("머리나 등 가운데 하나만 기준을 넘어도 쏠림이다", () => {
+    const headOnly = { ...still(50), headForwardCm: 3 };
+    const backOnly = { ...still(50), backLeanDeg: 4 };
     expect(
-      postureFeatures({ width: 640, height: 480, landmarks: [] }),
+      summarizePostureDrive(
+        drive([still(0), headOnly, { ...headOnly, minute: 100 }]),
+      ).driftStartMin,
+    ).toBe(50);
+    expect(
+      summarizePostureDrive(
+        drive([still(0), backOnly, { ...backOnly, minute: 100 }]),
+      ).driftStartMin,
+    ).toBe(50);
+  });
+
+  it("순서가 섞인 값과 주행 시간 밖의 값도 견딘다", () => {
+    const report = summarizePostureDrive(
+      drive([forward(100), still(0), forward(60), forward(500), still(-5)]),
+    );
+    expect(report.driftStartMin).toBe(60);
+    expect(report.driftMin).toBe(40);
+  });
+
+  it("기록이 하나도 없으면 쏠림이 없는 것으로 본다", () => {
+    expect(summarizePostureDrive(drive([])).driftStartMin).toBeNull();
+  });
+});
+
+describe("자세 리포트 → 조절 제안", () => {
+  it("앞으로 쏠렸으면 등받이를 세우자고 제안한다", () => {
+    const report = summarizePostureDrive(
+      drive([still(0), forward(50), forward(100)]),
+    );
+    expect(suggestForPosture(report)).toEqual({
+      axis: "backrest",
+      direction: "increase",
+      amount: "medium",
+    });
+  });
+
+  it("쏠리지 않았으면 제안하지 않는다", () => {
+    expect(
+      suggestForPosture(summarizePostureDrive(drive([still(0), still(100)]))),
     ).toBeNull();
   });
 });
 
-describe("analyzePosture", () => {
-  const analyze = (samples: PostureSample[], driveMs: number) =>
-    analyzePosture({
-      profileId: "p1",
-      samples,
-      startedAt: START,
-      endedAt: START + driveMs,
+describe("지난 주행과 비교", () => {
+  const before = drive([still(0), forward(50), forward(112)], {
+    startedAt: 1_000,
+    durationMin: 112,
+  });
+  const latest = drive([still(0), forward(85), forward(125)], {
+    startedAt: 2_000,
+    durationMin: 125,
+  });
+
+  it("같은 상황의 최근 두 주행을 견주고, 긴 쪽 시간을 눈금으로 쓴다", () => {
+    const comparison = comparePostureDrives([latest, before], "long");
+    expect(comparison?.previous.heldMin).toBe(50);
+    expect(comparison?.current.heldMin).toBe(85);
+    expect(comparison?.heldDeltaMin).toBe(35);
+    expect(comparison?.scaleMin).toBe(125);
+  });
+
+  it("다른 상황의 주행은 섞지 않는다", () => {
+    const city = drive([still(0), still(20)], {
+      startedAt: 3_000,
+      context: "city",
+      durationMin: 20,
     });
-
-  it("표본이 모자라면 판단하지 않는다", () => {
-    expect(analyze(drive(20 * 1000), 20 * 1000)).toBeNull();
-  });
-
-  it("끝까지 자세가 같으면 무너진 때가 없다", () => {
-    const report = analyze(drive(10 * MINUTE), 10 * MINUTE);
-    expect(report).toMatchObject({
-      driftAfterMs: null,
-      signs: [],
-      nudges: [],
-    });
-  });
-
-  it("중간부터 계속 무너지면 그 때와 모습을 찾는다", () => {
-    const report = analyze(
-      drive(60 * MINUTE, (progress) =>
-        progress >= 0.5 ? { earY: 215, earHalf: 46, shoulderY: 326 } : {},
-      ),
-      60 * MINUTE,
-    );
-    expect(report?.driftAfterMs).toBe(30 * MINUTE);
-    expect(report?.signs).toEqual(["headForward", "slumped"]);
-    expect(report?.nudges).toEqual([
-      { axis: "backrest", direction: "increase", amount: "medium" },
-      { axis: "lumbar", direction: "increase", amount: "small" },
-    ]);
-  });
-
-  it("잠깐 숙였다가 돌아오면 무너진 것으로 보지 않는다", () => {
-    const report = analyze(
-      drive(60 * MINUTE, (progress) =>
-        progress >= 0.4 && progress < 0.5 ? { earY: 230 } : {},
-      ),
-      60 * MINUTE,
-    );
-    expect(report?.driftAfterMs).toBeNull();
-  });
-
-  it("마지막 한 구간만 무너진 것은 무시한다", () => {
-    const report = analyze(
-      drive(60 * MINUTE, (progress) => (progress >= 0.9 ? { earY: 230 } : {})),
-      60 * MINUTE,
-    );
-    expect(report?.driftAfterMs).toBeNull();
-  });
-
-  it("출발 직전 1분보다 오래된 표본과 도착 뒤 표본은 쓰지 않는다", () => {
-    const samples = [
-      sample(START - 5 * MINUTE, { earY: 260 }),
-      ...drive(10 * MINUTE),
-      sample(START + 11 * MINUTE, { earY: 260 }),
-    ];
-    const report = analyze(samples, 10 * MINUTE);
-    expect(report?.sampleCount).toBe(drive(10 * MINUTE).length);
-    expect(report?.driftAfterMs).toBeNull();
-  });
-
-  it("결과는 저장 형식을 지킨다", () => {
-    const report = analyze(
-      drive(60 * MINUTE, (progress) =>
-        progress >= 0.5 ? { shoulderY: 330 } : {},
-      ),
-      60 * MINUTE,
-    );
-    expect(report?.signs).toEqual(["slumped"]);
-    expect(postureReportSchema.safeParse(report).success).toBe(true);
-  });
-});
-
-describe("demoPostureSamples", () => {
-  it("주행 후반부터 무너지는 결과가 나온다 (1분 시연 주행)", () => {
-    const samples = demoPostureSamples(START, START + MINUTE);
-    const report = analyzePosture({
-      profileId: "p1",
-      samples,
-      startedAt: START,
-      endedAt: START + MINUTE,
-      demo: true,
-    });
-    expect(report?.demo).toBe(true);
-    expect(report?.signs).toEqual(["headForward", "slumped"]);
-    expect(report?.driftAfterMs).toBeGreaterThanOrEqual(0.5 * MINUTE);
-    expect(report?.driftAfterMs).toBeLessThanOrEqual(0.8 * MINUTE);
-  });
-
-  it("표본은 네이티브 표본과 같은 형식이다", () => {
-    for (const item of demoPostureSamples(START, START + MINUTE))
-      expect(postureSampleSchema.safeParse(item).success).toBe(true);
-  });
-});
-
-describe("nudgesForSigns", () => {
-  it("한 가지만 보이면 등받이를 조금 세운다", () => {
-    expect(nudgesForSigns(["headForward"])).toEqual([
-      { axis: "backrest", direction: "increase", amount: "small" },
-    ]);
-  });
-
-  it("아무것도 없으면 바꾸지 않는다", () => {
-    expect(nudgesForSigns([])).toEqual([]);
-  });
-});
-
-describe("describe", () => {
-  it("경과 시간을 짧게 읽는다", () => {
-    expect(describeElapsed(40 * 1000)).toBe("40초쯤");
-    expect(describeElapsed(50 * MINUTE)).toBe("50분쯤");
-    expect(describeElapsed(60 * MINUTE)).toBe("1시간쯤");
-    expect(describeElapsed(70 * MINUTE)).toBe("1시간 10분쯤");
-  });
-
-  it("무너진 때와 모습을 한 문장으로 말한다", () => {
-    const base = {
-      profileId: "p1",
-      endedAt: 0,
-      driveMs: 0,
-      sampleCount: 10,
-      nudges: [],
-      demo: false,
-    };
+    expect(comparePostureDrives([before, city], "long")).toBeNull();
     expect(
-      describePosture({
-        ...base,
-        driftAfterMs: 50 * MINUTE,
-        signs: ["headForward", "slumped"],
-      }),
-    ).toBe("출발하고 50분쯤부터 머리가 앞으로 나오고 몸이 아래로 미끄러졌어요");
+      comparePostureDrives([before, latest, city], "long")?.current.durationMin,
+    ).toBe(125);
+  });
+
+  it("가장 최근 주행을 고른다", () => {
+    expect(latestPostureDrive([before, latest])?.startedAt).toBe(2_000);
+    expect(latestPostureDrive([before, latest], "city")).toBeNull();
+    expect(latestPostureDrive([])).toBeNull();
+  });
+});
+
+describe("쉬어 가기 좋은 때", () => {
+  const reportAt = (start: number) =>
+    summarizePostureDrive(drive([still(0), forward(start), forward(100)]));
+
+  it("쏠리기 시작한 때보다 앞선 10분 단위를 권한다", () => {
+    expect(suggestRestMin(reportAt(85))).toBe(80);
+    expect(suggestRestMin(reportAt(50))).toBe(40);
+    expect(suggestRestMin(reportAt(11))).toBe(10);
+  });
+
+  it("쏠리지 않았거나 너무 일찍 쏠렸으면 권하지 않는다", () => {
+    expect(suggestRestMin(summarizePostureDrive(drive([still(0)])))).toBeNull();
+    expect(suggestRestMin(reportAt(10))).toBeNull();
+  });
+});
+
+describe("예시 기록", () => {
+  const drives = samplePostureDrives("p1", 1_800_000_000_000);
+
+  it("스키마를 통과하고 예시로 표시되어 있다", () => {
+    for (const item of drives) {
+      expect(postureDriveSchema.safeParse(item).success).toBe(true);
+      expect(item.sample).toBe(true);
+    }
+  });
+
+  it("지난 장거리는 50분, 이번 장거리는 85분 동안 유지한 이야기다", () => {
+    const comparison = comparePostureDrives(drives, "long");
+    expect(comparison?.previous.heldMin).toBe(50);
+    expect(comparison?.current.heldMin).toBe(85);
+    expect(comparison?.previous.change).toEqual({
+      headForwardCm: 4,
+      shoulderDropCm: 0,
+      backLeanDeg: 6,
+    });
+  });
+});
+
+describe("자세 기록 스키마", () => {
+  it("사람이 앉은 채로 움직일 수 없는 값은 받지 않는다", () => {
+    const base = drive([still(0)]);
     expect(
-      describePosture({
+      postureDriveSchema.safeParse({
         ...base,
-        driftAfterMs: 50 * MINUTE,
-        signs: ["slumped"],
-      }),
-    ).toBe("출발하고 50분쯤부터 몸이 아래로 미끄러졌어요");
-    expect(describePosture({ ...base, driftAfterMs: null, signs: [] })).toBe(
-      "도착할 때까지 출발할 때 자세를 잘 유지했어요",
-    );
+        samples: [{ ...still(0), headForwardCm: 80 }],
+      }).success,
+    ).toBe(false);
+    expect(
+      postureDriveSchema.safeParse({ ...base, durationMin: 0 }).success,
+    ).toBe(false);
+  });
+
+  it("예시 표시가 없는 기록은 실제 기록으로 읽는다", () => {
+    const { sample: _sample, ...rest } = drive([still(0)]);
+    expect(postureDriveSchema.parse(rest).sample).toBe(false);
   });
 });

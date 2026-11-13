@@ -1,51 +1,26 @@
+import { isDemoBuild } from "@/shared/config/app-variant";
+
 import {
-  drainPostureSamples,
-  getCameraPermission,
-  getPostureWatchStatus,
-  isPoseCameraAvailable,
-  requestCameraPermission,
-  startPostureWatch,
-  stopPostureWatch,
-} from "@/shared/pose-camera/pose-camera";
-import type { PostureSample } from "@/shared/pose-camera/pose-camera.types";
-
-import { postureSampleSchema } from "../model/bodyfit.schema";
-
-// C-7 주행 중 자세 관찰의 카메라 창구. 카메라는 차를 움직이지 않지만 개인정보라
-// 운전자가 동의했고 카메라 권한이 있을 때만 켠다. 프레임은 네이티브 안에서 버려지고 관절 좌표만 온다.
-
-/** 카메라가 있고 권한도 받았는지 (권한 창은 띄우지 않는다). */
-export async function canWatchPosture(): Promise<boolean> {
-  if (!isPoseCameraAvailable()) return false;
-  return (await getCameraPermission()).granted;
-}
-
-/** 운전자가 동의를 켤 때 한 번 권한 창을 띄운다. 거부하면 false. */
-export async function askPostureCamera(): Promise<boolean> {
-  if (!isPoseCameraAvailable()) return false;
-  return (await requestCameraPermission()).granted;
-}
+  samplePostureDrives,
+  type PostureDrive,
+} from "../model/bodyfit-posture";
+import { postureDriveSchema } from "../model/bodyfit.schema";
+import { findStoredPostureDrives } from "./bodyfit.storage";
 
 /**
- * 관찰을 켠다. 앱이 화면에 보이는 주차 중에만 부른다: 주행 중에는 화면이 가려져 Android 가 카메라 서비스 시작을 막는다.
- * 이미 켜져 있으면 그대로 둔다.
+ * 이 운전자의 주행 자세 기록 (최근 것부터).
+ * 주행 중 카메라 관찰(C-7)을 켜고 달리면 주차할 때 기기 저장소에 쌓인다 (useAnalyzeDrivePosture).
+ * 아직 기록이 없으면 시연용 빌드에서는 화면을 보여 주기 위한 예시 기록(sample: true)을 돌려주고,
+ * 앱 마켓 빌드에서는 빈 목록이다.
  */
-export function ensurePostureWatch(): void {
-  if (!getPostureWatchStatus().running) startPostureWatch();
-}
-
-export function stopPostureWatching(): void {
-  if (getPostureWatchStatus().running) stopPostureWatch();
-}
-
-export function isPostureWatching(): boolean {
-  return getPostureWatchStatus().running;
-}
-
-/** 모은 표본을 꺼낸다. 네이티브에서 온 값이라 형식이 틀린 표본은 버린다. */
-export function takePostureSamples(): PostureSample[] {
-  return drainPostureSamples().flatMap((sample) => {
-    const parsed = postureSampleSchema.safeParse(sample);
+export async function findPostureDrives(
+  profileId: string,
+): Promise<PostureDrive[]> {
+  const stored = await findStoredPostureDrives(profileId);
+  if (stored.length > 0 || !isDemoBuild) return stored;
+  // 저장소에서 읽을 때와 같은 검증을 거친다: 범위 밖 값이 든 기록은 버린다.
+  return samplePostureDrives(profileId, Date.now()).flatMap((drive) => {
+    const parsed = postureDriveSchema.safeParse(drive);
     return parsed.success ? [parsed.data] : [];
   });
 }

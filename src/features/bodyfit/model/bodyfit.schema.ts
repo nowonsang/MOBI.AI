@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import { SEAT_AXES } from "@/shared/pleos/pleos.types";
 import { POSE_LANDMARK_NAMES } from "@/shared/pose-camera/pose-camera.types";
 
 import {
@@ -148,9 +147,29 @@ export const comfortRecordSchema = z.object({
   settings: comfortSettingsSchema,
 });
 
+// 주행 중 자세 관찰 값 (카메라 분석이 넘겨준다). 사람 몸이 앉은 채로 움직일 수 없는 값은 받지 않는다.
+const POSTURE_MAX_MINUTES = 24 * 60;
+
+export const postureSampleSchema = z.object({
+  minute: z.number().min(0).max(POSTURE_MAX_MINUTES),
+  headForwardCm: z.number().min(-40).max(40),
+  shoulderDropCm: z.number().min(-40).max(40),
+  backLeanDeg: z.number().min(-60).max(60),
+});
+
+export const postureDriveSchema = z.object({
+  profileId: z.string().min(1),
+  startedAt: z.number(),
+  context: driveContext,
+  durationMin: z.number().min(1).max(POSTURE_MAX_MINUTES),
+  // 1분에 한 번씩 남겨도 하루치를 넘지 않는다
+  samples: z.array(postureSampleSchema).max(POSTURE_MAX_MINUTES),
+  sample: z.boolean().default(false),
+});
+
 // 카메라(네이티브)에서 온 관절 표본. 신뢰하지 않는 입력이라 형식과 범위를 검사한다 (C-7).
 const finite = z.number().finite();
-export const postureSampleSchema = z.object({
+export const poseSampleSchema = z.object({
   at: finite,
   width: finite.positive(),
   height: finite.positive(),
@@ -164,21 +183,4 @@ export const postureSampleSchema = z.object({
       }),
     )
     .max(POSE_LANDMARK_NAMES.length),
-});
-
-const seatNudgeSchema = z.object({
-  axis: z.enum(SEAT_AXES),
-  direction: z.enum(["increase", "decrease"]),
-  amount: z.enum(["small", "medium"]),
-});
-
-export const postureReportSchema = z.object({
-  profileId: z.string().min(1),
-  endedAt: z.number(),
-  driveMs: z.number().nonnegative(),
-  sampleCount: z.number().int().nonnegative(),
-  driftAfterMs: z.number().nonnegative().nullable(),
-  signs: z.array(z.enum(["headForward", "slumped"])).max(2),
-  nudges: z.array(seatNudgeSchema).max(SEAT_AXES.length),
-  demo: z.boolean(),
 });

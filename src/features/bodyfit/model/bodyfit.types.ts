@@ -108,24 +108,3 @@ export type ComfortRecord = {
   settings: ComfortSettings;
 };
 
-/** headForward: 머리가 앞으로 나옴 (거북목), slumped: 몸이 시트에서 아래로 미끄러짐 */
-export type PostureSign = "headForward" | "slumped";
-
-/**
- * 한 번의 주행을 카메라로 살펴본 결과 (C-7). 영상·관절 좌표는 남기지 않고 이 요약만 저장한다.
- * 운전자가 반영하거나 넘기면 지운다.
- */
-export type PostureReport = {
-  profileId: string;
-  endedAt: number;
-  driveMs: number;
-  /** 분석에 쓴 표본 수 */
-  sampleCount: number;
-  /** 출발 후 무너지기 시작한 때. 끝까지 유지했으면 null */
-  driftAfterMs: number | null;
-  signs: PostureSign[];
-  /** 다음 자세 조절안. 운전자가 반영해야 기록에 들어간다 */
-  nudges: SeatNudge[];
-  /** 시연용 모의 표본으로 만든 결과 (에뮬레이터) */
-  demo: boolean;
-};

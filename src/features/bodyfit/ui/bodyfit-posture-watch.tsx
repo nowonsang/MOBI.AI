@@ -10,7 +10,7 @@ import {
   canWatchPosture,
   ensurePostureWatch,
   stopPostureWatching,
-} from "../api/bodyfit.posture";
+} from "../api/bodyfit.posture-camera";
 import { bodyfitQueries } from "../api/bodyfit.queries";
 import { selectActiveDriverId } from "../model/bodyfit-session.slice";
 

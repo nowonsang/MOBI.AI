@@ -12,7 +12,7 @@ import {
   bodyProfileSchema,
   comfortRecordSchema,
   driveSessionSchema,
-  postureReportSchema,
+  postureDriveSchema,
   seatAdjustmentSchema,
 } from "../model/bodyfit.schema";
 import type {
@@ -20,17 +20,19 @@ import type {
   BodyProfileInput,
   ComfortRecord,
   DriveSession,
-  PostureReport,
   SeatAdjustment,
 } from "../model/bodyfit.types";
+import type { PostureDrive } from "../model/bodyfit-posture";
 
 // 체형 정보는 민감한 개인정보라 기기 안(SQLite)에만 암호화해 저장하고 서버로 보내지 않는다.
 const PROFILES_KEY = "bodyfit:profiles";
 const ADJUSTMENTS_KEY = "bodyfit:adjustments";
 const DRIVE_SESSION_KEY = "bodyfit:drive-session";
 const COMFORT_KEY = "bodyfit:comfort";
-// 마지막 주행의 카메라 자세 요약 (C-7). 영상·관절 좌표는 저장하지 않는다. 반영하거나 넘기면 지운다.
-const POSTURE_REPORT_KEY = "bodyfit:posture-report";
+// 주행 자세 기록 (C-7 카메라 관찰 → D-6 화면). 영상·관절 좌표는 저장하지 않고 분마다의 변화(cm·도)만 남긴다.
+const POSTURE_DRIVES_KEY = "bodyfit:posture-drives";
+// 리포트·비교에는 최근 주행만 쓰므로 운전자별로 이 개수만 남긴다.
+const MAX_POSTURE_DRIVES_PER_PROFILE = 20;
 // 학습에는 최근 기록만 쓰므로 운전자별로 이 개수만 남긴다.
 const MAX_ADJUSTMENTS_PER_PROFILE = 50;
 // 자세 기록은 운전자·상황마다 이 개수만 남긴다 (가끔 고르는 상황의 기록이 밀려나지 않게, C-5).
@@ -39,6 +41,7 @@ const MAX_ADJUSTMENTS_PER_CONTEXT = 50;
 const profilesSchema = z.array(bodyProfileSchema);
 const adjustmentsSchema = z.array(seatAdjustmentSchema);
 const comfortRecordsSchema = z.array(comfortRecordSchema);
+const postureDrivesSchema = z.array(postureDriveSchema);
 
 // 저장된 값도 앱 버전이 바뀌면 형식이 다를 수 있다. 검증에 실패하면 빈 목록으로 본다.
 async function readList<T>(key: string, schema: z.ZodType<T[]>): Promise<T[]> {
@@ -94,7 +97,7 @@ export async function updateBodyProfile(
     profiles.map((profile) => (profile.id === id ? updated : profile)),
   );
   // 동의를 거두면 카메라로 만든 결과도 지운다.
-  if (changes.postureConsent === false) await deletePostureReport(id);
+  if (changes.postureConsent === false) await deletePostureDrives(id);
   return updated;
 }
 
@@ -119,7 +122,7 @@ export async function deleteBodyProfile(id: string): Promise<void> {
     comfort.filter((record) => record.profileId !== id),
   );
   if (session?.profileId === id) await deleteDriveSession();
-  await deletePostureReport(id);
+  await deletePostureDrives(id);
 }
 
 /** 진행 중인 주행. 없거나 형식이 다르면 null. */
@@ -187,31 +190,39 @@ export async function createComfortRecord(
   await writeList(COMFORT_KEY, [...others, ...mine]);
 }
 
-/** 이 운전자의 마지막 주행 자세 요약. 없거나 형식이 다르면 null. */
-export async function findPostureReport(
+/** 이 운전자의 주행 자세 기록 (최근 것부터). 형식이 다른 목록은 빈 목록으로 본다. */
+export async function findStoredPostureDrives(
   profileId: string,
-): Promise<PostureReport | null> {
-  const raw = await getEncryptedItem(POSTURE_REPORT_KEY);
-  if (!raw) return null;
-  try {
-    const parsed = postureReportSchema.safeParse(JSON.parse(raw));
-    return parsed.success && parsed.data.profileId === profileId
-      ? parsed.data
-      : null;
-  } catch {
-    return null;
-  }
+): Promise<PostureDrive[]> {
+  const drives = await readList(POSTURE_DRIVES_KEY, postureDrivesSchema);
+  return drives
+    .filter((drive) => drive.profileId === profileId)
+    .sort((a, b) => b.startedAt - a.startedAt);
 }
 
-/** 요약은 마지막 주행 하나만 둔다. */
-export async function createPostureReport(
-  report: PostureReport,
-): Promise<void> {
-  await setEncryptedItem(POSTURE_REPORT_KEY, JSON.stringify(report));
+/** 같은 주행(출발 시각)이 있으면 바꾸고, 운전자별로 최근 기록만 남긴다. */
+export async function createPostureDrive(drive: PostureDrive): Promise<void> {
+  const drives = await readList(POSTURE_DRIVES_KEY, postureDrivesSchema);
+  const others = drives.filter(
+    (item) =>
+      !(
+        item.profileId === drive.profileId && item.startedAt === drive.startedAt
+      ),
+  );
+  const mine = [
+    drive,
+    ...others.filter((item) => item.profileId === drive.profileId),
+  ]
+    .sort((a, b) => b.startedAt - a.startedAt)
+    .slice(0, MAX_POSTURE_DRIVES_PER_PROFILE);
+  await writeList(POSTURE_DRIVES_KEY, [
+    ...others.filter((item) => item.profileId !== drive.profileId),
+    ...mine,
+  ]);
 }
 
-/** profileId 를 주면 그 운전자의 요약일 때만 지운다. */
-export async function deletePostureReport(profileId?: string): Promise<void> {
-  if (profileId !== undefined && !(await findPostureReport(profileId))) return;
-  await removeEncryptedItem(POSTURE_REPORT_KEY);
+export async function deletePostureDrives(profileId: string): Promise<void> {
+  const drives = await readList(POSTURE_DRIVES_KEY, postureDrivesSchema);
+  const kept = drives.filter((drive) => drive.profileId !== profileId);
+  if (kept.length !== drives.length) await writeList(POSTURE_DRIVES_KEY, kept);
 }

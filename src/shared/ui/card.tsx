@@ -88,6 +88,8 @@ type SummaryCardProps = {
   value: string;
   onPress?: () => void;
   accessibilityHint?: string;
+  /** 값이 한 문장일 때: 라벨을 작게 위에 두고 값을 그 아래에 크게 쓴다 (기본은 라벨과 값을 한 줄에) */
+  stacked?: boolean;
 };
 
 // 화면에서 가장 중요한 한 줄을 파란 면으로 강조한다 (화면당 1개).
@@ -96,15 +98,22 @@ export function SummaryCard({
   value,
   onPress,
   accessibilityHint,
+  stacked,
 }: SummaryCardProps) {
   const styles = useStyles();
   const content = (
     <>
-      <AppText variant="bodyStrong" tone="inverse">
+      <AppText variant={stacked ? "secondary" : "bodyStrong"} tone="inverse">
         {label}
       </AppText>
-      <View style={styles.summaryValue}>
-        <AppText variant="bodyStrong" tone="inverse">
+      <View
+        style={[styles.summaryValue, stacked && styles.summaryValueStacked]}
+      >
+        <AppText
+          variant={stacked ? "heading" : "bodyStrong"}
+          tone="inverse"
+          style={stacked ? styles.summaryText : undefined}
+        >
           {value}
         </AppText>
         {onPress ? (
@@ -125,6 +134,7 @@ export function SummaryCard({
         onPress={onPress}
         style={({ pressed }) => [
           styles.summary,
+          stacked && styles.summaryStacked,
           pressed && styles.summaryPressed,
         ]}
       >
@@ -135,7 +145,7 @@ export function SummaryCard({
 
   return (
     <View
-      style={styles.summary}
+      style={[styles.summary, stacked && styles.summaryStacked]}
       accessible
       accessibilityLabel={`${label}, ${value}`}
     >
@@ -196,4 +206,15 @@ const useStyles = themedStyles((colors) => ({
     transform: [{ scale: 0.98 }],
   },
   summaryValue: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  summaryStacked: {
+    flexDirection: "column",
+    flexWrap: "nowrap",
+    alignItems: "stretch",
+    justifyContent: "center",
+    gap: spacing.xs,
+    paddingVertical: spacing.lg,
+  },
+  summaryValueStacked: { justifyContent: "space-between" },
+  // 긴 문장이 카드 안에서 줄바꿈되게 한다 (› 옆에서도).
+  summaryText: { flexShrink: 1 },
 }));

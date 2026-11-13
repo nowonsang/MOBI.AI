@@ -37,7 +37,7 @@ import {
 } from "../model/bodyfit-touch-feedback";
 import type { DriveContext, SeatAxis } from "../model/bodyfit.types";
 import { describeBodyfitError } from "./bodyfit-error-copy";
-import { BodyfitPostureCard } from "./bodyfit-posture-card";
+import { BodyfitPostureLink } from "./bodyfit-posture-link";
 import { BodyfitSeatImage } from "./bodyfit-seat-image";
 
 // 선택지 앞에 붙이는 방향 기호. 뜻은 옆 글자가 전한다. 모든 줄이 같은 가는 화살표를 쓴다.
@@ -263,13 +263,7 @@ export function BodyfitFeedbackScreen({
         <Columns
           left={
             <View style={styles.leftStack}>
-              {canUseCamera ? (
-                <BodyfitPostureCard
-                  driver={driver}
-                  context={context}
-                  canAnswer={canAnswer}
-                />
-              ) : null}
+              {canUseCamera ? <BodyfitPostureLink driver={driver} /> : null}
               <Card>
                 {context !== DEFAULT_DRIVE_CONTEXT ? (
                   <View style={styles.contextTag}>
@@ -278,12 +272,9 @@ export function BodyfitFeedbackScreen({
                     </AppText>
                   </View>
                 ) : null}
-                {/* 카메라 카드가 함께 있으면 꾸밈용 그림은 빼서 한 화면에 들어오게 한다. */}
-                {canUseCamera ? null : (
-                  <View style={styles.stage}>
-                    <BodyfitSeatImage height={pictureHeight} />
-                  </View>
-                )}
+                <View style={styles.stage}>
+                  <BodyfitSeatImage height={pictureHeight} />
+                </View>
                 <AppText
                   variant="secondary"
                   tone="secondary"

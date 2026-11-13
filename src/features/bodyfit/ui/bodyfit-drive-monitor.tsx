@@ -37,7 +37,7 @@ import type { DriveSession } from "../model/bodyfit.types";
  * 화면 없이 주행 흐름을 따라간다.
  * - 주차(P)에서 벗어날 때: 그때의 시트 자세를 운전자가 받아들인 자세로 기록하고 (학습 데이터),
  *   누가 언제 출발했는지 기기에 남긴다. 주행 중에는 차량이 앱을 종료하므로 메모리에 두면 사라진다.
- * - 주차(P)했거나 주차 중에 앱이 다시 켜졌을 때: 카메라로 살펴봤으면 그 주행의 자세 변화를 요약하고 (C-7),
+ * - 주차(P)했거나 주차 중에 앱이 다시 켜졌을 때: 카메라로 살펴봤으면 그 주행의 자세 기록을 남기고 (C-7),
  *   남겨 둔 주행이 길었으면 화면으로 착좌감을 묻는다 (D-1).
  *   음성 기능을 쓸 수 있고 동의한 운전자에게는 음성으로 묻고, 조절안이 있으면 확인 화면으로 보낸다.
  */
@@ -118,12 +118,11 @@ export function BodyfitDriveMonitor() {
     endDrive.mutate(undefined, {
       onSuccess: (session) => {
         if (!session) return;
-        // 카메라로 살펴봤으면 그 주행의 자세 변화를 먼저 요약해 둔다 (C-7). 주행 후 질문 화면이 결과를 보여 준다.
+        // 카메라로 살펴봤으면 그 주행의 자세 기록을 먼저 남겨 둔다 (C-7). 주행 후 질문 화면이 리포트로 이어 준다.
         analyzePosture.mutate({
-          profileId: session.profileId,
-          startedAt: session.startedAt,
+          session,
           endedAt: Date.now(),
-          // 에뮬레이터 카메라는 고정 사진이라 시연 빌드에서는 모의 표본으로 보여 준다 (결과에 "시연용"으로 표시).
+          // 에뮬레이터 카메라는 고정 사진이라 시연 빌드에서는 모의 표본으로 보여 준다 (기록에 "예시"로 표시).
           demo: isDemoBuild && isEmulator,
         });
         askComfort(session, parked);

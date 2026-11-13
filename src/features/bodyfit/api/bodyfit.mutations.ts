@@ -10,7 +10,11 @@ import {
 import { recommendComfort, toComfortRecord } from "../model/bodyfit-comfort";
 import { interpretByRules } from "../model/bodyfit-feedback";
 import { interpretYesNo } from "../model/bodyfit-voice-answer";
-import { analyzePosture, demoPostureSamples } from "../model/bodyfit-posture";
+import type { PostureDrive } from "../model/bodyfit-posture";
+import {
+  demoCameraSamples,
+  toPostureDrive,
+} from "../model/bodyfit-posture-camera";
 import { recommendBaseline } from "../model/bodyfit-recommend";
 import {
   interpretVoiceRequest,
@@ -29,7 +33,6 @@ import type {
   DriveContext,
   DriveSession,
   FeedbackInterpretation,
-  PostureReport,
   SeatAdjustmentSource,
   SeatNudge,
   SeatRatios,
@@ -39,11 +42,11 @@ import {
   createBodyProfile,
   createComfortRecord,
   createDriveSession,
-  createPostureReport,
+  createPostureDrive,
   createSeatAdjustment,
   deleteBodyProfile,
   deleteDriveSession,
-  deletePostureReport,
+  findBodyProfile,
   findDriveSession,
   updateBodyProfile,
 } from "./bodyfit.storage";
@@ -52,7 +55,7 @@ import {
   isPostureWatching,
   stopPostureWatching,
   takePostureSamples,
-} from "./bodyfit.posture";
+} from "./bodyfit.posture-camera";
 import { askByVoice } from "./bodyfit.voice";
 
 export function useCreateBodyProfile() {
@@ -78,7 +81,7 @@ export function useDeleteBodyProfile() {
           queryKey: bodyfitKeys.comfortRecords(id),
         }),
         queryClient.invalidateQueries({
-          queryKey: bodyfitKeys.postureReport(id),
+          queryKey: bodyfitKeys.postureDrives(id),
         }),
       ]),
   });
@@ -318,61 +321,53 @@ export function useUpdatePostureConsent() {
       Promise.all([
         queryClient.invalidateQueries({ queryKey: bodyfitKeys.profiles() }),
         queryClient.invalidateQueries({
-          queryKey: bodyfitKeys.postureReport(profileId),
+          queryKey: bodyfitKeys.postureDrives(profileId),
         }),
       ]),
   });
 }
 
 /**
- * 주행이 끝났을 때 그 주행 동안 모은 관절 표본으로 자세 변화를 분석하고 요약만 남긴다 (C-7).
+ * 주행이 끝났을 때 그 주행 동안 모은 관절 표본을 주행 자세 기록(D-6 화면이 읽는 형식)으로 바꿔 남긴다 (C-7).
  * 관찰이 켜져 있지 않았으면 아무것도 하지 않는다. 표본은 꺼내는 순간 네이티브에서 지워진다.
- * 시연 빌드를 에뮬레이터에서 돌리면 시연용 모의 표본으로 바꾸고 결과에 표시한다.
+ * 시연 빌드를 에뮬레이터에서 돌리면 시연용 모의 표본으로 바꾸고 기록에 예시(sample)로 표시한다.
  */
 export function useAnalyzeDrivePosture() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
-      profileId,
-      startedAt,
+      session,
       endedAt,
       demo,
     }: {
-      profileId: string;
-      startedAt: number;
+      session: DriveSession;
       endedAt: number;
       /** 시연용 모의 표본을 쓴다 (에뮬레이터 카메라는 고정 사진이라 자세가 변하지 않는다) */
       demo: boolean;
-    }): Promise<PostureReport | null> => {
+    }): Promise<PostureDrive | null> => {
       if (!isPostureWatching()) return null;
       // 모의 표본을 쓰더라도 카메라 표본은 꺼내서 버린다 (네이티브에 쌓아 두지 않는다).
       const captured = takePostureSamples();
-      const samples = demo ? demoPostureSamples(startedAt, endedAt) : captured;
-      const report = analyzePosture({
-        profileId,
-        samples,
-        startedAt,
+      const profile = await findBodyProfile(session.profileId);
+      if (!profile) return null;
+      const source = demo
+        ? demoCameraSamples(endedAt)
+        : { startedAt: session.startedAt, samples: captured };
+      const drive = toPostureDrive({
+        profileId: profile.id,
+        context: session.context,
+        startedAt: source.startedAt,
         endedAt,
-        demo,
+        heightCm: profile.heightCm,
+        samples: source.samples,
+        sample: demo,
       });
-      if (report) await createPostureReport(report);
-      return report;
+      if (drive) await createPostureDrive(drive);
+      return drive;
     },
-    onSettled: (_data, _error, { profileId }) =>
+    onSettled: (_data, _error, { session }) =>
       queryClient.invalidateQueries({
-        queryKey: bodyfitKeys.postureReport(profileId),
-      }),
-  });
-}
-
-/** 자세 요약을 반영했거나 넘겼을 때 지운다. */
-export function useDismissPostureReport() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (profileId: string) => deletePostureReport(profileId),
-    onSettled: (_data, _error, profileId) =>
-      queryClient.invalidateQueries({
-        queryKey: bodyfitKeys.postureReport(profileId),
+        queryKey: bodyfitKeys.postureDrives(session.profileId),
       }),
   });
 }

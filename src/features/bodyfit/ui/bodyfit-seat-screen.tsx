@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import { Pressable, View } from "react-native";
 
 import { useAppDispatch, useAppSelector } from "@/core/store/hooks";
-import { canControlSeat, canUseVoice } from "@/shared/config/app-variant";
+import {
+  canControlSeat,
+  canUseVoice,
+  isDemoBuild,
+} from "@/shared/config/app-variant";
 import { isPleosAvailable } from "@/shared/pleos/pleos";
 import { useGear } from "@/shared/pleos/use-gear";
 import { useUxRestrictions } from "@/shared/pleos/use-ux-restrictions";
@@ -242,6 +246,13 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
   const openFeedback = () =>
     router.push({
       pathname: "/bodyfit/[profileId]/feedback",
+      params: { profileId: driver.id },
+    });
+
+  // 주행 자세 관찰: 출발 자세 기억 → 주행 중 변화 리포트 → 지난번과 비교.
+  const openPosture = () =>
+    router.push({
+      pathname: "/bodyfit/[profileId]/posture",
       params: { profileId: driver.id },
     });
 
@@ -548,6 +559,18 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
                     다음 추천이 더 정확해져요
                   </AppText>
                 </Card>
+                {/* 주행 중 카메라 관찰이 연결되기 전에는 예시 기록뿐이라 시연용 빌드에서만 연다 */}
+                {isDemoBuild ? (
+                  <Card
+                    title="주행 자세 관찰"
+                    onPress={auto.seatMoving ? undefined : openPosture}
+                    accessibilityLabel="주행 자세 관찰. 출발 자세를 기억하고, 주행 중 달라진 점을 알려 드려요"
+                  >
+                    <AppText variant="caption" tone="tertiary">
+                      출발 자세를 기억하고, 주행 중 달라진 점을 알려 드려요
+                    </AppText>
+                  </Card>
+                ) : null}
                 {/* 되돌릴 수 없는 일이라 카드 밖 맨 아래에 조용한 글자 버튼으로 둔다. 누르면 확인 창을 거친다. */}
                 <Pressable
                   accessibilityRole="button"

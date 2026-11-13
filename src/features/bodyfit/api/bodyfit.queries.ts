@@ -4,12 +4,12 @@ import { pleos } from "@/shared/pleos/pleos";
 
 import { shouldRereadSeat } from "../model/bodyfit-seat";
 
+import { findPostureDrives } from "./bodyfit.posture";
 import {
   findBodyProfile,
   findBodyProfiles,
   findBoardings,
   findComfortRecords,
-  findPostureReport,
   findSeatAdjustments,
 } from "./bodyfit.storage";
 
@@ -28,17 +28,11 @@ export const bodyfitKeys = {
     [...bodyfitKeys.all, "comfort-records", profileId] as const,
   comfort: () => [...bodyfitKeys.all, "comfort"] as const,
   naviRoute: () => [...bodyfitKeys.all, "navi-route"] as const,
-  postureReport: (profileId: string) =>
-    [...bodyfitKeys.all, "posture-report", profileId] as const,
+  postureDrives: (profileId: string) =>
+    [...bodyfitKeys.all, "posture-drives", profileId] as const,
 };
 
 export const bodyfitQueries = {
-  /** 마지막 주행을 카메라로 살펴본 요약 (C-7). 없으면 null */
-  postureReport: (profileId: string) =>
-    queryOptions({
-      queryKey: bodyfitKeys.postureReport(profileId),
-      queryFn: () => findPostureReport(profileId),
-    }),
   profiles: () =>
     queryOptions({
       queryKey: bodyfitKeys.profiles(),
@@ -68,6 +62,12 @@ export const bodyfitQueries = {
     queryOptions({
       queryKey: bodyfitKeys.comfortRecords(profileId),
       queryFn: () => findComfortRecords(profileId),
+    }),
+  /** 주행 자세 기록 (출발 자세와 비교한 주행 중 변화). 지금은 시연용 예시 기록이다 */
+  postureDrives: (profileId: string) =>
+    queryOptions({
+      queryKey: bodyfitKeys.postureDrives(profileId),
+      queryFn: () => findPostureDrives(profileId),
     }),
   /** 운전석 열선·공조 상태와 지금 실내 온도. 운전자가 버튼으로 바꿀 수 있어 항상 다시 읽는다. */
   comfort: () =>
