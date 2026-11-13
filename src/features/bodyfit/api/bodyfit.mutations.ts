@@ -287,6 +287,14 @@ export function useVoiceAdjustment() {
  * 앉은 사람에게 "○○님이시죠?"를 음성으로 묻고 대답을 읽는다 (A-6).
  * 대답은 화면을 넘길지만 정한다. 시트는 넘어간 화면에서 운전자가 확인해야 움직인다.
  */
+/** 예/아니오로 답할 질문을 음성으로 묻는다. 답은 신뢰하지 않는 입력이라 "yes"·"no"·"unclear" 로만 읽는다. */
+export function useVoiceYesNo() {
+  return useMutation({
+    mutationFn: async ({ question }: { question: string }) =>
+      interpretYesNo(await askByVoice(question)),
+  });
+}
+
 export function useVoiceDriverConfirm() {
   return useMutation({
     mutationFn: async ({ name }: { name: string }) =>

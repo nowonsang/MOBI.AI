@@ -12,10 +12,12 @@ import { usePleosEvent } from "@/shared/pleos/use-pleos-event";
 import {
   useAnalyzeDrivePosture,
   useEndDriveSession,
+  useMarkPostureDriveApplied,
   useRecordComfort,
   useRecordSeatAdjustment,
   useStartDriveSession,
   useVoiceSeatFeedback,
+  useVoiceYesNo,
 } from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
 import { speakQuietly } from "../api/bodyfit.voice";
@@ -31,7 +33,17 @@ import {
   selectActiveDriverId,
   selectDriveContext,
 } from "../model/bodyfit-session.slice";
+import {
+  suggestForPosture,
+  summarizePostureDrive,
+  type PostureDrive,
+} from "../model/bodyfit-posture";
 import type { DriveSession } from "../model/bodyfit.types";
+import {
+  nudgeApplied,
+  nudgeQuestion,
+  postureHeadline,
+} from "./bodyfit-posture-copy";
 
 /**
  * 화면 없이 주행 흐름을 따라간다.
@@ -56,6 +68,8 @@ export function BodyfitDriveMonitor() {
   const endDrive = useEndDriveSession();
   const ask = useVoiceSeatFeedback();
   const analyzePosture = useAnalyzeDrivePosture();
+  const confirmPosture = useVoiceYesNo();
+  const markApplied = useMarkPostureDriveApplied();
   // 현재 기어를 먼저 읽어 둔다. 알림만 기다리면 앱을 켠 뒤 첫 P → D 전환을 기준 없이 받아 출발 기록을 놓친다.
   const gear = useGear();
   const lastGear = useRef<Gear | null>(null);
@@ -64,12 +78,13 @@ export function BodyfitDriveMonitor() {
   // 추후 고도화: 마이크를 여는 질문은 음성 기능에 동의한 운전자에게만 한다.
   const voiceReady = canUseVoice && driver.data?.voiceConsent === true;
 
-  /** postureAt: 이번 주행을 카메라로 살펴 남긴 기록의 출발 시각 (없으면 null). 주행 후 화면이 그 리포트로 이어 준다 */
+  /** posture: 이번 주행을 카메라로 살펴 남긴 기록 (없으면 null). 주행 후 화면이 그 결과를 먼저 보여 준다 */
   const askComfort = (
     session: DriveSession,
     parked: boolean,
-    postureAt: number | null,
+    posture: PostureDrive | null,
   ) => {
+    const postureAt = posture?.startedAt ?? null;
     const prompt = comfortPromptFor({
       startedAt: session.startedAt,
       now: Date.now(),
@@ -93,6 +108,58 @@ export function BodyfitDriveMonitor() {
       });
     if (prompt === "screen") {
       askOnScreen();
+      return;
+    }
+
+    // 카메라 결과가 있으면 그 결과로 묻는다: "37분쯤부터 앞으로 쏠렸어요. 등받이를 조금 세워 볼까요?"
+    // "응"이면 화면 조작 없이 바로 다음 추천에 반영한다 (시트는 움직이지 않는다). 애매하면 화면으로 묻는다.
+    const cameraNudge = posture
+      ? suggestForPosture(summarizePostureDrive(posture))
+      : null;
+    if (posture && cameraNudge && driver.data?.id === session.profileId) {
+      const profile = driver.data;
+      confirmPosture.mutate(
+        {
+          question: `${postureHeadline(summarizePostureDrive(posture))}. ${nudgeQuestion(cameraNudge)}`,
+        },
+        {
+          onError: () => {
+            if (parked) askOnScreen();
+          },
+          onSuccess: (answer) => {
+            if (answer === "no") {
+              void speakQuietly("알겠어요. 이번에는 그대로 둘게요");
+              return;
+            }
+            if (answer !== "yes") {
+              if (parked) askOnScreen();
+              return;
+            }
+            record.mutate(
+              {
+                profile,
+                source: posture.sample ? "touch" : "camera",
+                context: session.context,
+                nudges: [cameraNudge],
+              },
+              {
+                onSuccess: () => {
+                  markApplied.mutate({
+                    profileId: profile.id,
+                    startedAt: posture.startedAt,
+                  });
+                  void speakQuietly(
+                    `${nudgeApplied(cameraNudge, session.context)}`,
+                  );
+                },
+                onError: () => {
+                  if (parked) askOnScreen();
+                },
+              },
+            );
+          },
+        },
+      );
       return;
     }
 
@@ -137,8 +204,7 @@ export function BodyfitDriveMonitor() {
           },
           {
             // 기록을 남긴 뒤에 물어야 주행 후 화면이 "이번 주행" 리포트로 이어 줄 수 있다. 실패해도 질문은 한다.
-            onSettled: (drive) =>
-              askComfort(session, parked, drive?.startedAt ?? null),
+            onSettled: (drive) => askComfort(session, parked, drive ?? null),
           },
         );
       },
