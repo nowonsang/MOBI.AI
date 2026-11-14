@@ -279,6 +279,8 @@ Pleos 앱 보안 가이드: 배포용 앱은 디버그 인증서가 아닌 **배
 
 공모전 시연용 릴리스 APK 는 GitHub Release 에 올린다. 현재 버전: [v0.1.0](https://github.com/nowonsang/MOBI.AI/releases/tag/v0.1.0) (2026-11-14, contest 빌드, R8 적용, 배포용 인증서 서명).
 
+시연 영상(약 6분): https://youtu.be/TH8B7vasBSM — 만드는 방법과 세로형 요약 영상(숏폼)은 `docs/demo/README.md` 의 "시연 영상 만들기".
+
 - 공개되는 APK 는 `.env.local` 이 없는 폴더(worktree)에서 빌드한다. 있는 폴더에서 빌드하면 Pleos 앱 등록 정보가 APK 에 들어간다.
 - 올리기 전에 Pleos Connect 에뮬레이터에 설치해 확인한다: `adb install --user 10 <APK>`. 서명 키가 바뀌면 기존 앱을 지워야 설치된다 (앱 데이터도 지워진다).
 - 다음 버전을 올릴 때는 `app.config.ts` 의 `version` 과 `versionCode` 를 함께 올린다.

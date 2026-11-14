@@ -228,21 +228,25 @@ def duration(path):
     return float(out.stdout.strip())
 
 
-def main():
-    out = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else "bodyfit-demo.mp4")
+def render_scene(scene, index, total):
+    canvas = RENDER[scene["kind"]](scene)
+    if scene["kind"] != "title":
+        chrome(canvas, scene, index, total)
+    return canvas
+
+
+def build(scenes, render, voice_dir, out):
+    """장면마다 그림 한 장 + 대사 음성으로 조각 영상을 만들고 이어 붙인다 (세로 판 build_shorts.py 도 쓴다)."""
     work = tempfile.mkdtemp(prefix="bodyfit-video-")
-    total = len(SCENES)
+    total = len(scenes)
     parts = []
     length = 0.0
-    for index, scene in enumerate(SCENES):
+    for index, scene in enumerate(scenes):
         frame = os.path.join(work, f"{index:02d}.png")
-        canvas = RENDER[scene["kind"]](scene)
-        if scene["kind"] != "title":
-            chrome(canvas, scene, index, total)
-        canvas.convert("RGB").save(frame)
+        render(scene, index, total).convert("RGB").save(frame)
 
-        # voice/NN.mp3 (고른 목소리로 미리 만든 대사)가 있으면 그것을 쓰고, 없으면 macOS 음성으로 읽는다.
-        voice = os.path.join(HERE, "voice", f"{index:02d}.mp3")
+        # NN.mp3 (고른 목소리로 미리 만든 대사)가 있으면 그것을 쓰고, 없으면 macOS 음성으로 읽는다.
+        voice = os.path.join(voice_dir, f"{index:02d}.mp3")
         if not os.path.exists(voice):
             voice = os.path.join(work, f"{index:02d}.aiff")
             run("say", "-v", VOICE, "-r", RATE, "-o", voice, scene["say"])
@@ -270,6 +274,11 @@ def main():
         file.writelines(f"file '{part}'\n" for part in parts)
     run("ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", listing, "-c", "copy", "-movflags", "+faststart", out)
     print(f"{out}  ({int(length // 60)}분 {int(length % 60)}초)  frames: {work}")
+
+
+def main():
+    out = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else "bodyfit-demo.mp4")
+    build(SCENES, render_scene, os.path.join(HERE, "voice"), out)
 
 
 if __name__ == "__main__":
