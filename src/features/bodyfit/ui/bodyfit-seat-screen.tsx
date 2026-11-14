@@ -171,7 +171,9 @@ export function BodyfitSeatScreen({ profileId }: { profileId: string }) {
     learnOffsets(adjustments.data, context),
     learnRemembered(adjustments.data, context),
   );
-  const current = seat.data ? toSeatRatios(seat.data) : null;
+  const ratios = seat.data ? toSeatRatios(seat.data) : null;
+  // 읽은 축이 하나도 없으면 지금 자세를 모르는 것이다. 빈 값과 비교하면 "딱 좋아요"로 잘못 보이므로 null 로 둔다.
+  const current = ratios && Object.keys(ratios).length > 0 ? ratios : null;
   // 시트 조절은 플랫폼 제한(CarUxRestrictions NO_SETUP)이 없고 기어가 P 일 때만 연다.
   // 네이티브도 움직이기 전과 도중에 기어 P 를 다시 확인한다 (DriverSeat.kt).
   const parked = gear === "park" && !restrictions.noSetup;

@@ -18,7 +18,14 @@ const PLEOS_MAVEN_REPO =
 //   SDK 가 차량 서비스와 주고받는 클래스(AIDL·Parcelable·리플렉션)를 알 수 없어 SDK 전체를 그대로 둔다.
 // - android.car: 차량 OS 가 런타임에 제공하는 클래스라 APK 에 없다. 없는 클래스 경고로 빌드가 멈추지 않게 한다.
 // - 우리 네이티브 모듈(ai.mobi.**): Expo 가 이름으로 찾는 모듈·뷰·포그라운드 서비스.
+// - 제네릭 시그니처(Signature)와 Gson TypeToken: Pleos SDK 는 차량 서비스가 준 시트 범위(capability) 등을
+//   Gson TypeToken 으로 읽는다. R8 이 Signature 속성을 지우면 "TypeToken must be created with a type argument"
+//   로 실패해, 릴리스 빌드에서만 시트 위치를 하나도 읽지 못했다 (2026-11-14 Pleos 에뮬레이터 로그).
+//   클래스를 남기는 규칙만으로는 속성이 남지 않아 따로 적는다.
 const PROGUARD_RULES = `
+-keepattributes Signature,InnerClasses,EnclosingMethod,*Annotation*
+-keep,allowobfuscation,allowshrinking class com.google.gson.reflect.TypeToken
+-keep,allowobfuscation,allowshrinking class * extends com.google.gson.reflect.TypeToken
 -keep class ai.pleos.** { *; }
 -keep interface ai.pleos.** { *; }
 -dontwarn ai.pleos.**
