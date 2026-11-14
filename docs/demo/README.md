@@ -89,3 +89,22 @@
 - 음성으로 묻고 답하는 흐름: 에뮬레이터에서 음성 인식이 동작하지 않아 화면 흐름만 찍었다.
 - QR 가져오기(읽는 쪽): 에뮬레이터 카메라로 코드를 비출 수 없어 내보내기 화면만 찍었다.
 - "반영 전후 비교" 화면: 반영 뒤 한 번 더 주행한 기록이 있어야 나온다. 이번에는 찍지 않았다.
+
+## 시연 영상 만들기
+
+`docs/demo/video/` 의 스크립트가 위 화면 그림과 대사를 영상(1920×1080)으로 합친다. 결과 영상은 저장소에 넣지 않는다.
+
+```bash
+cd docs/demo/video && python3 build.py <결과.mp4>
+```
+
+| 파일 | 내용 |
+| --- | --- |
+| `build.py` | 장면 그림(Pillow) + 대사 음성 → ffmpeg 로 합친다. 필요한 것: macOS, ffmpeg, Python Pillow |
+| `scenes.py` | 장면과 대사 (29장면, 약 6분 18초). 기획서 1~6번 순서 |
+| `voice/NN.mp3` | 장면 번호별 대사 음성. 없는 장면은 macOS 음성(Yuna)으로 읽는다 |
+| `art/*.png` | 기획 배경 장면의 삽화 4장 |
+| `scenes_short.py`, `voice-short/` | 1분짜리 짧은 판 (쓰려면 `scenes.py`·`voice/` 자리에 둔다) |
+
+- 대사를 고치면 그 장면의 `voice/NN.mp3` 도 다시 만든다 (장면을 넣거나 빼면 번호가 밀린다).
+- 삽화는 Higgsfield(GPT Image), 대사 음성은 Higgsfield 의 ElevenLabs 음성(프리셋 "Mark")으로 만들었다. 실제 사람·차량 사진·로고가 아니다 (출처·약관은 `ui-design` 스킬 10장).
