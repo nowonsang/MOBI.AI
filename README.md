@@ -277,4 +277,10 @@ Pleos 앱 보안 가이드: 배포용 앱은 디버그 인증서가 아닌 **배
 
 ## 배포
 
-아직 정하지 않았다. Pleos App Market 등록 절차(권한 승인, 서명)는 정해지면 이 절에 추가한다. 이전 웹 버전의 Cloudflare Workers 배포는 2026-11-09 Expo 전환과 함께 제거했다 (Workers Builds 연동이 남아 있다면 Cloudflare 대시보드에서 끊는다).
+공모전 시연용 릴리스 APK 는 GitHub Release 에 올린다. 현재 버전: [v0.1.0](https://github.com/nowonsang/MOBI.AI/releases/tag/v0.1.0) (2026-11-14, contest 빌드, R8 적용, 배포용 인증서 서명).
+
+- 공개되는 APK 는 `.env.local` 이 없는 폴더(worktree)에서 빌드한다. 있는 폴더에서 빌드하면 Pleos 앱 등록 정보가 APK 에 들어간다.
+- 올리기 전에 Pleos Connect 에뮬레이터에 설치해 확인한다: `adb install --user 10 <APK>`. 서명 키가 바뀌면 기존 앱을 지워야 설치된다 (앱 데이터도 지워진다).
+- 다음 버전을 올릴 때는 `app.config.ts` 의 `version` 과 `versionCode` 를 함께 올린다.
+
+Pleos App Market 등록은 아직 정하지 않았다. 등록 절차(권한 승인, 서명)는 정해지면 이 절에 추가한다. 이전 웹 버전의 Cloudflare Workers 배포는 2026-11-09 Expo 전환과 함께 제거했다 (Workers Builds 연동이 남아 있다면 Cloudflare 대시보드에서 끊는다).
