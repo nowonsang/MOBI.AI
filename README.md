@@ -11,7 +11,7 @@ Expo SDK 58 (React Native 0.88, prebuild) + TanStack Query v5 + Redux Toolkit v2
 | --- | --- |
 | 앱 이름 | **BodyFit AI** |
 | 한 줄 소개 | 사람마다 키와 몸무게로 첫 시트 자세를 맞추고, 주행 중 흐트러진 자세를 분석하여 다음 시트 위치를 추천해주는 운전석 앱 |
-| APK | GitHub Release [v0.1.0](https://github.com/nowonsang/MOBI.AI/releases/tag/v0.1.0) (release 빌드, 약 188MB 로 저장소 업로드 용량을 넘어 Release 에 등록) |
+| APK | GitHub Release [v0.1.1](https://github.com/nowonsang/MOBI.AI/releases/tag/v0.1.1) (release 빌드, 약 188MB 로 저장소 업로드 용량을 넘어 Release 에 등록) |
 | 시연 영상 | https://youtu.be/TH8B7vasBSM (약 6분) |
 | 개발·테스트 에뮬레이터 | **Pleos Connect 에뮬레이터 v2.1.0** (Android Studio 시스템 이미지: API 34 · Automotive · Pleos Connect v2.1.0, 콜드 부트) |
 | 화면 규격 | 가로 **2560×1440** (에뮬레이터 기본 화면). 넓은 창은 2단, 좁은 창은 위아래로 쌓는다 |
@@ -290,7 +290,7 @@ app → core → features → shared → native(modules/*)
 - 지우면 안 되는 것은 `app.config.ts` 의 `PROGUARD_RULES` 에 적는다 (prebuild 가 `android/app/proguard-rules.pro` 에 넣는다): Pleos SDK 전체(`ai.pleos.**`), 차량 OS 가 제공하는 `android.car.**`, 우리 네이티브 모듈(`ai.mobi.**`).
 - AGP 9 의 `android.r8.strictFullModeForKeepRules` 는 끈다 (`withLenientR8KeepRules`). 켜 두면 ML Kit·WorkManager 가 리플렉션으로 부르는 생성자가 지워져 **앱이 시작하자마자 죽는다**.
 - 디버그 빌드에서 되던 것이 릴리스에서만 죽을 수 있다. 네이티브 의존성·모듈을 바꾸면 `npm run android:emulator -- --variant release` 로 릴리스 빌드를 에뮬레이터에서 띄워 본다. 충돌 원인은 `adb logcat` 의 `NoSuchMethodException`·`ClassNotFoundException`, 줄어든 이름은 `android/app/build/outputs/mapping/release/mapping.txt` 로 되돌려 읽는다.
-- 죽지 않고 값만 비는 경우도 있다. 2026-11-14 릴리스 빌드에서 Pleos SDK 가 시트 범위를 읽지 못해(logcat `TypeToken must be created with a type argument`) 시트 화면이 "지금 자세가 딱 좋아요"만 보였다. R8 이 제네릭 시그니처를 지웠기 때문이라 `-keepattributes Signature` 와 Gson `TypeToken` 규칙을 넣었다 (`app.config.ts` 의 `PROGUARD_RULES`). 이 수정 전에 만든 v0.1.0 APK 에는 이 문제가 있다.
+- 죽지 않고 값만 비는 경우도 있다. 2026-11-14 릴리스 빌드에서 Pleos SDK 가 시트 범위를 읽지 못해(logcat `TypeToken must be created with a type argument`) 시트 화면이 "지금 자세가 딱 좋아요"만 보였다. R8 이 제네릭 시그니처를 지웠기 때문이라 `-keepattributes Signature` 와 Gson `TypeToken` 규칙을 넣었다 (`app.config.ts` 의 `PROGUARD_RULES`). 이 수정 전에 만든 v0.1.0 APK 에는 이 문제가 있고, v0.1.1 에서 고쳤다.
 - 2026-11-14 Pleos Connect 에뮬레이터(v2.1.0)에서 릴리스 APK 로 확인: 실행, 운전자 추측, 시연 모드 자동 조절, 온도·무드등·기록 탭, 등록 화면, QR 카메라 읽기, 카메라 자세 인식, 주행(D) 80초 → 주차(P) 뒤 질문. 음성과 실제 시트 이동은 에뮬레이터에서 확인할 수 없다.
 
 ## APK 서명
@@ -305,7 +305,7 @@ Pleos 앱 보안 가이드: 배포용 앱은 디버그 인증서가 아닌 **배
 
 ## 배포
 
-공모전 시연용 릴리스 APK 는 GitHub Release 에 올린다. 현재 버전: [v0.1.0](https://github.com/nowonsang/MOBI.AI/releases/tag/v0.1.0) (2026-11-14, contest 빌드, R8 적용, 배포용 인증서 서명).
+공모전 시연용 릴리스 APK 는 GitHub Release 에 올린다. 현재 버전: [v0.1.1](https://github.com/nowonsang/MOBI.AI/releases/tag/v0.1.1) (2026-11-14, contest 빌드, versionCode 2, R8 적용, 배포용 인증서 서명). v0.1.0 은 시트 위치를 읽지 못하는 문제(위 "릴리스 빌드 축소·난독화")와 쓰지 않는 권한 6개가 들어 있어 v0.1.1 로 바꿨다.
 
 시연 영상(약 6분): https://youtu.be/TH8B7vasBSM — 만드는 방법과 세로형 요약 영상(숏폼)은 `docs/demo/README.md` 의 "시연 영상 만들기".
 

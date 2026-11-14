@@ -117,7 +117,7 @@ const appConfig = ({ config }: ConfigContext): ExpoConfig =>
     ...config,
     name: "MOBI.AI",
     slug: "mobi-ai",
-    version: "0.1.0",
+    version: "0.1.1",
     scheme: "mobiai",
     platforms: ["android"],
     orientation: "default",
@@ -128,7 +128,7 @@ const appConfig = ({ config }: ConfigContext): ExpoConfig =>
     android: {
       package: "ai.mobi.app",
       // Pleos 앱 버전 관리 정책: 심사 요청·배포 때마다 반드시 올린다 (version 과 함께).
-      versionCode: 1,
+      versionCode: 2,
       // Pleos 앱 보안 가이드: 자동 백업 비활성화 권장 (체형 정보가 기기 밖으로 나가지 않게).
       allowBackup: false,
       adaptiveIcon: {

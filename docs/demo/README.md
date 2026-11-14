@@ -94,7 +94,7 @@
 
 `docs/demo/video/` 의 스크립트가 위 화면 그림과 대사를 영상(1920×1080)으로 합친다. 결과 영상은 저장소에 넣지 않는다.
 
-- 올린 곳: 시연 영상 https://youtu.be/TH8B7vasBSM, 릴리스 APK https://github.com/nowonsang/MOBI.AI/releases/tag/v0.1.0
+- 올린 곳: 시연 영상 https://youtu.be/TH8B7vasBSM, 릴리스 APK https://github.com/nowonsang/MOBI.AI/releases/tag/v0.1.1
 
 ```bash
 cd docs/demo/video && python3 build.py <결과.mp4>          # 긴 판 (가로 1920×1080)
