@@ -20,5 +20,5 @@ export const canControlComfort = variant !== "market";
 /** 가이드 조절·자동 조절 시연 모드 (모의 시트 위치). 공모전 시연용이라 앱 마켓 빌드에는 넣지 않는다. */
 export const canUseDemoMode = variant !== "market";
 
-/** 카메라로 앉은키 재기 (Android 표준 CAMERA 권한). Pleos 앱 마켓과 협의하지 않아 앱 마켓 빌드에서는 권한과 화면을 뺀다. */
+/** 카메라 (Android 표준 CAMERA 권한): 주행 자세 관찰, QR 읽기. Pleos 앱 마켓과 협의하지 않아 앱 마켓 빌드에서는 권한과 화면을 뺀다. */
 export const canUseCamera = variant !== "market";

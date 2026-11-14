@@ -15,7 +15,7 @@ import {
 } from "./bodyfit-comfort";
 import { DEFAULT_DRIVE_CONTEXT, DRIVE_CONTEXTS } from "./bodyfit-drive-context";
 
-/** 키·앉은키 입력 범위 (cm). 카메라 추정(bodyfit-body-scan.ts)도 같은 범위로 자른다. */
+/** 키·앉은키 입력 범위 (cm). */
 export const HEIGHT_CM_RANGE = { min: 120, max: 220 } as const;
 export const SITTING_HEIGHT_CM_RANGE = { min: 60, max: 120 } as const;
 

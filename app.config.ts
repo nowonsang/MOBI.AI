@@ -96,11 +96,10 @@ const appConfig = ({ config }: ConfigContext): ExpoConfig =>
         monochromeImage: "./assets/images/android-icon-monochrome.png",
       },
       predictiveBackGestureEnabled: false,
-      // CAMERA: 세 곳에 쓴다. 운전자 등록의 "카메라로 재기", "QR 로 가져오기"의 "카메라로 읽기",
-      // 그리고 운전자가 동의한 주행 자세 관찰(C-7, 아래 FOREGROUND_SERVICE). 앞의 두 곳은
-      // 주차 중 운전자가 버튼을 눌렀을 때만 켜고, 화면 한 장을 기기 안에서 분석해 관절 위치(앉은키 추정)나
-      // QR 코드의 글자(다른 차에서 만든 프로필 코드)만 읽는다. 영상·사진은 저장하지도 밖으로 보내지도 않는다
-      // (modules/pose-camera). 권한 창도 처음 쓸 때 띄우고, 거부해도 직접 입력으로 등록할 수 있다.
+      // CAMERA: 두 곳에 쓴다. "QR 로 가져오기"의 "카메라로 읽기"와 운전자가 동의한 주행 자세 관찰
+      // (C-7, 아래 FOREGROUND_SERVICE). QR 읽기는 주차 중 운전자가 버튼을 눌렀을 때만 켜고, 화면 한 장을
+      // 기기 안에서 분석해 QR 코드의 글자(다른 차에서 만든 프로필 코드)만 읽는다. 영상·사진은 저장하지도
+      // 밖으로 보내지도 않는다 (modules/pose-camera). 권한 창도 처음 쓸 때 띄우고, 거부해도 등록할 수 있다.
       // Pleos 앱 마켓과 협의하지 않은 기능이라 market 빌드에서는 권한을 선언하지 않는다 (화면도 숨긴다: app-variant.ts).
       // FOREGROUND_SERVICE·FOREGROUND_SERVICE_CAMERA: 주행 중 자세 관찰(C-7). 주행 중에는 앱 화면이 가려져
       // 화면 없이 도는 카메라 서비스가 필요하다. 운전자가 켠 경우에만 주차 중에 시작하고, 관절 좌표만 기기 안에 남긴다.

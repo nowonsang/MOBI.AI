@@ -26,7 +26,7 @@ const isBaselineAxis = (axis: SeatAxis): axis is BaselineAxis =>
 export const BASELINE_AXES: readonly BaselineAxis[] =
   SEAT_AXES.filter(isBaselineAxis);
 
-// 앉은키를 모를 때 쓰는 대략적인 성인 평균 비율 (앉은키 ≈ 키의 53%). 카메라 추정(bodyfit-body-scan.ts)도 이 값을 기준으로 삼는다.
+// 앉은키를 모를 때 쓰는 대략적인 성인 평균 비율 (앉은키 ≈ 키의 53%).
 export const SITTING_HEIGHT_RATIO = 0.53;
 const STATURE_RANGE = { min: 150, max: 195 };
 const SITTING_RANGE = { min: 78, max: 100 };

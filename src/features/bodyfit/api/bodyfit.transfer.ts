@@ -1,7 +1,12 @@
 import { useMutation } from "@tanstack/react-query";
 
 import { canUseCamera, canUseDemoMode } from "@/shared/config/app-variant";
-import { isPoseCameraAvailable } from "@/shared/pose-camera/pose-camera";
+import { isPleosAvailable } from "@/shared/pleos/pleos";
+import { useGear } from "@/shared/pleos/use-gear";
+import {
+  isPoseCameraAvailable,
+  requestCameraPermission,
+} from "@/shared/pose-camera/pose-camera";
 import type { PoseCameraViewHandle } from "@/shared/pose-camera/pose-camera-view";
 
 import {
@@ -29,6 +34,20 @@ export function transferReadMode(): TransferReadMode | null {
   if (!canTransferProfile) return null;
   if (isPoseCameraAvailable()) return "camera";
   return canUseDemoMode ? "sample" : null;
+}
+
+/**
+ * 카메라로 읽기는 주차(P) 중에만 쓴다. 기어를 아직 모르거나 확인할 수 없으면 주차가 아닌 것으로 본다.
+ * 차량이 아닌 기기(휴대폰 확인용)에는 기어가 없으므로 막지 않는다.
+ */
+export function useParkedForCamera(): boolean {
+  const gear = useGear();
+  return isPleosAvailable() ? gear === "park" : true;
+}
+
+/** 카메라 권한 창을 띄운다. 운전자가 카메라를 쓰는 버튼·동의를 눌렀을 때만 부른다. */
+export function useRequestCameraPermission() {
+  return useMutation({ mutationFn: requestCameraPermission });
 }
 
 /** 카메라가 있어도 샘플 코드로 시연할 수 있는지 (에뮬레이터의 모의 카메라에는 QR 을 비출 수 없다) */
