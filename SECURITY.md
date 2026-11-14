@@ -26,7 +26,16 @@
 | 릴리스 APK 분석·변조 | R8 로 축소·난독화하고 배포용 인증서(v2·v3)로 서명한다. 릴리스 빌드는 디버깅이 꺼져 있고 평문 통신을 허용하지 않는다 | `app.config.ts`, README 'APK 서명' |
 | 공유 DB 키 유출 | 앱은 Supabase 에 접속하지 않는다. `@supabase/*` import 는 ESLint 에러다 | `eslint.config.mjs` |
 
-앱 코드가 직접 보내는 네트워크 요청은 없다(`fetch`·WebView·외부 링크 열기 없음). 음성 기능을 켠 경우에만 Pleos SDK 가 음성을 Pleos 서버에서 처리할 수 있고, 이는 선택 동의 화면에서 알린다.
+### 기기 밖으로 나가는 데이터
+
+앱 코드가 직접 보내는 네트워크 요청은 없다(`fetch`·WebView·외부 링크 열기 없음). 다만 앱에 포함된 SDK 두 가지는 스스로 서버와 통신한다.
+
+| SDK | 보내는 것 | 보내지 않는 것 | 끌 수 있는지 |
+| --- | --- | --- | --- |
+| Pleos STT·TTS | 음성 기능을 켠 운전자의 음성(서버 모드일 때) | 체형 정보, 카메라 영상 | 음성 기능은 선택 동의이며, 동의한 운전자에게만 마이크를 연다 |
+| Google ML Kit (자세 인식·QR 읽기) | 진단·사용 통계: 기기·앱 정보, 설치별 식별자, 처리 시간, 이미지 형식·해상도, 오류 코드 ([Google 공개 문서](https://developers.google.com/ml-kit/android-data-disclosure)) | 카메라 영상, 관절 좌표, QR 내용. 인식은 기기 안에서만 한다 ([ML Kit 약관](https://developers.google.com/ml-kit/terms)) | Google 이 끄는 방법을 제공하지 않는다 |
+
+ML Kit 은 원격 설정도 받아 온다. 이 통계 전송(`com.google.android.datatransport`)은 라이브러리 동작이라 앱에서 막을 수 없고, 2026-11-13 에뮬레이터 로그로 실제 전송을 확인했다. 운전자 등록 화면의 안내에 이 내용을 적었다 (README 'ML Kit').
 
 ## 자동 검사
 
