@@ -235,32 +235,49 @@ def render_scene(scene, index, total):
     return canvas
 
 
-def build(scenes, render, voice_dir, out):
-    """장면마다 그림 한 장 + 대사 음성으로 조각 영상을 만들고 이어 붙인다 (세로 판 build_shorts.py 도 쓴다)."""
+def build(scenes, render, voice_dir, out, lead=LEAD, tail=TAIL, fade=FADE, zoom=0.0):
+    """장면마다 그림 한 장 + 대사 음성으로 조각 영상을 만들고 이어 붙인다 (세로 판 build_shorts.py 도 쓴다).
+
+    zoom 이 0 보다 크면 장면마다 그 비율만큼 천천히 확대한다. fade 가 0 이면 장면을 바로 넘긴다.
+    """
     work = tempfile.mkdtemp(prefix="bodyfit-video-")
     total = len(scenes)
     parts = []
     length = 0.0
     for index, scene in enumerate(scenes):
         frame = os.path.join(work, f"{index:02d}.png")
-        render(scene, index, total).convert("RGB").save(frame)
+        canvas = render(scene, index, total).convert("RGB")
+        canvas.save(frame)
+        width, height = canvas.size
 
         # NN.mp3 (고른 목소리로 미리 만든 대사)가 있으면 그것을 쓰고, 없으면 macOS 음성으로 읽는다.
         voice = os.path.join(voice_dir, f"{index:02d}.mp3")
         if not os.path.exists(voice):
             voice = os.path.join(work, f"{index:02d}.aiff")
             run("say", "-v", VOICE, "-r", RATE, "-o", voice, scene["say"])
-        seconds = LEAD + duration(voice) + TAIL
+        seconds = lead + duration(voice) + tail
         length += seconds
 
         part = os.path.join(work, f"{index:02d}.mp4")
         color = "0xF4F5F7"
+        video = []
+        if zoom:
+            # 두 배로 키운 뒤 확대해야 움직임이 떨리지 않는다.
+            frames = int(seconds * FPS) + 1
+            video.append(
+                f"scale={width * 2}:{height * 2},"
+                f"zoompan=z='1+{zoom}*on/{frames}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
+                f":d={frames}:s={width}x{height}:fps={FPS}"
+            )
+        if fade:
+            video.append(f"fade=t=in:st=0:d={fade}:color={color}")
+            video.append(f"fade=t=out:st={seconds - fade:.3f}:d={fade}:color={color}")
+        video.append("format=yuv420p")
+        still = ["-i", frame] if zoom else ["-loop", "1", "-framerate", str(FPS), "-i", frame]
         run(
-            "ffmpeg", "-y", "-loop", "1", "-framerate", str(FPS), "-i", frame, "-i", voice,
+            "ffmpeg", "-y", *still, "-i", voice,
             "-filter_complex",
-            f"[0:v]fade=t=in:st=0:d={FADE}:color={color},"
-            f"fade=t=out:st={seconds - FADE:.3f}:d={FADE}:color={color},format=yuv420p[v];"
-            f"[1:a]adelay={int(LEAD * 1000)}:all=1,apad[a]",
+            f"[0:v]{','.join(video)}[v];[1:a]adelay={int(lead * 1000)}:all=1,apad[a]",
             "-map", "[v]", "-map", "[a]", "-t", f"{seconds:.3f}",
             "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-r", str(FPS),
             "-c:a", "aac", "-b:a", "160k", "-ar", "44100", "-ac", "2",

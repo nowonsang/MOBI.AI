@@ -46,3 +46,6 @@ yarn-error.*
 
 # claude code (개인 설정만 제외, .claude/settings.json·hooks는 팀 공유용으로 커밋)
 .claude/settings.local.json
+
+# 팀원 이름·연락처가 들어간 제출용 기획서 (공개 저장소에 올리지 않는다)
+/docs/*제출용*
