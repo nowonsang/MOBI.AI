@@ -4,12 +4,48 @@ import {
   type ConfigPlugin,
   withAndroidColorsNight,
   withAppBuildGradle,
+  withGradleProperties,
 } from "expo/config-plugins";
 
 // Pleos Connect SDK 요구 사항: Android API 28 이상, Pleos 전용 Maven 저장소.
 // android/ 폴더는 prebuild 가 이 설정으로 매번 다시 만든다 (직접 수정 금지, .gitignore 대상).
 const PLEOS_MAVEN_REPO =
   "https://nexus-playground.pleos.ai/repository/maven-releases/";
+
+// 릴리스 빌드의 코드 축소·난독화(R8, ProGuard 규칙)에서 지우거나 이름을 바꾸면 안 되는 것들.
+// React Native·Expo 모듈·CameraX·ML Kit 은 라이브러리가 자기 규칙을 함께 배포한다. 여기에는 그렇지 않은 것만 적는다.
+// - Pleos SDK: Vehicle 만 규칙이 들어 있고 NaviHelper·SpeechToText·TextToSpeech AAR 에는 없다 (2026-11-14 AAR 확인).
+//   SDK 가 차량 서비스와 주고받는 클래스(AIDL·Parcelable·리플렉션)를 알 수 없어 SDK 전체를 그대로 둔다.
+// - android.car: 차량 OS 가 런타임에 제공하는 클래스라 APK 에 없다. 없는 클래스 경고로 빌드가 멈추지 않게 한다.
+// - 우리 네이티브 모듈(ai.mobi.**): Expo 가 이름으로 찾는 모듈·뷰·포그라운드 서비스.
+const PROGUARD_RULES = `
+-keep class ai.pleos.** { *; }
+-keep interface ai.pleos.** { *; }
+-dontwarn ai.pleos.**
+-keep class android.car.** { *; }
+-dontwarn android.car.**
+-keep class ai.mobi.** { *; }
+-keep class * extends androidx.room.RoomDatabase { <init>(); }
+-keep class * implements com.google.firebase.components.ComponentRegistrar { <init>(); }
+`;
+
+// AGP 9 는 R8 이 "클래스를 남겨라"는 규칙만으로는 인자 없는 생성자를 남기지 않는다 (strictFullModeForKeepRules 기본 켜짐).
+// 그런데 ML Kit·WorkManager(Room) 같은 라이브러리의 규칙은 생성자가 함께 남는다고 보고 쓰여 있어,
+// 릴리스 앱이 시작하자마자 죽었다 (2026-11-14 Pleos 에뮬레이터: PoseRegistrar.<init>, WorkDatabase 생성 실패).
+// 라이브러리들이 새 방식에 맞출 때까지 예전 방식으로 둔다. 위 두 줄은 이 속성이 없어져도 같은 문제가 나지 않게 한 것.
+const R8_STRICT_KEEP_RULES = "android.r8.strictFullModeForKeepRules";
+const withLenientR8KeepRules: ConfigPlugin = (config) =>
+  withGradleProperties(config, (mod) => {
+    mod.modResults = mod.modResults.filter(
+      (item) => item.type !== "property" || item.key !== R8_STRICT_KEEP_RULES,
+    );
+    mod.modResults.push({
+      type: "property",
+      key: R8_STRICT_KEEP_RULES,
+      value: "false",
+    });
+    return mod;
+  });
 
 // 앱이 뜨기 전(창 바탕·시작 화면)의 색. src/shared/ui/theme.ts 의 surfaceMuted 주간·야간 값과 같게 둔다.
 const DAY_BACKGROUND = "#F4F5F7";
@@ -133,6 +169,10 @@ const appConfig = ({ config }: ConfigContext): ExpoConfig =>
           android: {
             minSdkVersion: 28,
             extraMavenRepos: [PLEOS_MAVEN_REPO],
+            // 릴리스 APK 는 R8 로 안 쓰는 코드·리소스를 빼고 이름을 줄인다 (디버그 빌드는 그대로).
+            enableMinifyInReleaseBuilds: true,
+            enableShrinkResourcesInReleaseBuilds: true,
+            extraProguardRules: PROGUARD_RULES,
           },
         },
       ],
@@ -152,4 +192,4 @@ const appConfig = ({ config }: ConfigContext): ExpoConfig =>
   });
 
 export default (context: ConfigContext): ExpoConfig =>
-  withNightWindowBackground(appConfig(context));
+  withLenientR8KeepRules(withNightWindowBackground(appConfig(context)));

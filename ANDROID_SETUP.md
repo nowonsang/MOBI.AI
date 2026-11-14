@@ -144,7 +144,7 @@ npm run android:doctor  # "결과: 통과" 확인
 | `npm run android:prebuild` | `android/` 생성·동기화 (`expo prebuild`) | — |
 | `npm run android:prebuild:clean` | `android/` 를 지우고 처음부터 다시 생성 | — |
 | `npm run android:build:debug` | 디버그 APK 빌드 (설치·실행 안 함) | `-- --arch arm64-v8a` |
-| `npm run android:build:release` | 릴리스 APK 빌드 (디버그 키 서명, 제출용 아님) | `-- --arch arm64-v8a` |
+| `npm run android:build:release` | 릴리스 APK 빌드 (R8 축소·난독화. 배포 키가 없으면 디버그 키 서명, 제출용 아님) | `-- --arch arm64-v8a` |
 | `npm run android:emulator` | Pleos Connect 에뮬레이터를 (꺼져 있으면 콜드 부트로) 켜고 빌드·설치·실행. 설치돼 있지 않으면 설치 안내 후 중단 | `-- --avd <이름>`, `-- --variant release`, `-- --market` |
 | `npm run android:device` | 내 기기(실기기)에서 빌드·설치·실행 | `-- --device <시리얼>`, `-- --variant release`, `-- --market` |
 | `npm start` | 개발 서버만 (앱이 이미 설치돼 있고 JS 만 바꿨을 때) | — |

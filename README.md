@@ -28,7 +28,7 @@ npm start              # JS 만 바꿨을 때 개발 서버만 (Fast Refresh)
 npm run android:prebuild        # android/ 생성·동기화
 npm run android:prebuild:clean  # android/ 를 처음부터 다시 생성 (.env.local·app.config.ts 를 바꾼 뒤)
 npm run android:build:debug     # 디버그 APK (-- --arch arm64-v8a)
-npm run android:build:release   # 릴리스 APK, 공모전 시연용 contest (배포 키가 없으면 디버그 키 서명 + 경고)
+npm run android:build:release   # 릴리스 APK, 공모전 시연용 contest (R8 축소·난독화, 배포 키가 없으면 디버그 키 서명 + 경고)
 npm run android:build:market    # 릴리스 APK, Pleos 앱 마켓 심사용 market (승인 전 권한·기능 제외)
 npm run lint           # ESLint(아키텍처·차량 SDK 창구·디자인 토큰) + 마이그레이션 검사
 npm run typecheck
@@ -255,6 +255,15 @@ app → core → features → shared → native(modules/*)
 
 - 2026-11-09 기준 `npm audit` 의 moderate 31건·low 1건은 모두 개발·빌드 도구(Expo CLI, Jest, ESLint)가 쓰는 `glob`([GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4))·`minimatch`([GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249))·`deepmerge`([GHSA-gcqx-w48m-w2h4](https://github.com/advisories/GHSA-gcqx-w48m-w2h4))에서 나온다. 앱(APK)에 들어가는 코드가 아니다.
 - `overrides` 로 강제 업그레이드하면 Expo CLI·Metro 와 어긋날 수 있어 지금은 두지 않았다. Expo SDK 패치 버전이 올라오면 `npx expo install --fix` 후 다시 확인한다. `npm audit fix --force` 는 쓰지 않는다.
+
+## 릴리스 빌드 축소·난독화 (R8)
+
+릴리스 APK 는 R8 로 안 쓰는 코드·리소스를 빼고 클래스 이름을 줄인다 (`app.config.ts` 의 `enableMinifyInReleaseBuilds`·`enableShrinkResourcesInReleaseBuilds`). 디버그 빌드에는 적용되지 않는다.
+
+- 지우면 안 되는 것은 `app.config.ts` 의 `PROGUARD_RULES` 에 적는다 (prebuild 가 `android/app/proguard-rules.pro` 에 넣는다): Pleos SDK 전체(`ai.pleos.**`), 차량 OS 가 제공하는 `android.car.**`, 우리 네이티브 모듈(`ai.mobi.**`).
+- AGP 9 의 `android.r8.strictFullModeForKeepRules` 는 끈다 (`withLenientR8KeepRules`). 켜 두면 ML Kit·WorkManager 가 리플렉션으로 부르는 생성자가 지워져 **앱이 시작하자마자 죽는다**.
+- 디버그 빌드에서 되던 것이 릴리스에서만 죽을 수 있다. 네이티브 의존성·모듈을 바꾸면 `npm run android:emulator -- --variant release` 로 릴리스 빌드를 에뮬레이터에서 띄워 본다. 충돌 원인은 `adb logcat` 의 `NoSuchMethodException`·`ClassNotFoundException`, 줄어든 이름은 `android/app/build/outputs/mapping/release/mapping.txt` 로 되돌려 읽는다.
+- 2026-11-14 Pleos Connect 에뮬레이터(v2.1.0)에서 릴리스 APK 로 확인: 실행, 운전자 추측, 시연 모드 자동 조절, 온도·무드등·기록 탭, 등록 화면, QR 카메라 읽기, 카메라 자세 인식, 주행(D) 80초 → 주차(P) 뒤 질문. 음성과 실제 시트 이동은 에뮬레이터에서 확인할 수 없다.
 
 ## APK 서명
 
