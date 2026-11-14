@@ -22,11 +22,16 @@ class PleosConnectModule : Module() {
     if (!isAutomotive) throw NotAutomotiveException()
   }
 
-  private val gearLazy = lazy {
+  private val gearLazy: Lazy<GearMonitor> = lazy {
     requireAutomotive()
-    GearMonitor(context) { sendEvent("onGearChanged", mapOf("gear" to it)) }
+    GearMonitor(context) { gear ->
+      // P 가 아니게 되거나 기어를 모르게 되면(차량 서비스 재시작 포함) 움직이던 시트를 바로 멈춘다.
+      // DriverSeat 도 위치가 바뀔 때마다 기어를 보지만, 위치 알림이 끊기면 시간 초과(30초)까지 기다리게 된다.
+      if (gear != "park" && seatLazy.isInitialized()) seat.stopAllBlocking(0)
+      sendEvent("onGearChanged", mapOf("gear" to gear))
+    }
   }
-  private val gear by gearLazy
+  private val gear: GearMonitor by gearLazy
 
   private val uxLazy = lazy {
     requireAutomotive()
@@ -39,7 +44,7 @@ class PleosConnectModule : Module() {
     Vehicle(context).apply { initialize() }
   }
 
-  private val seatLazy = lazy {
+  private val seatLazy: Lazy<DriverSeat> = lazy {
     DriverSeat(
       vehicleLazy.value.getSeat(),
       gear,
@@ -49,7 +54,7 @@ class PleosConnectModule : Module() {
       },
     )
   }
-  private val seat by seatLazy
+  private val seat: DriverSeat by seatLazy
 
   // 운전석 온도 취향(열선·공조). 값을 바꾸는 것은 주차 중 화면 조작으로만 한다.
   private val comfortLazy = lazy {

@@ -143,6 +143,7 @@ modules/pleos-connect/        Pleos Connect SDK 로컬 Expo 모듈
 ├── android/src/main/java/ai/mobi/pleosconnect/
 │   ├── PleosConnectModule.kt JS 로 노출하는 함수·이벤트
 │   ├── DriverSeat.kt         시트 읽기·목표 위치 이동(주차 확인·항상 STOP)
+│   ├── CarConnection.kt      Android 차량 서비스 연결 (서비스가 다시 떠도 앱이 죽지 않게 재연결, 끊긴 동안은 값을 모름으로 처리)
 │   ├── GearMonitor.kt        Android Car API GEAR_SELECTION
 │   ├── UxRestrictionsMonitor.kt  플랫폼 주행 중 UX 제한 (CarUxRestrictions, NO_SETUP)
 │   ├── VoiceServices.kt      STT · TTS

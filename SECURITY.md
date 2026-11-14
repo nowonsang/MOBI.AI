@@ -12,7 +12,8 @@
 | 위험 | 막는 방법 | 코드 |
 | --- | --- | --- |
 | 주행 중 시트가 움직인다 | 이동 전과 위치가 바뀔 때마다 **네이티브에서** 기어 P 를 다시 확인한다. 기어를 읽지 못하면 주차가 아닌 것으로 본다 | `DriverSeat.kt` `moveLocked`·`followUntil`, `GearMonitor.kt` `isParked` |
-| 시트가 멈추지 않는다 | 성공·실패·취소·시간 초과(30초) 모두 `finally` 에서 STOP 을 보낸다. 목표에서 멀어지면 멈춘다. 앱이 화면에서 사라져도 STOP 을 보낸다 | `DriverSeat.kt` `moveLocked`·`stopAllBlocking` |
+| 시트가 멈추지 않는다 | 성공·실패·취소·시간 초과(30초) 모두 `finally` 에서 STOP 을 보낸다. 목표에서 멀어지면 멈춘다. 앱이 화면에서 사라지거나, 기어가 P 가 아니게 되거나, 차량 서비스가 다시 시작돼 기어를 모르게 되면 바로 STOP 을 보낸다 | `DriverSeat.kt` `moveLocked`·`stopAllBlocking`, `PleosConnectModule.kt` |
+| 차량 서비스 재시작으로 앱이 강제 종료된다 | 수명 리스너를 달아 차량 서비스에 연결한다. 리스너가 없으면 Car 라이브러리가 앱 프로세스를 끝내 STOP 을 보내지 못한다. 끊긴 동안은 기어를 unknown, 주행 제한을 "막힘"으로 알리고, 다시 연결되면 구독을 복구한다 | `CarConnection.kt`, `GearMonitor.kt`, `UxRestrictionsMonitor.kt` |
 | 범위 밖 값으로 움직인다 | 목표값을 차량이 알려 준 범위로 자른다. 범위를 모르거나 쓰기 권한이 없는 축은 움직이지 않는다 | `DriverSeat.kt` `bounds`·`canMove` |
 | 확인 없이 움직인다 | 화면의 확인 대화상자에서 운전자가 눌러야 시작하고, 멈추기 버튼이 항상 보인다 | `bodyfit-seat-screen.tsx`, `src/shared/ui/confirm-dialog.tsx` |
 | 음성으로 차량을 조작한다 | 음성 인식 결과는 신뢰하지 않는 입력이다. 정해진 규칙으로 조절안만 만들고, 운전자가 화면에서 확인해야 적용한다 | `bodyfit-voice-answer.ts`, `bodyfit-voice-comfort.ts` |
