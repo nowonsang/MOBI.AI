@@ -98,7 +98,7 @@
 
 ```bash
 cd docs/demo/video && python3 build.py <결과.mp4>          # 긴 판 (가로 1920×1080)
-cd docs/demo/video && python3 build_shorts.py <결과.mp4>   # 광고형 숏폼 (세로 1080×1920, 약 54초)
+cd docs/demo/video && python3 build_shorts.py <결과.mp4>   # 광고형 숏폼 (세로 1080×1920, 약 56초)
 ```
 
 | 파일 | 내용 |
