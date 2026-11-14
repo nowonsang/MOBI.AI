@@ -5,6 +5,29 @@ Expo SDK 58 (React Native 0.88, prebuild) + TanStack Query v5 + Redux Toolkit v2
 
 첫 서비스는 **BodyFit AI — 내 몸을 기억하는 운전석**: 체형으로 시트 자세를 추천해 주차 중 자동으로 맞추고, 운전자가 실제로 받아들인 자세와 음성 피드백을 학습해 다음 추천을 개인화한다.
 
+## 공모전 심사용 요약 (현대자동차그룹 차량용 앱 개발 공모전)
+
+| 항목 | 내용 |
+| --- | --- |
+| 앱 이름 | **BodyFit AI** |
+| 한 줄 소개 | 사람마다 키와 몸무게로 첫 시트 자세를 맞추고, 주행 중 흐트러진 자세를 분석하여 다음 시트 위치를 추천해주는 운전석 앱 |
+| APK | GitHub Release [v0.1.0](https://github.com/nowonsang/MOBI.AI/releases/tag/v0.1.0) (release 빌드, 약 188MB 로 저장소 업로드 용량을 넘어 Release 에 등록) |
+| 시연 영상 | https://youtu.be/TH8B7vasBSM (약 6분) |
+| 개발·테스트 에뮬레이터 | **Pleos Connect 에뮬레이터 v2.1.0** (Android Studio 시스템 이미지: API 34 · Automotive · Pleos Connect v2.1.0, 콜드 부트) |
+| 화면 규격 | 가로 **2560×1440** (에뮬레이터 기본 화면). 넓은 창은 2단, 좁은 창은 위아래로 쌓는다 |
+
+**APK 만 설치해 실행하기** (빌드 없이)
+
+1. Android Studio 에 Pleos Connect 에뮬레이터 v2.1.0 을 설치하고 콜드 부트로 켠다 (설치 절차: [ANDROID_SETUP.md](ANDROID_SETUP.md)).
+2. Release 에서 APK 를 받아 설치한다: `adb install --user 10 <APK 파일>`
+3. 앱 목록에서 BodyFit AI 를 연다. 시트 이동·온도 조절 같은 차량 제어는 기어 P 에서만 동작한다. 기어·착좌·온도 값은 Virtual Console(http://127.0.0.1:8088/)에서 바꾼다.
+
+**테스트 환경과 필요한 설정**
+
+- 에뮬레이터는 시트 이동 명령은 받지만 위치 값이 바뀌지 않고, 카메라는 고정 사진이다. 그래서 자동 조절·가이드 조절의 "시연 모드"와 QR 의 "샘플 코드로 시연"으로 흐름을 보여 준다.
+- 음성 인식·안내는 Pleos 앱 등록 정보 없이 온디바이스 모드로 동작한다. 실제 말소리는 에뮬레이터 Extended Controls → Microphone 에서 호스트 마이크를 켜야 들어간다.
+- 소스에서 빌드해 실행하는 방법은 아래 "처음 받았다면"과 "실행"을 따른다 (Node 22.13+ 또는 24.3+, JDK 17, Android Studio).
+
 ## 처음 받았다면 (팀원 온보딩)
 
 자세한 절차와 문제 해결은 `project-setup` 스킬에 있다. Claude Code에 "세팅해줘"라고 하면 이 순서로 안내한다.
