@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+import { useIsFocused, useRouter } from "expo-router";
 import { Fragment, useState } from "react";
 import { Pressable, View } from "react-native";
 
@@ -38,6 +38,9 @@ export function BodyfitDriverListScreen() {
   const boardings = useQuery(bodyfitQueries.boardings());
   const guessPending = useAppSelector(selectDriverGuessPending);
   const gear = useGear();
+  // 다른 화면이 이 목록을 덮고 있으면 추측한 운전자로 넘어가지 않는다.
+  // 앱이 다시 켜지며 뜬 주행 후 질문(다른 운전자의 것일 수 있다)을 추측한 운전자의 화면이 덮어 버린다.
+  const focused = useIsFocused();
   // 화면을 연 시각 기준으로 한 번만 추측한다 (렌더마다 시각이 바뀌어 추측이 흔들리지 않게).
   const [openedAt] = useState(() => Date.now());
   const goToNew = () => router.push("/bodyfit/new");
@@ -228,13 +231,16 @@ export function BodyfitDriverListScreen() {
             confidence={guess.confidence}
             // 주차(P) 중이고 확률이 충분히 높을 때만 저절로 넘어간다 (S-5). 낮으면 묻기만 한다.
             autoStart={
-              gear === "park" && guess.confidence >= AUTO_START_CONFIDENCE
+              focused &&
+              gear === "park" &&
+              guess.confidence >= AUTO_START_CONFIDENCE
             }
             // 음성은 Pleos 서버에서 처리될 수 있어, 추측한 운전자가 음성 기능에 동의했을 때만 묻는다.
             askByVoice={
               canUseVoice &&
               isPleosAvailable() &&
               guessed.voiceConsent &&
+              focused &&
               gear === "park"
             }
             onAccept={() => openDriver(guessed.id)}
