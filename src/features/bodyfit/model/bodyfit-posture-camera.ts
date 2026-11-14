@@ -15,7 +15,7 @@ import type { DriveContext } from "./bodyfit.types";
 const MIN_LIKELIHOOD = 0.5;
 /** 어깨 폭이 화면 폭의 이 비율보다 작으면 사람이 너무 멀거나 잘못 잡힌 것으로 본다. */
 const MIN_SHOULDER_WIDTH = 0.05;
-/** 어깨 폭 ≈ 키 × 0.259 (Drillis & Contini 1966 인체 비율표). */
+/** 어깨 폭 ≈ 키 × 0.259 (Drillis & Contini 1966 인체 비율표, bodyfit-body-scan.ts 와 같은 자료). */
 const SHOULDER_WIDTH_RATIO = 0.259;
 /** 출발 직전 이 시간 안의 표본도 출발 자세로 쓴다 (주차 중 운전석에 앉아 있던 모습). */
 const PRE_START_MS = 60 * 1000;

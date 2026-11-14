@@ -21,14 +21,16 @@ import { StatusView } from "@/shared/ui/status-view";
 import { radius, spacing } from "@/shared/ui/theme";
 import { themedStyles } from "@/shared/ui/use-theme";
 
+import {
+  useParkedForBodyScan,
+  useRequestCameraPermission,
+} from "../api/bodyfit.body-scan";
 import { useImportBodyProfile } from "../api/bodyfit.mutations";
 import { bodyfitQueries } from "../api/bodyfit.queries";
 import {
   canReadSampleTransfer,
   transferReadMode,
-  useParkedForCamera,
   useReadTransferCode,
-  useRequestCameraPermission,
 } from "../api/bodyfit.transfer";
 import { resolveImportName } from "../model/bodyfit-transfer";
 import { BodyfitConsentNotice } from "./bodyfit-consent-notice";
@@ -68,7 +70,7 @@ export function BodyfitImportScreen() {
   const router = useRouter();
   // 기기에 카메라가 있는지는 화면을 여는 동안 바뀌지 않아 한 번만 확인한다.
   const [mode] = useState(transferReadMode);
-  const parked = useParkedForCamera();
+  const parked = useParkedForBodyScan();
   const profiles = useQuery(bodyfitQueries.profiles());
   const permission = useRequestCameraPermission();
   const read = useReadTransferCode();
