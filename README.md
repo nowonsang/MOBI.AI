@@ -203,6 +203,8 @@ app → core → features → shared → native(modules/*)
 
 ## 보안·안전 (상세: `secure-coding` 스킬)
 
+위험별로 무엇을 어디서 막는지, 취약점 신고 방법, 알려진 한계는 **[SECURITY.md](SECURITY.md)** 에 정리했다.
+
 - 차량을 움직이는 동작은 **기어 P 에서만**, 운전자 확인 후에만, 끝나면 **항상 STOP**. 기어를 알 수 없으면 주차가 아닌 것으로 본다.
 - 음성 인식 결과는 신뢰하지 않는 입력이다. 조절안으로만 만들고 운전자 확인 후에만 적용한다.
 - 체형·자세 기록은 기기 안에만 **AES-GCM 으로 암호화**해 저장한다 (`src/shared/storage/encrypted-storage.ts`, 키는 `expo-secure-store` 로 Android Keystore 가 보호). 운전자가 지울 수 있다.
@@ -211,6 +213,7 @@ app → core → features → shared → native(modules/*)
 - 주행 자세 관찰의 카메라 관찰(C-7)은 운전자가 주행 자세 관찰 화면(D-6)에서 "켜기"로 동의한 경우에만 켠다. 화면 없이 도는 서비스도 프레임은 메모리에서 분석하고 버리며, 관절 표본은 주행이 끝날 때 꺼내 zod 로 검증하고 분마다의 변화(cm·도)만 주행 자세 기록으로 암호화 저장소에 남긴다. 제안은 운전자가 리포트에서 "반영하기"를 눌러야 기록에 들어가고 시트는 움직이지 않는다. 끄면 카메라를 끄고 기록을 지운다.
 - 운전자 등록 화면에서 수집 항목·목적·보관·거부 권리를 알리고 **"동의하고 등록하기"** 버튼으로만 필수 동의를 받는다. 음성 기능은 별도 선택 동의(음성은 Pleos 서버에서 처리될 수 있음)이며, 동의한 운전자에게만 마이크를 연다.
 - `EXPO_PUBLIC_*` 변수와 앱 설정 값은 APK 에 들어간다. 비밀 값을 넣지 않는다.
+- 권한은 쓰는 것만 선언한다. Expo 기본 템플릿이 넣는 외부 저장소 읽기·쓰기, 다른 앱 위에 그리기, 진동, 생체 인증 권한은 `app.config.ts` 의 `blockedPermissions` 로 뺀다. 운전자 ID 는 암호학적 난수(`expo-crypto` 의 UUID)로 만든다.
 
 ### 환경 변수 (`.env.local`, 이름만 기록)
 
@@ -253,7 +256,7 @@ app → core → features → shared → native(modules/*)
 
 ## 의존성 보안 메모
 
-- 2026-11-09 기준 `npm audit` 의 moderate 31건·low 1건은 모두 개발·빌드 도구(Expo CLI, Jest, ESLint)가 쓰는 `glob`([GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4))·`minimatch`([GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249))·`deepmerge`([GHSA-gcqx-w48m-w2h4](https://github.com/advisories/GHSA-gcqx-w48m-w2h4))에서 나온다. 앱(APK)에 들어가는 코드가 아니다.
+- 2026-11-14 기준 `npm audit` 의 moderate 31건·low 1건은 모두 개발·빌드 도구(Expo CLI, Jest, ESLint)가 쓰는 `glob`([GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4))·`minimatch`([GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249))·`deepmerge`([GHSA-gcqx-w48m-w2h4](https://github.com/advisories/GHSA-gcqx-w48m-w2h4))에서 나온다. 앱(APK)에 들어가는 코드가 아니다.
 - `overrides` 로 강제 업그레이드하면 Expo CLI·Metro 와 어긋날 수 있어 지금은 두지 않았다. Expo SDK 패치 버전이 올라오면 `npx expo install --fix` 후 다시 확인한다. `npm audit fix --force` 는 쓰지 않는다.
 
 ## 릴리스 빌드 축소·난독화 (R8)

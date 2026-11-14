@@ -145,5 +145,7 @@ export default defineConfig([
     "dist/**",
     "coverage/**",
     "expo-env.d.ts",
+    // 저장소 안에 만들어진 다른 세션의 작업 폴더(git worktree). 그 브랜치의 파일까지 검사하면 이 브랜치의 검사가 깨진다.
+    ".claude/worktrees/**",
   ]),
 ]);

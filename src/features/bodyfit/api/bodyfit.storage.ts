@@ -1,3 +1,4 @@
+import { randomUUID } from "expo-crypto";
 import { z } from "zod";
 
 import {
@@ -73,8 +74,8 @@ export async function findBodyProfile(id: string): Promise<BodyProfile | null> {
   return profiles.find((profile) => profile.id === id) ?? null;
 }
 
-const newProfileId = () =>
-  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+// 운전자 ID 는 암호학적 난수(UUID v4)로 만든다. Math.random 은 예측할 수 있어 식별자에 쓰지 않는다.
+const newProfileId = () => randomUUID();
 
 export async function createBodyProfile(
   input: BodyProfileInput,

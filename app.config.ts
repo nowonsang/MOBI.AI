@@ -148,6 +148,20 @@ const appConfig = ({ config }: ConfigContext): ExpoConfig =>
               "android.permission.FOREGROUND_SERVICE",
               "android.permission.FOREGROUND_SERVICE_CAMERA",
             ],
+      // 최소 권한: Expo 기본 템플릿이 넣지만 이 앱이 쓰지 않는 권한을 매니페스트에서 뺀다 (tools:node="remove").
+      // 외부 저장소 읽기·쓰기(체형 정보는 앱 전용 암호화 저장소에만 둔다), 다른 앱 위에 그리기, 진동.
+      // INTERNET 은 남긴다: 개발 빌드가 Metro 에서 JS 를 받아 오고, Pleos STT·TTS 의 서버 모드가 쓴다.
+      // 앱 코드가 직접 보내는 네트워크 요청은 없다 (SECURITY.md).
+      blockedPermissions: [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.VIBRATE",
+        // expo-secure-store 가 함께 선언하는 생체 인증 권한. 암호화 키를 읽을 때 생체 인증을 요구하지 않으므로
+        // (requireAuthentication 을 쓰지 않는다) 필요 없다.
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+      ],
     },
     plugins: [
       "expo-router",
